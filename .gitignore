@@ -1,0 +1,44 @@
+# Build results
+bin/
+obj/
+.vs/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Mono Auto Generated Files
+mono_crash.*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Rider / JetBrains IDE
+.idea/
+
+# VS Code settings (nếu dùng)
+.vscode/
+
+# NuGet packages
+*.nupkg
+# The packages folder can be ignored because of PackageReference
+packages/
+# Uncomment if using legacy project.json
+#project.lock.json
+#*.nuget.props
+#*.nuget.targets
+
+# Others
+*.log
+*.tlog
+
+# Publish output
+publish/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
