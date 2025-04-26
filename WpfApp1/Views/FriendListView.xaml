@@ -1,0 +1,176 @@
+﻿<UserControl x:Class="WpfApp1.Views.FriendListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:WpfApp1.Views"
+             xmlns:vm="clr-namespace:WpfApp1.ViewModels" xmlns:models="clr-namespace:WpfApp1.Models" mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900"
+             Background="#F0F2F5">
+
+    <UserControl.Resources>
+        <DataTemplate x:Key="FriendListItemTemplate">
+            <StackPanel Orientation="Horizontal" Margin="5">
+                <Ellipse Width="30" Height="30" Fill="LightBlue" Margin="0,0,10,0"/>
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="GroupListItemTemplate">
+            <StackPanel Orientation="Horizontal" Margin="5">
+                <Ellipse Width="30" Height="30" Fill="LightGreen" Margin="0,0,10,0"/>
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:FriendViewModel}">
+            <StackPanel Margin="10">
+                <Ellipse Width="80" Height="80" Fill="LightBlue" Margin="0,0,0,15" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+                <Button Content="Hủy kết bạn" Margin="0,5" Padding="10,5" Cursor="Hand"
+                        Command="{Binding DataContext.UnfriendCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding}"/>
+                <Button Content="Gửi tin nhắn" Margin="0,5" Padding="10,5" Cursor="Hand"
+                        Command="{Binding DataContext.SendMessageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding}"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:GroupViewModel}">
+            <StackPanel Margin="10">
+                <Ellipse Width="80" Height="80" Fill="LightGreen" Margin="0,0,0,15" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+                <Button Content="Rời nhóm" Margin="0,5" Padding="10,5" Cursor="Hand" Background="OrangeRed" Foreground="White"
+                        Command="{Binding DataContext.LeaveGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding}"/>
+                <Button Content="Gửi tin nhắn" Margin="0,5" Padding="10,5" Cursor="Hand"
+                        Command="{Binding DataContext.SendMessageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding}"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="FriendRequestItemTemplate">
+            <Border Background="White" CornerRadius="3" Padding="10" Margin="0,0,0,5">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Ellipse Grid.Column="0" Width="40" Height="40" Fill="Gray" Margin="0,0,10,0"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding RequesterName}" FontWeight="SemiBold"/>
+                        <TextBlock Text="muốn kết bạn" FontSize="11" Foreground="Gray"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Content="✔" ToolTip="Chấp nhận" Margin="0,0,5,0" Padding="5,3" Background="LightGreen" Cursor="Hand"
+                                Command="{Binding DataContext.AcceptRequestCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"/>
+                        <Button Content="✖" ToolTip="Từ chối" Padding="5,3" Background="Salmon" Cursor="Hand"
+                                Command="{Binding DataContext.DeclineRequestCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="250"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="White" CornerRadius="5,0,0,5" Margin="5">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Danh bạ" FontSize="16" FontWeight="Bold" Margin="10"/>
+                <ListBox x:Name="ContactsListBox"
+                          ItemsSource="{Binding CombinedContacts}"
+                          SelectedItem="{Binding SelectedContact}"
+                          BorderThickness="0"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="5,2"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="LightSkyBlue"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="5">
+                                <Ellipse Width="30" Height="30" Fill="Silver" Margin="0,0,10,0"/>
+                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Column="1" Background="White" Margin="0,5,0,5">
+            <ContentControl Content="{Binding SelectedContact}">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedContact}" Value="{x:Null}">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ContentControl">
+                                            <TextBlock Text="Chọn một liên hệ hoặc nhóm để xem chi tiết"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="Gray"/>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+        </Border>
+
+        <Border Grid.Column="2" Background="White" CornerRadius="0,5,5,0" Margin="5">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Lời mời kết bạn" FontSize="16" FontWeight="Bold" Margin="10"/>
+                <ListBox ItemsSource="{Binding FriendRequests}"
+                          ItemTemplate="{StaticResource FriendRequestItemTemplate}"
+                          BorderThickness="0"
+                          Background="Transparent"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          SelectionMode="Single">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Focusable" Value="False"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <ContentPresenter/>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <GridSplitter Grid.Column="0" Width="3" Background="LightGray" HorizontalAlignment="Right" VerticalAlignment="Stretch"/>
+        <GridSplitter Grid.Column="1" Width="3" Background="LightGray" HorizontalAlignment="Right" VerticalAlignment="Stretch"/>
+
+    </Grid>
+</UserControl>
