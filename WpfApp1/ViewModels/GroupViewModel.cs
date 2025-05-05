@@ -17,7 +17,7 @@ namespace WpfApp1.ViewModels
             _groupModel = groupModel ?? throw new ArgumentNullException(nameof(groupModel));
         }
 
-        string IChatContact.Id { get => Id; set { } }
+        string IChatContact.Email { get => Id; set { } }
         string IChatContact.Name { get => Name; set { } }
         string IChatContact.AvatarUrl { get => AvatarUrl; set { } }
 

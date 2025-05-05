@@ -9,8 +9,8 @@ namespace WpfApp1.ViewModels
         private readonly FriendRequest _requestModel; // Giữ tham chiếu đến Model
 
         // Properties expose dữ liệu từ Model
-        public string RequestId => _requestModel.RequestId;
-        public string RequesterId => _requestModel.RequesterId;
+        public string RequestId => _requestModel.EmailRequestId;
+        public string RequesterId => _requestModel.EmailRequesterId;
         public string RequesterName => _requestModel.RequesterName;
         public string RequesterAvatarUrl => _requestModel.RequesterAvatarUrl;
         public DateTime RequestTime => _requestModel.RequestTime;

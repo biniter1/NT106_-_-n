@@ -1,105 +1,134 @@
 ﻿// File: ViewModels/AddFriendViewModel.cs
 using System;
+using Google.Cloud.Firestore;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WpfApp1.Models; // Namespace chứa UserSearchResult
-using System.Windows; // Cho MessageBox (tùy chọn)
-// using WpfApp1.Services; // Namespace chứa IFriendService (nếu có)
-
-namespace WpfApp1.ViewModels // <-- Thay WpfApp1 bằng namespace gốc của dự án bạn
+using System.Windows;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+namespace WpfApp1.ViewModels 
 {
     public partial class AddFriendViewModel : ObservableObject
     {
-        // (Tùy chọn) Service để xử lý logic tìm kiếm và kết bạn
-        // private readonly IFriendService _friendService;
-
-        // Thuộc tính cho ô tìm kiếm, tự động tạo bởi [ObservableProperty]
         [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(SearchCommand))] // Tự động gọi CanExecute của SearchCommand khi SearchQuery thay đổi
-        private string _searchQuery = ""; // Khởi tạo giá trị mặc định
-
-        // Collection chứa kết quả, không cần thay đổi
+        [NotifyCanExecuteChangedFor(nameof(SearchCommand))] 
+        private string _searchQuery = ""; 
+        public User userdata;
+        static List<FriendRequest> friendRequests;
         public ObservableCollection<UserSearchResult> SearchResults { get; } = new();
 
-        // Lệnh Tìm kiếm - Sử dụng attribute [RelayCommand]
-        // Tên phương thức sẽ là tên lệnh + "Async" (nếu là Task) -> SearchCommand
-        // Thuộc tính IsRunning sẽ tự động có trên SearchCommand
-        [RelayCommand(CanExecute = nameof(CanSearch))] // Chỉ định phương thức CanExecute
-        private async Task SearchAsync() // Đặt tên phương thức là SearchAsync
+        [RelayCommand(CanExecute = nameof(CanSearch))] 
+        private async Task SearchAsync() 
         {
             SearchResults.Clear();
-            Console.WriteLine($"Đang tìm kiếm: {SearchQuery}");
-
-            // *** THAY THẾ BẰNG LOGIC GỌI SERVICE/API THỰC TẾ ***
             try
             {
-                await Task.Delay(1000); // Giả lập chờ mạng
-                if (!string.IsNullOrWhiteSpace(SearchQuery))
+                var db=FirestoreHelper.database;
+                var doc=db.Collection("users").Document(SearchQuery);
+                var snapShot = await doc.GetSnapshotAsync();
+
+                var userData = snapShot.ConvertTo<User>();
+                if (userData != null)
                 {
-                    SearchResults.Add(new UserSearchResult { UserId = "1", DisplayName = $"{SearchQuery} User 1", Status = FriendStatus.NotFriend });
-                    SearchResults.Add(new UserSearchResult { UserId = "2", DisplayName = $"{SearchQuery} User 2", Status = FriendStatus.RequestSent });
-                    SearchResults.Add(new UserSearchResult { UserId = "3", DisplayName = $"{SearchQuery} User 3", Status = FriendStatus.Friend });
+                    SearchResults.Add(new UserSearchResult { UserId = userData.Email, DisplayName = $"{userData.Username}", Status = FriendStatus.NotFriend });
+                    userdata=userData;
+                    friendRequests=SharedData.friendRequests;
+                }
+                else
+                {
+                    MessageBox.Show("Nguoi dung khong ton tai");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Lỗi tìm kiếm: {ex.Message}");
-                // Cân nhắc dùng service hiển thị lỗi thay vì MessageBox trực tiếp
+                
                 MessageBox.Show($"Đã xảy ra lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
-                 // Gọi lại CanExecute của AddFriendCommand để cập nhật trạng thái nút Kết bạn
+                 
                  AddFriendCommand.NotifyCanExecuteChanged();
             }
         }
-
-        // Phương thức kiểm tra điều kiện thực thi cho SearchAsync
         private bool CanSearch()
         {
-            // Nếu lệnh chưa chạy và có nội dung tìm kiếm
             return !SearchCommand.IsRunning && !string.IsNullOrWhiteSpace(SearchQuery);
         }
-
-
-        // Lệnh Thêm bạn - Sử dụng attribute [RelayCommand]
-        // Tên phương thức sẽ là tên lệnh + "Async" (nếu là Task) -> AddFriendCommand
-        // Tự động nhận tham số kiểu UserSearchResult từ CommandParameter
-        [RelayCommand(CanExecute = nameof(CanAddFriend))] // Chỉ định phương thức CanExecute
-        private async Task AddFriendAsync(UserSearchResult user) // Đặt tên phương thức AddFriendAsync
+        private async Task<bool> AreAlreadyFriends(string myEmail, string otherEmail)
         {
-            if (user == null) return; // Tham số null thì bỏ qua
+            var db = FirestoreHelper.database;
+            var myFriendDocRef = db.Collection("Friend").Document(myEmail);
+            var myFriendDocSnapshot = await myFriendDocRef.GetSnapshotAsync();
 
-            Console.WriteLine($"Đang gửi yêu cầu kết bạn đến: {user.DisplayName} ({user.UserId})");
+            if (myFriendDocSnapshot.Exists)
+            {
+                var friendsList = myFriendDocSnapshot.GetValue<List<Dictionary<string, object>>>("friends");
 
-            // *** THAY THẾ BẰNG LOGIC GỌI SERVICE/API GỬI YÊU CẦU KẾT BẠN THỰC TẾ ***
+                if (friendsList != null)
+                {
+                    return friendsList.Any(friend =>
+                        friend.ContainsKey("Email") && friend["Email"].ToString() == otherEmail);
+                }
+            }
+
+            return false;
+        }
+
+        [RelayCommand(CanExecute = nameof(CanAddFriend))] 
+        private async Task AddFriendAsync(UserSearchResult user) 
+        {
+            if (user == null) return;
+            bool checkFriend=await AreAlreadyFriends(SharedData.Instance.userdata.Email,userdata.Email);
+            if (checkFriend)
+            {
+                MessageBox.Show("Bạn đã là bạn với người này rồi");
+                user.Status=FriendStatus.Friend;
+                return;
+            }
+            var db = FirestoreHelper.database;
+            FriendRequest friendRequest = new FriendRequest
+            {
+                EmailRequestId = user.UserId,
+                EmailRequesterId = SharedData.Instance.userdata.Email,
+                RequesterName = SharedData.Instance.userdata.Name,
+                RequesterAvatarUrl = "null",
+                RequestTime = DateTime.UtcNow,
+            };
+            friendRequests.Add(friendRequest);
+            user.Status = FriendStatus.RequestSent;
             try
             {
-                await Task.Delay(800); // Giả lập chờ mạng
-                user.Status = FriendStatus.RequestSent; // Cập nhật trạng thái (cần INotifyPropertyChanged trong UserSearchResult)
-                Console.WriteLine($"Đã gửi yêu cầu đến {user.DisplayName}");
-
-                // Quan trọng: Thông báo cho UI biết rằng điều kiện CanExecute của lệnh này
-                // (cho user này và có thể cả user khác) cần được đánh giá lại.
-                AddFriendCommand.NotifyCanExecuteChanged();
+                var doc = db.Collection("AddFriendQuery").Document(friendRequest.EmailRequestId);
+                await doc.UpdateAsync(new Dictionary<string, object>
+                {{ "requests", FieldValue.ArrayUnion(friendRequest) }
+                });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Lỗi gửi yêu cầu kết bạn: {ex.Message}");
-                MessageBox.Show($"Đã xảy ra lỗi khi gửi yêu cầu: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                var initialData = new Dictionary<string, object>
+                {
+                    { "requests", new List<FriendRequest> { new FriendRequest
+                        {
+                            EmailRequestId = user.UserId,
+                            EmailRequesterId = SharedData.Instance.userdata.Email,
+                            RequesterName = SharedData.Instance.userdata.Name,
+                            RequesterAvatarUrl = "null",
+                            RequestTime = DateTime.UtcNow,
+                        }
+                    }}
+                };
+                await db.Collection("AddFriendQuery").Document(friendRequest.EmailRequestId).SetAsync(initialData);
+            }   
         }
-
-        // Phương thức kiểm tra điều kiện thực thi cho AddFriendAsync
         private bool CanAddFriend(UserSearchResult user)
         {
-            // Cho phép nếu user hợp lệ, chưa phải bạn bè/đã gửi yêu cầu, và lệnh không đang chạy
             return user != null
                 && user.Status == FriendStatus.NotFriend
-                && !AddFriendCommand.IsRunning; // Kiểm tra trạng thái chạy chung của lệnh
-                // Lưu ý: Nếu cần vô hiệu hóa chỉ nút của user đang được xử lý, bạn cần thêm cờ trạng thái trong UserSearchResult
+                && !AddFriendCommand.IsRunning;
         }
 
     }

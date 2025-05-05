@@ -1,0 +1,189 @@
+﻿<Window x:Class="WpfApp1.LoginlSignUp.fCode"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WpfApp1.LoginlSignUp"
+        mc:Ignorable="d"
+        Title="Xác thực OTP" Height="524" Width="400"
+        WindowStartupLocation="CenterScreen"
+        Background="White"
+        ResizeMode="NoResize">
+    <Window.Resources>
+        <!-- Style cho TextBox nhập OTP -->
+        <Style x:Key="OTPTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Width" Value="50"/>
+            <Setter Property="Height" Value="60"/>
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="4,0"/>
+            <Setter Property="MaxLength" Value="1"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="BorderBrush" Value="#DDDDDD"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TextBox}">
+                        <Border x:Name="border" 
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True"
+                                CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost" 
+                                          Focusable="False" 
+                                          HorizontalScrollBarVisibility="Hidden" 
+                                          VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="BorderBrush" Value="#4F74FF"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,2"/>
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="true">
+                                <Setter Property="BorderBrush" Value="#4F74FF"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Style cho nút xác nhận -->
+        <Style x:Key="VerifyButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#4F74FF"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Height" Value="45"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="border" 
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True"
+                                CornerRadius="6">
+                            <ContentPresenter x:Name="contentPresenter" 
+                                              Focusable="False"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              Margin="{TemplateBinding Padding}"
+                                              RecognizesAccessKey="True"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#3A5FE0"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#2E4BB3"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#CCCCCC"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border BorderThickness="1" BorderBrush="#DDDDDD">
+        <Grid Margin="0,0,0,-19">
+            <!-- Nút đóng -->
+            <Button x:Name="btnClose" 
+                    Content="✕" 
+                    HorizontalAlignment="Right" 
+                    VerticalAlignment="Top" 
+                    Width="24" Height="24" 
+                    Margin="0,10,10,0"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Foreground="#AAAAAA"
+                    FontSize="14"
+                    Click="btnClose_Click"/>
+
+            <!-- Nội dung chính -->
+            <StackPanel Margin="30,40,30,30">
+                <!-- Icon -->
+                <Border Width="70" Height="70"
+                        Background="#F0F4FF"
+                        CornerRadius="35"
+                        Margin="0,0,0,25">
+                    <TextBlock Text="🔒" 
+                               FontSize="30" 
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Tiêu đề -->
+                <TextBlock Text="XÁC THỰC OTP" 
+                           FontSize="22" FontWeight="Bold" 
+                           Foreground="#333333"
+                           HorizontalAlignment="Center" 
+                           Margin="0,0,0,15"/>
+
+                <!-- Mô tả -->
+                <TextBlock TextWrapping="Wrap" 
+                           TextAlignment="Center"
+                           Margin="0,0,0,30">
+                    <Run Text="Vui lòng nhập mã OTP gồm 6 chữ số đã được gửi đến" Foreground="#666666"/>
+                    <LineBreak/>
+                    <Run Text="email@example.com" Foreground="#333333" FontWeight="SemiBold"/>
+                </TextBlock>
+
+                <!-- Các ô nhập OTP -->
+                <StackPanel Orientation="Horizontal" 
+                            HorizontalAlignment="Center"
+                            Margin="0,10,0,10">
+                    <TextBox x:Name="otp1" Style="{StaticResource OTPTextBoxStyle}" PreviewTextInput="NumberValidationTextBox" MaxLength="1" TextChanged="OTP_TextChanged"/>
+                    <TextBox x:Name="otp2" Style="{StaticResource OTPTextBoxStyle}" PreviewTextInput="NumberValidationTextBox" MaxLength="1" TextChanged="OTP_TextChanged"/>
+                    <TextBox x:Name="otp3" Style="{StaticResource OTPTextBoxStyle}" PreviewTextInput="NumberValidationTextBox" MaxLength="1" TextChanged="OTP_TextChanged"/>
+                    <TextBox x:Name="otp4" Style="{StaticResource OTPTextBoxStyle}" PreviewTextInput="NumberValidationTextBox" MaxLength="1" TextChanged="OTP_TextChanged"/>
+                    <TextBox x:Name="otp5" Style="{StaticResource OTPTextBoxStyle}" PreviewTextInput="NumberValidationTextBox" MaxLength="1" TextChanged="OTP_TextChanged"/>
+                    <TextBox x:Name="otp6" Style="{StaticResource OTPTextBoxStyle}" PreviewTextInput="NumberValidationTextBox" MaxLength="1" TextChanged="OTP_TextChanged"/>
+                </StackPanel>
+
+                <!-- Thông báo lỗi -->
+                <TextBlock x:Name="txtError" 
+                           Foreground="#E53935" 
+                           TextAlignment="Center"
+                           Margin="0,10,0,0"
+                           Visibility="Collapsed"/>
+
+                <!-- Nút xác nhận -->
+                <Button x:Name="btnVerify" 
+                        Content="XÁC NHẬN" 
+                        Style="{StaticResource VerifyButtonStyle}"
+                        Margin="0,30,0,0"
+                        Click="btnVerify_Click"/>
+
+                <!-- Đếm ngược -->
+                <TextBlock Margin="0,15,0,0" 
+                           HorizontalAlignment="Center">
+                    <Run Text="Gửi lại mã sau " Foreground="#666666"/>
+                    <Run x:Name="countdownText" Text="01:30" Foreground="#4F74FF" FontWeight="SemiBold"/>
+                </TextBlock>
+
+                <!-- Gửi lại mã -->
+                <TextBlock Margin="0,5,0,0"
+                           TextAlignment="Center">
+                    <Hyperlink x:Name="resendLink" 
+                               TextDecorations="None"
+                               Foreground="#CCCCCC"
+                               IsEnabled="False"
+                               Click="resendLink_Click">
+                        Gửi lại mã
+                    </Hyperlink>
+                </TextBlock>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

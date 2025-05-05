@@ -5,31 +5,68 @@ using WpfApp1.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
+using System.Windows;
+using System.Text;
+using Firebase.Database;
+using Firebase.Database.Query;
+using System.Windows.Media;
+using Google.Cloud.Firestore;
+using Firebase.Database.Streaming;
+using System.Text;
+using System.Security.Cryptography;
+using System.Text;
+using System.Reactive.Linq;
 
 namespace WpfApp1.ViewModels
 {
     public partial class ChatViewModel : ObservableObject
     {
-        // Collections for data binding
         public ObservableCollection<Message> Messages { get; set; }
         public ObservableCollection<Contact> Contacts { get; set; }
         public ObservableCollection<FileItem> Files { get; set; }
 
         [ObservableProperty]
-        private string _newMessageText; // Đặt attribute trên field private
+        private string _newMessageText;
 
+        private IDisposable messageSubscription;
+        private FirebaseClient firebaseClient;
+        private string currentUserId;
 
         [ObservableProperty]
-        private Contact _selectedContact; 
+        private Contact _selectedContact;
+
+        public User userdata;
+        private List<IDisposable> allMessageSubscriptions = new List<IDisposable>();
 
         partial void OnSelectedContactChanged(Contact value)
         {
-           
-            // Gọi phương thức tải tin nhắn tương ứng với contact mới ('value')
-            LoadMessagesForContact(value);
-            LoadFilesForContact(value);
+            // Thông báo cho Command cập nhật trạng thái có thể thực thi
+            SendMessageCommand.NotifyCanExecuteChanged();
+
+            // Nếu đã chọn một contact, tải tin nhắn của contact đó
+            if (value != null)
+            {
+                LoadMessagesForContact(value);
+            }
+            else
+            {
+                // Nếu không có contact nào được chọn, xóa danh sách tin nhắn
+                Messages.Clear();
+                Files.Clear();
+
+                // Hủy đăng ký lắng nghe tin nhắn nếu có
+                if (messageSubscription != null)
+                {
+                    messageSubscription.Dispose();
+                    messageSubscription = null;
+                }
+            }
         }
-        // Constructor
+        partial void OnNewMessageTextChanged(string value)
+        {
+            SendMessageCommand.NotifyCanExecuteChanged();
+        }
+
         public ChatViewModel()
         {
             Messages = new ObservableCollection<Message>();
@@ -37,98 +74,246 @@ namespace WpfApp1.ViewModels
             Files = new ObservableCollection<FileItem>();
 
             SelectedContact = null;
-            NewMessageText = string.Empty; // Initialize input property
+            NewMessageText = string.Empty;
 
-            // Load sample data
+            firebaseClient = new FirebaseClient("https://fir-5b855-default-rtdb.firebaseio.com");
+
+            userdata= SharedData.Instance.userdata;
+            SelectedContact = null;
+            NewMessageText = string.Empty;
+
             LoadInitialData();
         }
 
-        // Executes when SendCommand is triggered
-        [RelayCommand]
-        private void SendMessage()
+
+        // Bổ sung phương thức để dọn dẹp tài nguyên khi đóng ứng dụng
+        public void Cleanup()
+        {
+            // Hủy tất cả các subscription để tránh rò rỉ bộ nhớ
+            foreach (var subscription in allMessageSubscriptions)
+            {
+                subscription?.Dispose();
+            }
+            allMessageSubscriptions.Clear();
+
+            messageSubscription?.Dispose();
+            messageSubscription = null;
+        }
+
+        // Phương thức để tải lại tin nhắn khi cần thiết
+        public void RefreshMessages()
+        {
+            if (SelectedContact != null)
+            {
+                LoadMessagesForContact(SelectedContact);
+            }
+        }
+        private async void LoadMessagesForContact(Contact contact)
+        {
+            // Xóa danh sách tin nhắn hiện tại
+            Messages.Clear();
+
+            // Dừng subscription cũ nếu có
+            if (messageSubscription != null)
+            {
+                messageSubscription.Dispose();
+                messageSubscription = null;
+            }
+
+            // Kiểm tra contact có tồn tại không
+            if (contact == null || string.IsNullOrEmpty(contact.chatID))
+            {
+                Debug.WriteLine("Contact không hợp lệ hoặc không có chatID");
+                return;
+            }
+
+            var roomId = contact.chatID;
+            Debug.WriteLine($"Đang tải tin nhắn cho chatID: {roomId}");
+
+            try
+            {
+                // 1. Tải tin nhắn cũ từ Firebase
+                var messagesQuery = await firebaseClient
+                    .Child("messages")
+                    .Child(roomId)
+                    .OrderByKey()
+                    .LimitToLast(100)  // Giới hạn 100 tin nhắn gần nhất để tránh quá tải
+                    .OnceAsync<Message>();
+
+                if (messagesQuery != null)
+                {
+                    var oldMessages = messagesQuery
+                        .Select(item => {
+                            var msg = item.Object;
+                            msg.Id = item.Key;  // Đặt Id là khóa của tin nhắn trong Firebase
+                            msg.IsMine = msg.SenderId == SharedData.Instance.userdata.Email;  // Đặt IsMine dựa trên SenderId
+                            msg.Alignment = msg.IsMine ? "Right" : "Left";  // Đặt Alignment
+                            return msg;
+                        })
+                        .OrderBy(m => m.Timestamp)
+                        .ToList();
+
+                    Debug.WriteLine($"Đã tải {oldMessages.Count} tin nhắn cũ");
+
+                    Application.Current.Dispatcher.Invoke(() => {
+                        foreach (var message in oldMessages)
+                        {
+                            Messages.Add(message);
+                        }
+                    });
+                }
+
+                // 2. Đăng ký lắng nghe tin nhắn mới
+                messageSubscription = firebaseClient
+                    .Child("messages")
+                    .Child(roomId)
+                    .AsObservable<Message>()
+                    .Subscribe(messageEvent => {
+                        if (messageEvent.EventType == FirebaseEventType.InsertOrUpdate && messageEvent.Object != null)
+                        {
+                            var message = messageEvent.Object;
+                            message.Id = messageEvent.Key;  // Đặt Id là khóa Firebase
+                            message.IsMine = message.SenderId == SharedData.Instance.userdata.Email;  // Đặt IsMine dựa trên SenderId
+                            message.Alignment = message.IsMine ? "Right" : "Left";  // Đặt Alignment
+
+                            // Chỉ thêm tin nhắn từ đối phương hoặc cập nhật nếu không phải của mình
+                            if (!message.IsMine || Messages.Any(m => m.Id == message.Id))
+                            {
+                                Application.Current.Dispatcher.Invoke(() => {
+                                    int existingIndex = -1;
+                                    for (int i = 0; i < Messages.Count; i++)
+                                    {
+                                        if (Messages[i].Id == message.Id)
+                                        {
+                                            existingIndex = i;
+                                            break;
+                                        }
+                                    }
+
+                                    if (existingIndex >= 0)
+                                    {
+                                        Messages[existingIndex] = message;
+                                        Debug.WriteLine($"Đã cập nhật tin nhắn: {message.Id}");
+                                    }
+                                    else if (!message.IsMine) // Chỉ thêm tin nhắn từ đối phương
+                                    {
+                                        int insertIndex = 0;
+                                        while (insertIndex < Messages.Count && Messages[insertIndex].Timestamp < message.Timestamp)
+                                        {
+                                            insertIndex++;
+                                        }
+                                        Messages.Insert(insertIndex, message);
+                                        Debug.WriteLine($"Đã thêm tin nhắn mới: {message.Id} tại vị trí {insertIndex}");
+                                    }
+                                });
+                            }
+                        }
+                        else if (messageEvent.EventType == FirebaseEventType.Delete)
+                        {
+                            Application.Current.Dispatcher.Invoke(() => {
+                                var messageToRemove = Messages.FirstOrDefault(m => m.Id == messageEvent.Key);
+                                if (messageToRemove != null)
+                                {
+                                    Messages.Remove(messageToRemove);
+                                    Debug.WriteLine($"Đã xóa tin nhắn: {messageEvent.Key}");
+                                }
+                            });
+                        }
+                    }, ex => {
+                        Debug.WriteLine($"Lỗi khi lắng nghe tin nhắn: {ex.Message}");
+                    });
+
+                // Lưu subscription để có thể dọn dẹp sau này
+                allMessageSubscriptions.Add(messageSubscription);
+
+                // Tải danh sách tệp tin nếu có
+                LoadFilesForContact(contact);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Lỗi trong LoadMessagesForContact: {ex.Message}");
+                MessageBox.Show($"Không thể tải tin nhắn: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private void LoadMessageForAllContact(List<Contact> contacts)
+        {
+            foreach (var contact in contacts)
+            {
+                LoadMessagesForContact(contact);
+            }
+        }
+        private void LoadFilesForContact(Contact contact)
+        {
+            Files.Clear();
+
+            if (contact == null) return; 
+        }
+        [RelayCommand(CanExecute = nameof(CanSendMessage))]
+        private async void SendMessage(Contact contact)
         {
             if (!string.IsNullOrWhiteSpace(NewMessageText))
             {
                 var newMessage = new Message
                 {
+                    SenderId = SharedData.Instance.userdata.Email,
                     Content = this.NewMessageText,
+                    Timestamp = DateTime.UtcNow,
                     IsMine = true,
-                    // Timestamp = DateTime.Now // Uncomment if Message.cs has Timestamp
                 };
+                await firebaseClient
+                .Child("messages")
+                .Child(contact.chatID)
+                .PostAsync(newMessage);
+
                 Messages.Add(newMessage);
-                NewMessageText = string.Empty; // Clear input property
+                NewMessageText = string.Empty;
             }
         }
 
-        private void LoadMessagesForContact(Contact contact)
+        private bool CanSendMessage()
         {
-            Messages.Clear(); // Xóa tin nhắn cũ
-            if (contact == null) return;
-
-            // Logic tải tin nhắn
-            if (contact.Name == "Peter Griffin")
-            {
-                Messages.Add(new Message { Content = "Hey Lois", IsMine = false });
-                Messages.Add(new Message { Content = "Look what I found", IsMine = false });
-                Messages.Add(new Message { Content = "Yes, Peter", IsMine = true });
-            }
-            else if (contact.Name == "Lois Griffin")
-            {
-                Messages.Add(new Message { Content = "What is it Peter?", IsMine = false });
-                Messages.Add(new Message { Content = "Oh nothing.", IsMine = true });
-            }
-            else if (contact.Name == "Stewie Griffin")
-            {
-                Messages.Add(new Message { Content = "Silence vile woman!", IsMine = false });
-            }
-            else if (contact.Name == "Brian Griffin")
-            {
-                Messages.Add(new Message { Content = "Just reading. You?", IsMine = false });
-                Messages.Add(new Message { Content = "I am plotting.", IsMine = true });
-            }
+            return !string.IsNullOrWhiteSpace(NewMessageText)&&SelectedContact != null; 
         }
-
-        private void LoadFilesForContact(Contact contact)
+        public async Task<List<Contact>> GetContactsAsync(string email)
         {
-            Files.Clear(); // Xóa danh sách file cũ
+            if (string.IsNullOrEmpty(email))
+            {
+                //MessageBox.Show("Email bị null hoặc rỗng!"); // để kiểm tra nhanh
+                return new List<Contact>();
+            }
+            var db = FirestoreHelper.database;
+            var userDocRef = db.Collection("users").Document(email);
+            var contactsCollectionRef = userDocRef.Collection("contacts");
+            var contactsSnapshot = await contactsCollectionRef.GetSnapshotAsync();
 
-            if (contact == null) return; // Không có contact nào được chọn thì thôi
+            var contacts = new List<Contact>();
 
-            if (contact.Name == "Peter Griffin")
+            foreach (var contactDoc in contactsSnapshot.Documents)
             {
-                Files.Add(new FileItem { FileName = "XSTK.pdf", IconPathOrType = "pdf", FileInfo = "PDF - 2.1MB", FilePathOrUrl = "dummy" });
-                Files.Add(new FileItem { FileName = "baitap.png", IconPathOrType = "png", FileInfo = "PNG - 850KB", FilePathOrUrl = "dummy" });
+                var contact = contactDoc.ConvertTo<Contact>();
+                contacts.Add(contact);
             }
-            else if (contact.Name == "Lois Griffin")
-            {
-                Files.Add(new FileItem { FileName = "tiendien.xls", IconPathOrType = "xls", FileInfo = "TXT - 5KB", FilePathOrUrl = "dummy" });
-            }
-            else if (contact.Name == "Stewie Griffin")
-            {
-                Files.Add(new FileItem { FileName = "LAB01-LTMCB.docx", IconPathOrType = "docx", FileInfo = "DOCX - 128KB", FilePathOrUrl = "dummy" });
-                Files.Add(new FileItem { FileName = "multithread.ppt", IconPathOrType = "ppt", FileInfo = "PDF - 5.5MB", FilePathOrUrl = "dummy" });
-            }
+
+            return contacts;
         }
-
-        // Loads initial sample data
-        private void LoadInitialData()
+        private async void LoadInitialData()
         {
             Contacts.Clear();
-            // Sample Contacts
-            Contacts.Add(new Contact { Name = "Peter Griffin", AvatarUrl = "placeholder", LastMessage = "Hey Lois", IsOnline = true, LastMessageTime = DateTime.Now.AddMinutes(-5) });
-            Contacts.Add(new Contact { Name = "Lois Griffin", AvatarUrl = "placeholder", LastMessage = "What is it Peter?", IsOnline = false, LastMessageTime = DateTime.Now.AddMinutes(-6) });
-            Contacts.Add(new Contact { Name = "Stewie Griffin", AvatarUrl = "placeholder", LastMessage = "Victory is mine!", IsOnline = true, LastMessageTime = DateTime.Now.AddHours(-1) });
-            if (Contacts.Any())
+            List<Contact> contacts = await GetContactsAsync(SharedData.Instance.userdata.Email);
+            if (contacts.Count == 0)
             {
-                SelectedContact= Contacts[0];
+                //MessageBox.Show("No contacts found.");
+                return;
             }
+            foreach (var contact in contacts) Contacts.Add(contact);
+
+            if (Contacts.Any()) SelectedContact = Contacts[0];
             else
             {
                 SelectedContact = null;
                 Messages.Clear();
                 Files.Clear();
             }
-
         }
     }
 }

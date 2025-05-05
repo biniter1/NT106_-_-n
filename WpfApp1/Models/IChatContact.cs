@@ -2,7 +2,7 @@
 {
     public interface IChatContact
     {
-        string Id { get; set; }
+        string Email { get; set; }
         string Name { get; set; }
         string AvatarUrl { get; set; }
     }

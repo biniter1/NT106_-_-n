@@ -1,21 +1,37 @@
-﻿using System;
+﻿using System; // Cần cho DateTime nếu bạn dùng
+using Google.Cloud.Firestore;
 
-namespace WpfApp1.Models
+namespace WpfApp1.Models // Đảm bảo namespace khớp với cấu trúc thư mục của bạn
 {
+
+    [FirestoreData]
     public class Contact
     {
-        public string Id { get; set; }
-        public string AvatarUrl { get; set; }
-        public string Name { get; set; }
-        public string LastMessage { get; set; }
-        public DateTime? LastMessageTime { get; set; }
-
-        // Trạng thái online
-        public bool IsOnline { get; set; }    
-       
         public Contact()
         {
             IsOnline = false;
         }
+
+        [FirestoreProperty]
+        public string AvatarUrl { get; set; }
+
+        [FirestoreProperty]
+        public string Name { get; set; }
+
+        [FirestoreProperty]
+        public string Email { get; set; }
+
+        [FirestoreProperty]
+        public string LastMessage { get; set; }
+
+        [FirestoreProperty]
+        public DateTime? LastMessageTime { get; set; }
+
+        [FirestoreProperty]
+        public bool IsOnline { get; set; }
+
+        [FirestoreProperty]
+        public string chatID { get; set; }
+
     }
 }

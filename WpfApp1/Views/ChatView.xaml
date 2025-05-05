@@ -205,7 +205,7 @@
                             </TextBox.Style>
                         </TextBox>
                     </Border>
-                    <Button Grid.Column="1" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="Send" Command="{Binding SendMessageCommand}">
+                    <Button Grid.Column="1" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="Send" Command="{Binding SendMessageCommand}" CommandParameter="{Binding SelectedContact}">
                         <TextBlock Text="&#xE122;" Margin="0,15,0,0" FontFamily="Segoe Fluent Icons" FontSize="20" Foreground="{StaticResource PrimaryBrush}">
                             <TextBlock.RenderTransform>
                                 <RotateTransform Angle="-45"/>

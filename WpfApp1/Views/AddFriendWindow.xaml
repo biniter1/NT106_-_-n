@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WpfApp1.Views"
         xmlns:viewModels="clr-namespace:WpfApp1.ViewModels"
+        xmlns:models="clr-namespace:WpfApp1.Models"
         mc:Ignorable="d"
         Title="Thêm bạn bè" Height="500" Width="450"
         WindowStartupLocation="CenterOwner"
@@ -155,10 +156,37 @@
                                                FontWeight="SemiBold"/>
 
                                     <Button Grid.Column="2"
-                                            Content="Kết bạn"
-                                            Style="{StaticResource SecondaryButtonStyle}"
-                                            Command="{Binding DataContext.AddFriendCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                            CommandParameter="{Binding}"/>
+        x:Name="ActionButton" MinWidth="80"         Command="{Binding DataContext.AddFriendCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+        CommandParameter="{Binding}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+                                                <Setter Property="Content" Value="Kết bạn"/>
+                                                <Setter Property="IsEnabled" Value="True"/>
+
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static models:FriendStatus.Friend}">
+                                                        <Setter Property="Content" Value="Bạn bè"/>
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+
+                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static models:FriendStatus.RequestSent}">
+                                                        <Setter Property="Content" Value="Đã gửi"/>
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+
+                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static models:FriendStatus.RequestReceived}">
+                                                        <Setter Property="Content" Value="Phản hồi"/>
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+
+                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static models:FriendStatus.Unknown}">
+                                                        <Setter Property="Content" Value="---"/>
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                 </Grid>
                             </Border>
                         </DataTemplate>

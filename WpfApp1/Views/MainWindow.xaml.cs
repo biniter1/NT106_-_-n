@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using WpfApp1.Models;
 using WpfApp1.ViewModels;
 using WpfApp1.Views;
 
@@ -19,7 +20,8 @@ namespace WpfApp1
     /// </summary>
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        string CurrentEmail;
+        public MainWindow(string email)
         {
             InitializeComponent();
             var viewModel = new MainViewModel();
@@ -36,8 +38,31 @@ namespace WpfApp1
 
             //}
             //// ============================
+            ///
+            CurrentEmail=email;
+            LoadDataCurrentUser(email);
         }
-
+        public async void LoadDataCurrentUser(string eamil)
+        {
+            var db=FirestoreHelper.database;
+            var doc = db.Collection("users").Document(eamil);
+            var snap=await doc.GetSnapshotAsync();
+            if (snap.Exists)
+            {
+                var user=snap.ConvertTo<User>();
+                SharedData.Instance.userdata.Ho=user.Ho;
+                SharedData.Instance.userdata.Name = user.Name;
+                SharedData.Instance.userdata.Email = user.Email;
+                SharedData.Instance.userdata.Password = user.Password;
+                SharedData.Instance.userdata.Username = user.Username;
+                SharedData.Instance.userdata.Phone = user.Phone;
+                SharedData.Instance.userdata.gender=user.gender;
+                SharedData.Instance.userdata.DateTime = user.DateTime;  
+                SharedData.Instance.userdata.Address = user.Address;
+                SharedData.Instance.userdata.IdToken = user.IdToken;    
+                SharedData.Instance.userdata.AvatarUrl = user.AvatarUrl;    
+            }
+        }
         //// Xử lý sự kiện khi collection Messages thay đổi
         //private void Messages_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         //{
@@ -65,15 +90,15 @@ namespace WpfApp1
         //    }
         //}
 
-        
-         //protected override void OnClosed(EventArgs e)
-         //{
-         //    if (this.DataContext is ChatViewModel viewModel && viewModel.Messages is INotifyCollectionChanged notifyCollection)
-         //   {
-         //       notifyCollection.CollectionChanged -= Messages_CollectionChanged;
-         //    }
-         //    base.OnClosed(e);
-         //}
+
+        //protected override void OnClosed(EventArgs e)
+        //{
+        //    if (this.DataContext is ChatViewModel viewModel && viewModel.Messages is INotifyCollectionChanged notifyCollection)
+        //   {
+        //       notifyCollection.CollectionChanged -= Messages_CollectionChanged;
+        //    }
+        //    base.OnClosed(e);
+        //}
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {

@@ -3,39 +3,32 @@ using WpfApp1.Models; // Namespace chứa Contact và IChatContact
 
 namespace WpfApp1.ViewModels
 {
-    // FriendViewModel wrap Contact Model và implement IChatContact
     public partial class FriendViewModel : ObservableObject, IChatContact
     {
-        private readonly Contact _contactModel; // Giữ tham chiếu đến Contact Model
+        private readonly FriendData _FriendModel;
 
-        // Expose các thuộc tính từ Contact Model
-        public string Id => _contactModel.Id;
-        public string Name => _contactModel.Name;
-        public string AvatarUrl => _contactModel.AvatarUrl;
+        public string Email => _FriendModel.Email;
+        public string Name => _FriendModel.Name;
+        public string AvatarUrl => _FriendModel.AvatarUrl;
 
-        // Expose IsOnline và làm nó Observable nếu cần cập nhật động từ VM
         [ObservableProperty]
         private bool _isOnline;
 
-        // Constructor nhận Contact Model
-        public FriendViewModel(Contact contactModel)
+        public FriendViewModel(FriendData friendModel)
         {
-            _contactModel = contactModel ?? throw new ArgumentNullException(nameof(contactModel));
-            _isOnline = contactModel.IsOnline; // Khởi tạo giá trị ban đầu
-            // TODO: Cập nhật IsOnline nếu trạng thái thay đổi qua SignalR/Polling,...
+            _FriendModel = friendModel ?? throw new ArgumentNullException(nameof(friendModel));
+            _isOnline = friendModel.IsOnline;
         }
 
-        // Triển khai IChatContact properties (nếu cần set thì phải thêm logic)
-        string IChatContact.Id { get => Id; set { /* No set needed from interface typically */ } }
+        string IChatContact.Email { get => Email; set { } }
         string IChatContact.Name { get => Name; set { } }
         string IChatContact.AvatarUrl { get => AvatarUrl; set { } }
 
-        // Phương thức để lấy Model gốc nếu cần trong Command
-        public Contact GetModel() => _contactModel;
+        public FriendData GetModel() => _FriendModel;
 
         public override string ToString()
         {
-            return $"FriendVM: {Name} ({Id})";
+            return $"FriendVM: {Name} ({Email})";
         }
     }
 }
