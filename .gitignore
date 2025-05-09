@@ -8,6 +8,7 @@ obj/
 *.suo
 *.userosscache
 *.sln.docstates
+firebase-credentials.json
 
 # Mono Auto Generated Files
 mono_crash.*
