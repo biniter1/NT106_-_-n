@@ -278,36 +278,66 @@ namespace WpfApp1.ViewModels
         {
             if (string.IsNullOrEmpty(email))
             {
-                //MessageBox.Show("Email bị null hoặc rỗng!"); // để kiểm tra nhanh
+                Debug.WriteLine("Email is null or empty!");
                 return new List<Contact>();
             }
-            var db = FirestoreHelper.database;
-            var userDocRef = db.Collection("users").Document(email);
-            var contactsCollectionRef = userDocRef.Collection("contacts");
-            var contactsSnapshot = await contactsCollectionRef.GetSnapshotAsync();
 
-            var contacts = new List<Contact>();
-
-            foreach (var contactDoc in contactsSnapshot.Documents)
+            try
             {
-                var contact = contactDoc.ConvertTo<Contact>();
-                contacts.Add(contact);
-            }
+                var db = FirestoreHelper.database;
+                if (db == null)
+                {
+                    Debug.WriteLine("Firestore database is not initialized!");
+                    return new List<Contact>();
+                }
 
-            return contacts;
+                var userDocRef = db.Collection("users").Document(email);
+                var contactsCollectionRef = userDocRef.Collection("contacts");
+                var contactsSnapshot = await contactsCollectionRef.GetSnapshotAsync();
+
+                var contacts = new List<Contact>();
+
+                foreach (var contactDoc in contactsSnapshot.Documents)
+                {
+                    var contact = contactDoc.ConvertTo<Contact>();
+                    contacts.Add(contact);
+                }
+
+                Debug.WriteLine($"Loaded {contacts.Count} contacts for user {email}");
+                return contacts;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading contacts: {ex.Message}");
+                return new List<Contact>();
+            }
         }
         private async void LoadInitialData()
         {
             Contacts.Clear();
-            List<Contact> contacts = await GetContactsAsync(SharedData.Instance.userdata.Email);
+            Debug.WriteLine($"Loading contacts for user: {SharedData.Instance.userdata?.Email}");
+
+            List<Contact> contacts = await GetContactsAsync(SharedData.Instance.userdata?.Email);
             if (contacts.Count == 0)
             {
-                //MessageBox.Show("No contacts found.");
+                Debug.WriteLine("No contacts found for the user.");
+                MessageBox.Show("No contacts found.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                SelectedContact = null;
+                Messages.Clear();
+                Files.Clear();
                 return;
             }
-            foreach (var contact in contacts) Contacts.Add(contact);
 
-            if (Contacts.Any()) SelectedContact = Contacts[0];
+            foreach (var contact in contacts)
+            {
+                Contacts.Add(contact);
+            }
+
+            if (Contacts.Any())
+            {
+                SelectedContact = Contacts[0];
+                Debug.WriteLine($"Set SelectedContact to: {SelectedContact?.Name}");
+            }
             else
             {
                 SelectedContact = null;

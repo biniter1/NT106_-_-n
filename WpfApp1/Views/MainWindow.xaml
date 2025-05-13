@@ -58,7 +58,7 @@
 
     </Window.Resources>
 
-    <Grid>
+    <Grid x:Name="chatGrid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="60"/>
             <ColumnDefinition Width="*"/>

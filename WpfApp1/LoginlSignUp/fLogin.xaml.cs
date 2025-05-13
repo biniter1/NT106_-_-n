@@ -49,14 +49,13 @@ namespace WpfApp1.LoginlSignUp
 
         private async void LoginButton_Click(object sender, RoutedEventArgs e)
         {
-
             string email = txtUsername.Text.Trim();
             string password = txtPassword.Password.Trim();
 
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
                 MessageBox.Show("Vui lòng nhập đầy đủ thông tin đăng nhập!", "Thông báo",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -65,7 +64,8 @@ namespace WpfApp1.LoginlSignUp
                 var db = FirestoreHelper.database;
                 if (db == null)
                 {
-                    MessageBox.Show("Không thể kết nối đến cơ sở dữ liệu!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("Không thể kết nối đến cơ sở dữ liệu!", "Lỗi",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
@@ -74,7 +74,8 @@ namespace WpfApp1.LoginlSignUp
 
                 if (!snapshot.Exists)
                 {
-                    MessageBox.Show("Tài khoản không tồn tại!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("Tài khoản không tồn tại!", "Lỗi",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
@@ -82,19 +83,27 @@ namespace WpfApp1.LoginlSignUp
                 string decryptedPassword = data.Password;
                 if (password != decryptedPassword)
                 {
-                    MessageBox.Show("Mật khẩu không chính xác!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("Mật khẩu không chính xác!", "Lỗi",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
-                // Kiểm tra xác thực email
+                // Step 1: Sign in with Firebase Authentication to get a fresh idToken
+                string idToken = await SignInWithFirebase(email, password);
+                if (string.IsNullOrEmpty(idToken))
+                {
+                    return; // Error message already shown in SignInWithFirebase
+                }
+
+                // Step 2: Check email verification status with the fresh idToken
                 using (HttpClient client = new HttpClient())
                 {
-                    string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg"; // dùng từ project của bạn
+                    string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg";
                     string url = $"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={apiKey}";
 
                     var lookupPayload = new
                     {
-                        idToken = data.IdToken // Bạn cần lưu token khi người dùng đăng ký xong
+                        idToken = idToken
                     };
 
                     var content = new StringContent(JsonConvert.SerializeObject(lookupPayload), Encoding.UTF8, "application/json");
@@ -108,28 +117,73 @@ namespace WpfApp1.LoginlSignUp
 
                         if (!emailVerified)
                         {
-                            MessageBox.Show("Email của bạn chưa được xác minh. Vui lòng kiểm tra hộp thư!", "Xác minh Email", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            MessageBox.Show("Email của bạn chưa được xác minh. Vui lòng kiểm tra hộp thư!", "Xác minh Email",
+                                MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
                     }
                     else
                     {
-                        MessageBox.Show("Không thể kiểm tra trạng thái email xác thực.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBox.Show($"Không thể kiểm tra trạng thái email xác thực. Chi tiết lỗi: {result}", "Lỗi",
+                            MessageBoxButton.OK, MessageBoxImage.Error);
                         return;
                     }
                 }
 
                 // Đăng nhập thành công
-                MessageBox.Show("Đăng nhập thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Đăng nhập thành công!", "Thông báo",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
                 this.Hide();
                 MainWindow main = new MainWindow(email);
                 main.Show();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Lỗi: " + ex.Message, "Lỗi",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
 
+        private async Task<string> SignInWithFirebase(string email, string password)
+        {
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg";
+                    string url = $"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={apiKey}";
+
+                    var signInPayload = new
+                    {
+                        email = email,
+                        password = password,
+                        returnSecureToken = true
+                    };
+
+                    var content = new StringContent(JsonConvert.SerializeObject(signInPayload), Encoding.UTF8, "application/json");
+                    var response = await client.PostAsync(url, content);
+                    string result = await response.Content.ReadAsStringAsync();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        dynamic resJson = JsonConvert.DeserializeObject(result);
+                        string idToken = resJson.idToken;
+                        return idToken;
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Đăng nhập Firebase thất bại. Chi tiết lỗi: {result}", "Lỗi",
+                            MessageBoxButton.OK, MessageBoxImage.Error);
+                        return null;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi đăng nhập Firebase: {ex.Message}", "Lỗi",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return null;
+            }
         }
 
         private void ForgotPassword_Click(object sender, MouseButtonEventArgs e)

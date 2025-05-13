@@ -1,4 +1,5 @@
 ﻿using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,84 +22,52 @@ namespace WpfApp1
     public partial class MainWindow : Window
     {
         string CurrentEmail;
+
         public MainWindow(string email)
         {
             InitializeComponent();
-            var viewModel = new MainViewModel();
-            this.DataContext = viewModel;
-            //// === THÊM CODE TỰ ĐỘNG CUỘN ===
-            //// Kiểm tra xem ViewModel và Messages collection có hợp lệ không
-            //if (viewModel.Messages is INotifyCollectionChanged notifyCollection)
-            //{
-            //    // Đăng ký sự kiện CollectionChanged
-            //    notifyCollection.CollectionChanged += Messages_CollectionChanged;
-
-            //    // Xử lý trường hợp ScrollViewer được load sau ListBox (an toàn hơn)
-            //    MessagesScrollViewer.Loaded += (s, e) => ScrollToBottomAfterLoad(notifyCollection);
-
-            //}
-            //// ============================
-            ///
-            CurrentEmail=email;
-            LoadDataCurrentUser(email);
+            CurrentEmail = email;
+            Loaded += MainWindow_Loaded; // Use Loaded event to ensure UI is ready
         }
-        public async void LoadDataCurrentUser(string eamil)
+
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            var db=FirestoreHelper.database;
-            var doc = db.Collection("users").Document(eamil);
-            var snap=await doc.GetSnapshotAsync();
+            await LoadDataCurrentUser(CurrentEmail);
+
+            // Initialize ChatViewModel after user data is loaded
+            var chatView = new ChatView
+            {
+                DataContext = new ChatViewModel()
+            };
+            //chatGrid.Children.Add(chatView); // Replace "chatGrid" with the actual Grid name in XAML
+
+            var mainViewModel = new MainViewModel();
+            this.DataContext = mainViewModel;
+        }
+
+        public async Task LoadDataCurrentUser(string email)
+        {
+            var db = FirestoreHelper.database;
+            if (db == null)
+            {
+                MessageBox.Show("Firestore database is not initialized!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var doc = db.Collection("users").Document(email);
+            var snap = await doc.GetSnapshotAsync();
             if (snap.Exists)
             {
-                var user=snap.ConvertTo<User>();
-                SharedData.Instance.userdata.Ho=user.Ho;
-                SharedData.Instance.userdata.Name = user.Name;
-                SharedData.Instance.userdata.Email = user.Email;
-                SharedData.Instance.userdata.Password = user.Password;
-                SharedData.Instance.userdata.Username = user.Username;
-                SharedData.Instance.userdata.Phone = user.Phone;
-                SharedData.Instance.userdata.gender=user.gender;
-                SharedData.Instance.userdata.DateTime = user.DateTime;  
-                SharedData.Instance.userdata.Address = user.Address;
-                SharedData.Instance.userdata.IdToken = user.IdToken;    
-                SharedData.Instance.userdata.AvatarUrl = user.AvatarUrl;    
+                var user = snap.ConvertTo<User>();
+                SharedData.Instance.userdata = user; // Assign the entire user object
+                Debug.WriteLine($"Loaded user data for: {user.Email}");
+            }
+            else
+            {
+                Debug.WriteLine($"User document not found for email: {email}");
+                MessageBox.Show($"User not found for email: {email}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        //// Xử lý sự kiện khi collection Messages thay đổi
-        //private void Messages_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-        //{
-        //    // Chỉ xử lý khi có item mới được thêm vào
-        //    if (e.Action == NotifyCollectionChangedAction.Add)
-        //    {
-        //        // Dispatcher.InvokeAsync để đảm bảo việc cuộn xảy ra trên UI thread
-        //        // và sau khi layout đã được cập nhật
-        //        Dispatcher.InvokeAsync(() =>
-        //        {
-        //            MessagesScrollViewer.ScrollToBottom();
-        //        });
-        //    }
-        //}
-
-        //// Hàm phụ trợ để cuộn xuống khi control được load (nếu có item ban đầu)
-        //private void ScrollToBottomAfterLoad(INotifyCollectionChanged collection)
-        //{
-        //    if (collection is System.Collections.ICollection { Count: > 0 }) // Kiểm tra collection có item không
-        //    {
-        //        Dispatcher.InvokeAsync(() =>
-        //        {
-        //            MessagesScrollViewer.ScrollToBottom();
-        //        });
-        //    }
-        //}
-
-
-        //protected override void OnClosed(EventArgs e)
-        //{
-        //    if (this.DataContext is ChatViewModel viewModel && viewModel.Messages is INotifyCollectionChanged notifyCollection)
-        //   {
-        //       notifyCollection.CollectionChanged -= Messages_CollectionChanged;
-        //    }
-        //    base.OnClosed(e);
-        //}
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
