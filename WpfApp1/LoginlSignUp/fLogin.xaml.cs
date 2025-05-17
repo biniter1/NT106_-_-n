@@ -1,28 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using Newtonsoft.Json;
 using WpfApp1.Models;
+using System.Security.Cryptography;
+using System.Runtime.InteropServices;
+using System.Net.NetworkInformation;
 
 namespace WpfApp1.LoginlSignUp
 {
-    /// <summary>
-    /// Interaction logic for fLogin.xaml
-    /// </summary>
     public partial class fLogin : Window
     {
+        private const string CREDENTIAL_KEY = "WpfApp1_RefreshToken";
+
         public fLogin()
         {
             InitializeComponent();
@@ -32,17 +27,88 @@ namespace WpfApp1.LoginlSignUp
                     this.DragMove();
             };
             txtUsername.Focus();
+
+            Loaded += async (s, e) =>
+            {
+                if (!IsNetworkAvailable())
+                {
+                    MessageBox.Show("Không có kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.", "Lỗi kết nối",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Kiểm tra xem có Refresh Token không
+                string refreshToken = RetrieveRefreshToken();
+                if (!string.IsNullOrEmpty(refreshToken))
+                {
+                    // Ẩn form đăng nhập ngay lập tức
+                    this.Opacity = 0;
+
+                    // Hiển thị form "Đang đăng nhập"
+                    LoadingForm loadingForm = new LoadingForm();
+                    loadingForm.Show();
+
+                    try
+                    {
+                        await AutoLoginAsync();
+                        loadingForm.CloseWithFadeOut();
+                    }
+                    catch (Exception ex)
+                    {
+                        loadingForm.CloseWithFadeOut();
+                        this.Opacity = 1; // Hiển thị lại form đăng nhập
+                        MessageBox.Show("Không thể tự động đăng nhập. Vui lòng đăng nhập thủ công.\nChi tiết lỗi: " + ex.Message,
+                            "Lỗi tự động đăng nhập", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+                else
+                {
+                }
+            };
         }
+
+        private async Task AutoLoginAsync()
+        {
+            try
+            {
+                string refreshToken = RetrieveRefreshToken();
+                if (!string.IsNullOrEmpty(refreshToken))
+                {
+                    string idToken = await RefreshIdToken(refreshToken);
+                    if (!string.IsNullOrEmpty(idToken))
+                    {
+                        // Get email from Firebase using idToken
+                        string email = await GetEmailFromIdToken(idToken);
+                        if (!string.IsNullOrEmpty(email))
+                        {
+                            this.Hide();
+                            SuccessPopup successPopup = new SuccessPopup();
+                            successPopup.Closed += (s, args) =>
+                            {
+                                MainWindow main = new MainWindow(email);
+                                main.Show();
+                            };
+                            successPopup.Show();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging
+                Console.WriteLine($"Auto login error: {ex.Message}");
+                // If auto-login fails, proceed to manual login
+            }
+        }
+
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            // Hiệu ứng fade out khi đóng
             DoubleAnimation fadeOut = new DoubleAnimation
             {
                 From = 1,
                 To = 0,
                 Duration = TimeSpan.FromSeconds(0.3)
             };
-
             fadeOut.Completed += (s, _) => this.Close();
             this.BeginAnimation(UIElement.OpacityProperty, fadeOut);
         }
@@ -88,14 +154,14 @@ namespace WpfApp1.LoginlSignUp
                     return;
                 }
 
-                // Step 1: Sign in with Firebase Authentication to get a fresh idToken
-                string idToken = await SignInWithFirebase(email, password);
+                // Sign in with Firebase Authentication
+                (string idToken, string refreshToken) = await SignInWithFirebase(email, password);
                 if (string.IsNullOrEmpty(idToken))
                 {
-                    return; // Error message already shown in SignInWithFirebase
+                    return;
                 }
 
-                // Step 2: Check email verification status with the fresh idToken
+                // Check email verification status
                 using (HttpClient client = new HttpClient())
                 {
                     string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg";
@@ -130,12 +196,25 @@ namespace WpfApp1.LoginlSignUp
                     }
                 }
 
-                // Đăng nhập thành công
-                MessageBox.Show("Đăng nhập thành công!", "Thông báo",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                // Store refresh token if "Remember Me" is checked
+                if (chkRemember.IsChecked == true)
+                {
+                    StoreRefreshToken(refreshToken);
+                }
+                else
+                {
+                    ClearRefreshToken();
+                }
+
+                // Show success popup and proceed
                 this.Hide();
-                MainWindow main = new MainWindow(email);
-                main.Show();
+                SuccessPopup successPopup = new SuccessPopup();
+                successPopup.Closed += (s, args) =>
+                {
+                    MainWindow main = new MainWindow(email);
+                    main.Show();
+                };
+                successPopup.Show();
             }
             catch (Exception ex)
             {
@@ -144,7 +223,7 @@ namespace WpfApp1.LoginlSignUp
             }
         }
 
-        private async Task<string> SignInWithFirebase(string email, string password)
+        private async Task<(string idToken, string refreshToken)> SignInWithFirebase(string email, string password)
         {
             try
             {
@@ -168,13 +247,14 @@ namespace WpfApp1.LoginlSignUp
                     {
                         dynamic resJson = JsonConvert.DeserializeObject(result);
                         string idToken = resJson.idToken;
-                        return idToken;
+                        string refreshToken = resJson.refreshToken;
+                        return (idToken, refreshToken);
                     }
                     else
                     {
                         MessageBox.Show($"Đăng nhập Firebase thất bại. Chi tiết lỗi: {result}", "Lỗi",
                             MessageBoxButton.OK, MessageBoxImage.Error);
-                        return null;
+                        return (null, null);
                     }
                 }
             }
@@ -182,8 +262,130 @@ namespace WpfApp1.LoginlSignUp
             {
                 MessageBox.Show($"Lỗi khi đăng nhập Firebase: {ex.Message}", "Lỗi",
                     MessageBoxButton.OK, MessageBoxImage.Error);
+                return (null, null);
+            }
+        }
+
+        private async Task<string> RefreshIdToken(string refreshToken)
+        {
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg";
+                    string url = $"https://securetoken.googleapis.com/v1/token?key={apiKey}";
+
+                    var refreshPayload = new
+                    {
+                        grant_type = "refresh_token",
+                        refresh_token = refreshToken
+                    };
+
+                    var content = new StringContent(JsonConvert.SerializeObject(refreshPayload), Encoding.UTF8, "application/json");
+                    var response = await client.PostAsync(url, content);
+                    string result = await response.Content.ReadAsStringAsync();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        dynamic resJson = JsonConvert.DeserializeObject(result);
+                        string newRefreshToken = resJson.refresh_token;
+
+                        // Cập nhật refresh token mới vào storage nếu có
+                        if (!string.IsNullOrEmpty(newRefreshToken))
+                        {
+                            StoreRefreshToken(newRefreshToken);
+                        }
+
+                        return resJson.id_token;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging
+                Console.WriteLine($"Token refresh error: {ex.Message}");
+                // Clear invalid refresh token to prevent future failures
+                ClearRefreshToken();
+            }
+            return null;
+        }
+
+        private async Task<string> GetEmailFromIdToken(string idToken)
+        {
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg";
+                    string url = $"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={apiKey}";
+
+                    var lookupPayload = new
+                    {
+                        idToken = idToken
+                    };
+
+                    var content = new StringContent(JsonConvert.SerializeObject(lookupPayload), Encoding.UTF8, "application/json");
+                    var response = await client.PostAsync(url, content);
+                    string result = await response.Content.ReadAsStringAsync();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        dynamic resJson = JsonConvert.DeserializeObject(result);
+                        return resJson.users[0].email;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging
+                Console.WriteLine($"Email lookup error: {ex.Message}");
+            }
+            return null;
+        }
+
+        private void StoreRefreshToken(string refreshToken)
+        {
+            try
+            {
+                // Use Windows Credential Locker or secure storage
+                var bytes = Encoding.UTF8.GetBytes(refreshToken);
+                var protectedBytes = ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
+                Properties.Settings.Default.RefreshToken = Convert.ToBase64String(protectedBytes);
+                Properties.Settings.Default.Save();
+            }
+            catch (Exception ex)
+            {
+                // Log exception for debugging
+                Console.WriteLine($"Store refresh token error: {ex.Message}");
+                // Handle silently to avoid interrupting login
+            }
+        }
+
+        private string RetrieveRefreshToken()
+        {
+            try
+            {
+                string base64 = Properties.Settings.Default.RefreshToken;
+                if (string.IsNullOrEmpty(base64))
+                    return null;
+                var protectedBytes = Convert.FromBase64String(base64);
+                var bytes = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
+                return Encoding.UTF8.GetString(bytes);
+            }
+            catch (Exception ex)
+            {
+                // Log exception for debugging
+                Console.WriteLine($"Retrieve refresh token error: {ex.Message}");
+                // Clear corrupted refresh token
+                ClearRefreshToken();
                 return null;
             }
+        }
+
+        private void ClearRefreshToken()
+        {
+            Properties.Settings.Default.RefreshToken = null;
+            Properties.Settings.Default.Save();
         }
 
         private void ForgotPassword_Click(object sender, MouseButtonEventArgs e)
@@ -195,17 +397,23 @@ namespace WpfApp1.LoginlSignUp
 
         private void Register_Click(object sender, MouseButtonEventArgs e)
         {
-
-
-
             LoginlSignUp.fSignup register = new fSignup();
             register.Show();
             this.Close();
         }
-
+        private bool IsNetworkAvailable()
+        {
+            try
+            {
+                return NetworkInterface.GetIsNetworkAvailable();
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
         private void txtUsername_TextChanged(object sender, TextChangedEventArgs e)
         {
-
         }
     }
 }
