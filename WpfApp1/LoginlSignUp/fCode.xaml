@@ -10,6 +10,10 @@
         Background="White"
         ResizeMode="NoResize">
     <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
+            </ResourceDictionary.MergedDictionaries>
         <!-- Style cho TextBox nhập OTP -->
         <Style x:Key="OTPTextBoxStyle" TargetType="TextBox">
             <Setter Property="Width" Value="50"/>
@@ -93,13 +97,14 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        </ResourceDictionary>
     </Window.Resources>
 
     <Border BorderThickness="1" BorderBrush="#DDDDDD">
         <Grid Margin="0,0,0,-19">
             <!-- Nút đóng -->
             <Button x:Name="btnClose" 
-                    Content="✕" 
+                    Content="{DynamicResource CloseButton}" 
                     HorizontalAlignment="Right" 
                     VerticalAlignment="Top" 
                     Width="24" Height="24" 
@@ -111,32 +116,34 @@
                     Click="btnClose_Click"/>
 
             <!-- Nội dung chính -->
+            pronunciation: /ˈstæk ˈpænəl/
             <StackPanel Margin="30,40,30,30">
                 <!-- Icon -->
                 <Border Width="70" Height="70"
                         Background="#F0F4FF"
                         CornerRadius="35"
                         Margin="0,0,0,25">
-                    <TextBlock Text="🔒" 
+                    <TextBlock Text="{DynamicResource LockIcon}" 
                                FontSize="30" 
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
                 </Border>
 
                 <!-- Tiêu đề -->
-                <TextBlock Text="XÁC THỰC OTP" 
+                <TextBlock Text="{DynamicResource OTPHeader}" 
                            FontSize="22" FontWeight="Bold" 
                            Foreground="#333333"
                            HorizontalAlignment="Center" 
                            Margin="0,0,0,15"/>
 
                 <!-- Mô tả -->
-                <TextBlock TextWrapping="Wrap" 
+                <TextBlock x:Name="otpDescription" 
+                           TextWrapping="Wrap" 
                            TextAlignment="Center"
                            Margin="0,0,0,30">
-                    <Run Text="Vui lòng nhập mã OTP gồm 6 chữ số đã được gửi đến" Foreground="#666666"/>
+                    <Run Text="{DynamicResource OTPDescription}" Foreground="#666666"/>
                     <LineBreak/>
-                    <Run Text="email@example.com" Foreground="#333333" FontWeight="SemiBold"/>
+                    <Run x:Name="emailText" Text="{DynamicResource SampleEmail}" Foreground="#333333" FontWeight="SemiBold"/>
                 </TextBlock>
 
                 <!-- Các ô nhập OTP -->
@@ -160,7 +167,7 @@
 
                 <!-- Nút xác nhận -->
                 <Button x:Name="btnVerify" 
-                        Content="XÁC NHẬN" 
+                        Content="{DynamicResource VerifyButton}" 
                         Style="{StaticResource VerifyButtonStyle}"
                         Margin="0,30,0,0"
                         Click="btnVerify_Click"/>
@@ -168,8 +175,8 @@
                 <!-- Đếm ngược -->
                 <TextBlock Margin="0,15,0,0" 
                            HorizontalAlignment="Center">
-                    <Run Text="Gửi lại mã sau " Foreground="#666666"/>
-                    <Run x:Name="countdownText" Text="01:30" Foreground="#4F74FF" FontWeight="SemiBold"/>
+                    <Run Text="{DynamicResource ResendPrompt}" Foreground="#666666"/>
+                    <Run x:Name="countdownText" Text="{DynamicResource CountdownDefault}" Foreground="#4F74FF" FontWeight="SemiBold"/>
                 </TextBlock>
 
                 <!-- Gửi lại mã -->
@@ -180,7 +187,7 @@
                                Foreground="#CCCCCC"
                                IsEnabled="False"
                                Click="resendLink_Click">
-                        Gửi lại mã
+                        <Run Text="{DynamicResource ResendLink}"/>
                     </Hyperlink>
                 </TextBlock>
             </StackPanel>

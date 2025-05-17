@@ -235,13 +235,6 @@ namespace WpfApp1.ViewModels
                 MessageBox.Show($"Không thể tải tin nhắn: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        private void LoadMessageForAllContact(List<Contact> contacts)
-        {
-            foreach (var contact in contacts)
-            {
-                LoadMessagesForContact(contact);
-            }
-        }
         private void LoadFilesForContact(Contact contact)
         {
             Files.Clear();

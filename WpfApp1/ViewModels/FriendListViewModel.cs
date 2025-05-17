@@ -3,7 +3,7 @@ using System.Linq;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using WpfApp1.Models; // Namespace của Contact, Group, FriendRequest, IChatContact
+using WpfApp1.Models;
 using System.Collections.Generic;
 using System.Windows.Documents;
 using Google.Cloud.Firestore;
@@ -21,7 +21,7 @@ namespace WpfApp1.ViewModels
         [NotifyCanExecuteChangedFor(nameof(LeaveGroupCommand))]
         [NotifyCanExecuteChangedFor(nameof(SendMessageCommand))]
         private IChatContact _selectedContact; // Vẫn là IChatContact
-        public User userdata=SharedData.Instance.userdata;
+        public User userdata = SharedData.Instance.userdata;
 
         [ObservableProperty]
         private ObservableObject _currentViewModel;
@@ -94,7 +94,7 @@ namespace WpfApp1.ViewModels
             }
 
         }
-        
+
         private bool CanUnfriend() => SelectedContact is FriendViewModel;
 
 
@@ -299,7 +299,7 @@ namespace WpfApp1.ViewModels
                 var mySnapshot = await myDocRef.GetSnapshotAsync();
                 if (!mySnapshot.Exists)
                 {
-                        await myDocRef.SetAsync(new Dictionary<string, object>
+                    await myDocRef.SetAsync(new Dictionary<string, object>
                         {
                             { "friends", new List<object> { friendData } }
                         });
@@ -326,14 +326,14 @@ namespace WpfApp1.ViewModels
 
                 if (!friendDocSnapshot.Exists)
                 {
-                        await friendDocRef.SetAsync(new Dictionary<string, object>
+                    await friendDocRef.SetAsync(new Dictionary<string, object>
                         {
                             { "friends", new List<object> { myDataForFriend } }
                         });
                 }
                 else
                 {
-                         await friendDocRef.UpdateAsync(new Dictionary<string, object>
+                    await friendDocRef.UpdateAsync(new Dictionary<string, object>
                         {
                             { "friends", FieldValue.ArrayUnion(myDataForFriend) }
                          });
@@ -356,7 +356,7 @@ namespace WpfApp1.ViewModels
             if (requestVM == null) return;
             FriendRequest requestModel = requestVM.GetModel();
             MessageBox.Show($"Đã từ chối lời mời từ: {requestModel.RequesterName} ({requestModel.EmailRequesterId})");
-            
+
             FriendRequests.Remove(requestVM);
             await RemoveFriendRequestAsync(myEmail: SharedData.Instance.userdata.Email, requesterId: requestModel.EmailRequesterId);
         }
@@ -406,22 +406,23 @@ namespace WpfApp1.ViewModels
             List<FriendData> friends = await LoadFriendsAsync(SharedData.Instance.userdata.Email);
 
             var db = FirestoreHelper.database;
-            var doc=db.Collection("AddFriendQuery").Document(SharedData.Instance.userdata.Email);
-            var snapshot= await doc.GetSnapshotAsync();
-            List<FriendRequest> requests= new List<FriendRequest>();
+            var doc = db.Collection("AddFriendQuery").Document(SharedData.Instance.userdata.Email);
+            var snapshot = await doc.GetSnapshotAsync();
+            List<FriendRequest> requests = new List<FriendRequest>();
             if (snapshot.Exists)
             {
                 if (snapshot.TryGetValue<List<Dictionary<string, object>>>("requests", out var requestList))
                 {
                     foreach (var request in requestList)
                     {
-                        FriendRequest newRequest = new FriendRequest {
+                        FriendRequest newRequest = new FriendRequest
+                        {
                             EmailRequestId = request["EmailRequestId"]?.ToString(),
                             RequesterAvatarUrl = request.ContainsKey("RequesterAvatarUrl") ? request["RequesterAvatarUrl"]?.ToString() : null,
                             RequesterName = request["RequesterName"]?.ToString(),
                             EmailRequesterId = request["EmailRequesterId"]?.ToString(),
                             RequestTime = request.ContainsKey("RequestTime") ? ((Google.Cloud.Firestore.Timestamp)request["RequestTime"]).ToDateTime() : DateTime.UtcNow,
-                            
+
                         };
                         requests.Add(newRequest);
                     }

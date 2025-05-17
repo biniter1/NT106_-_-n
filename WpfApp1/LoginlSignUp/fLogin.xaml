@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WpfApp1.LoginlSignUp"
         mc:Ignorable="d"
-        Title="Đăng nhập hệ thống" Height="500" Width="800"
+        Title="{DynamicResource LoginTitle}" Height="500" Width="800"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -13,108 +13,113 @@
         ResizeMode="NoResize">
 
     <Window.Resources>
-        <Style x:Key="TextBoxStyle" TargetType="{x:Type TextBox}">
-            <Setter Property="Padding" Value="10"/>
-            <Setter Property="Background" Value="#F0F0F0"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Foreground" Value="#333333"/>
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type TextBox}">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="5"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                BorderBrush="{TemplateBinding BorderBrush}">
-                            <ScrollViewer x:Name="PART_ContentHost" 
-                                          HorizontalScrollBarVisibility="Hidden"
-                                          VerticalScrollBarVisibility="Hidden"
-                                          />
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="TextBoxStyle" TargetType="{x:Type TextBox}">
+                <Setter Property="Padding" Value="10"/>
+                <Setter Property="Background" Value="#F0F0F0"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Foreground" Value="#333333"/>
+                <Setter Property="Height" Value="40"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type TextBox}">
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="5"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    BorderBrush="{TemplateBinding BorderBrush}">
+                                <ScrollViewer x:Name="PART_ContentHost" 
+                                              HorizontalScrollBarVisibility="Hidden"
+                                              VerticalScrollBarVisibility="Hidden"
+                                              />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
 
-        <Style x:Key="PasswordBoxStyle" TargetType="{x:Type PasswordBox}">
-            <Setter Property="Padding" Value="10"/>
-            <Setter Property="Background" Value="#F0F0F0"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Foreground" Value="#333333"/>
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type PasswordBox}">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="5"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                BorderBrush="{TemplateBinding BorderBrush}">
-                            <ScrollViewer x:Name="PART_ContentHost" 
-                                          HorizontalScrollBarVisibility="Hidden"
-                                          VerticalScrollBarVisibility="Hidden"
-                                          />
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+            <Style x:Key="PasswordBoxStyle" TargetType="{x:Type PasswordBox}">
+                <Setter Property="Padding" Value="10"/>
+                <Setter Property="Background" Value="#F0F0F0"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Foreground" Value="#333333"/>
+                <Setter Property="Height" Value="40"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type PasswordBox}">
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="5"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    BorderBrush="{TemplateBinding BorderBrush}">
+                                <ScrollViewer x:Name="PART_ContentHost" 
+                                              HorizontalScrollBarVisibility="Hidden"
+                                              VerticalScrollBarVisibility="Hidden"
+                                              />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
 
-        <Style x:Key="ButtonStyle" TargetType="{x:Type Button}">
-            <Setter Property="Background" Value="#4169E1"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Button}">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="5"
-                                BorderThickness="0">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#2E4DE0"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#1A35B2"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+            <Style x:Key="ButtonStyle" TargetType="{x:Type Button}">
+                <Setter Property="Background" Value="#4169E1"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Height" Value="40"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type Button}">
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="5"
+                                    BorderThickness="0">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#2E4DE0"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Background" Value="#1A35B2"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
 
-        <Style x:Key="CloseButtonStyle" TargetType="{x:Type Button}">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#888888"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Width" Value="30"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Button}">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="15">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FFE6E6"/>
-                                <Setter Property="Foreground" Value="#FF0000"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+            <Style x:Key="CloseButtonStyle" TargetType="{x:Type Button}">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="#888888"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Width" Value="30"/>
+                <Setter Property="Height" Value="30"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type Button}">
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="15">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#FFE6E6"/>
+                                    <Setter Property="Foreground" Value="#FF0000"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
     </Window.Resources>
 
     <Border Background="White" CornerRadius="20" Margin="10">
@@ -139,53 +144,44 @@
 
                 <Grid>
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="30">
-                        <TextBlock Text="CHÀO MỪNG" FontSize="32" FontWeight="Bold" Foreground="White" TextAlignment="Center"/>
-                        <TextBlock Text="Đến với App chat siêu chuyên nghiệp" FontSize="20" Foreground="White" Opacity="0.8" TextAlignment="Center" Margin="0,10,0,30"/>
-
+                        <TextBlock Text="{DynamicResource Welcome}" FontSize="32" FontWeight="Bold" Foreground="White" TextAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource AppDescription}" FontSize="20" Foreground="White" Opacity="0.8" TextAlignment="Center" Margin="0,10,0,30"/>
                         <Border Width="180" Height="180" Background="White" CornerRadius="90" Opacity="0.1"/>
-
-                        <TextBlock Text="Hãy đăng nhập để Chat với bạn bè nào" 
-                                   FontSize="14" Foreground="White" TextWrapping="Wrap" 
-                                   TextAlignment="Center" Margin="0,30,0,0" Opacity="0.8"/>
+                        <TextBlock Text="{DynamicResource LoginPrompt}" FontSize="14" Foreground="White" TextWrapping="Wrap" TextAlignment="Center" Margin="0,30,0,0" Opacity="0.8"/>
                     </StackPanel>
                 </Grid>
             </Border>
 
             <!-- Right Side - Login Form -->
             <Grid Grid.Column="1">
-                <Button Style="{StaticResource CloseButtonStyle}" Content="✕" 
+                <Button Style="{StaticResource CloseButtonStyle}" Content="{DynamicResource CloseButton}" 
                         HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,15,15,0"
                         Click="CloseButton_Click"/>
 
                 <StackPanel Margin="30,60,30,30" VerticalAlignment="Center">
-
-                    <TextBlock Text="ĐĂNG NHẬP" FontSize="24" FontWeight="Bold" Foreground="#333333" 
+                    <TextBlock Text="{DynamicResource LoginButton}" FontSize="24" FontWeight="Bold" Foreground="#333333" 
                                HorizontalAlignment="Center" Margin="0,0,0,40"/>
-
-                    <TextBlock Text="Email" FontSize="12" Foreground="#888888" Margin="0,0,0,5"/>
-                    <TextBox x:Name="txtUsername" Style="{StaticResource TextBoxStyle}"  TextChanged="txtUsername_TextChanged" RenderTransformOrigin="0.502,0.547"/>
-
-                    <TextBlock Text="Mật khẩu" FontSize="12" Foreground="#888888" Margin="0,0,0,5"/>
-                    <PasswordBox x:Name="txtPassword" Style="{StaticResource PasswordBoxStyle}" 
-                                 Margin="0,0,0,15" />
-
+                    <TextBlock Text="{DynamicResource EmailLabel}" FontSize="12" Foreground="#888888" Margin="0,0,0,5"/>
+                    <TextBox x:Name="txtUsername" Style="{StaticResource TextBoxStyle}" TextChanged="txtUsername_TextChanged"/>
+                    <TextBlock Text="{DynamicResource PasswordLabel}" FontSize="12" Foreground="#888888" Margin="0,0,0,5"/>
+                    <PasswordBox x:Name="txtPassword" Style="{StaticResource PasswordBoxStyle}" Margin="0,0,0,15"/>
                     <Grid Margin="0,0,0,30">
-                        <CheckBox x:Name="chkRemember" Content="Ghi nhớ đăng nhập" 
+                        <CheckBox x:Name="chkRemember" Content="{DynamicResource RememberLogin}" 
                                   Foreground="#888888" FontSize="12" VerticalAlignment="Center"/>
-                        <TextBlock Text="Quên mật khẩu?" Foreground="#4169E1" FontSize="12" 
+                        <TextBlock Text="{DynamicResource ForgotPassword}" Foreground="#4169E1" FontSize="12" 
                                    Cursor="Hand" HorizontalAlignment="Right" VerticalAlignment="Center"
                                    MouseDown="ForgotPassword_Click"/>
                     </Grid>
-
-                    <Button Style="{StaticResource ButtonStyle}" Content="ĐĂNG NHẬP" 
+                    <Button Style="{StaticResource ButtonStyle}" Content="{DynamicResource LoginButton}" 
                             Click="LoginButton_Click"/>
-
-                    <TextBlock Margin="0,20,0,0" HorizontalAlignment="Center"><Run Text="Chưa có tài khoản? " Foreground="#888888" FontSize="12"/><Run Text=" "/><Run Text="Đăng ký" Foreground="#4169E1" FontSize="12" 
+                    <TextBlock Margin="0,20,0,0" HorizontalAlignment="Center">
+                        <Run Text="{DynamicResource NoAccount}" Foreground="#888888" FontSize="12"/>
+                        <Run Text="{DynamicResource Register}" Foreground="#4169E1" FontSize="12" 
                              TextDecorations="Underline" Cursor="Hand"
-                             MouseDown="Register_Click"/></TextBlock>
+                             MouseDown="Register_Click"/>
+                    </TextBlock>
                 </StackPanel>
             </Grid>
-
         </Grid>
     </Border>
 </Window>

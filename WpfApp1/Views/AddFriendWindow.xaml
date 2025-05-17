@@ -11,75 +11,79 @@
         WindowStartupLocation="CenterOwner"
         Background="#F0F0F0">
     <Window.Resources>
-        <Style TargetType="TextBox" x:Key="SearchBoxStyle">
-            <Setter Property="Padding" Value="8,5"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border Background="{TemplateBinding Background}"
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <Style TargetType="TextBox" x:Key="SearchBoxStyle">
+                <Setter Property="Padding" Value="8,5"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="BorderBrush" Value="#CCCCCC"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TextBox">
+                            <Border Background="{TemplateBinding Background}"
                                  BorderBrush="{TemplateBinding BorderBrush}"
                                  BorderThickness="{TemplateBinding BorderThickness}"
                                  CornerRadius="15">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+                                <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
 
-        <Style TargetType="Button" x:Key="PrimaryButtonStyle">
-            <Setter Property="Background" Value="#007ACC"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
+            <Style TargetType="Button" x:Key="PrimaryButtonStyle">
+                <Setter Property="Background" Value="#007ACC"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Padding" Value="15,8"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
                                  CornerRadius="15">
-                            <ContentPresenter HorizontalAlignment="Center"
+                                <ContentPresenter HorizontalAlignment="Center"
                                                VerticalAlignment="Center"
                                                Margin="{TemplateBinding Padding}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#005A9E"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Background" Value="#A0A0A0"/>
-                                <Setter Property="Foreground" Value="#E0E0E0"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#005A9E"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Background" Value="#A0A0A0"/>
+                                    <Setter Property="Foreground" Value="#E0E0E0"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
 
-        <Style TargetType="Button" x:Key="SecondaryButtonStyle" BasedOn="{StaticResource PrimaryButtonStyle}">
-            <Setter Property="Background" Value="#5BC0DE"/>
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#31B0D5"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
+            <Style TargetType="Button" x:Key="SecondaryButtonStyle" BasedOn="{StaticResource PrimaryButtonStyle}">
+                <Setter Property="Background" Value="#5BC0DE"/>
+                <Setter Property="Padding" Value="10,5"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#31B0D5"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
 
-        <Style TargetType="ListBoxItem" x:Key="ListBoxItemStyle">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0, 2"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Bd"
+            <Style TargetType="ListBoxItem" x:Key="ListBoxItemStyle">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Margin" Value="0, 2"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="Bd"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
@@ -87,25 +91,25 @@
                                 SnapsToDevicePixels="true"
                                 CornerRadius="5"
                                 Margin="2">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsSelected" Value="true">
-                                <Setter TargetName="Bd" Property="Background" Value="#CDE8FF"/>
-                                <Setter Property="Foreground" Value="#000"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="true">
-                                <Setter TargetName="Bd" Property="Background" Value="#E0EFFF"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="true">
+                                    <Setter TargetName="Bd" Property="Background" Value="#CDE8FF"/>
+                                    <Setter Property="Foreground" Value="#000"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="true">
+                                    <Setter TargetName="Bd" Property="Background" Value="#E0EFFF"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
 
-
+        </ResourceDictionary>
     </Window.Resources>
 
     <Border Padding="20">
@@ -114,18 +118,19 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="20"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <DockPanel Grid.Row="0">
                 <Button DockPanel.Dock="Right"
-                        Content="Tìm kiếm"
+                        Content="{DynamicResource SearchButton}"
                         Style="{StaticResource PrimaryButtonStyle}"
                         Command="{Binding SearchCommand}"
                         Margin="10,0,0,0"/>
 
                 <TextBox Style="{StaticResource SearchBoxStyle}"
-                          Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
-                          VerticalAlignment="Center"/>
+                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                         VerticalAlignment="Center"/>
             </DockPanel>
 
             <Border Grid.Row="2"
@@ -156,31 +161,29 @@
                                                FontWeight="SemiBold"/>
 
                                     <Button Grid.Column="2"
-        x:Name="ActionButton" MinWidth="80"         Command="{Binding DataContext.AddFriendCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-        CommandParameter="{Binding}">
+                                            x:Name="ActionButton"
+                                            MinWidth="80"
+                                            Command="{Binding DataContext.AddFriendCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                            CommandParameter="{Binding}">
                                         <Button.Style>
                                             <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
-                                                <Setter Property="Content" Value="Kết bạn"/>
+                                                <Setter Property="Content" Value="{DynamicResource AddFriendButton}"/>
                                                 <Setter Property="IsEnabled" Value="True"/>
-
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Status}" Value="{x:Static models:FriendStatus.Friend}">
-                                                        <Setter Property="Content" Value="Bạn bè"/>
+                                                        <Setter Property="Content" Value="{DynamicResource FriendStatus}"/>
                                                         <Setter Property="IsEnabled" Value="False"/>
                                                     </DataTrigger>
-
                                                     <DataTrigger Binding="{Binding Status}" Value="{x:Static models:FriendStatus.RequestSent}">
-                                                        <Setter Property="Content" Value="Đã gửi"/>
+                                                        <Setter Property="Content" Value="{DynamicResource RequestSentStatus}"/>
                                                         <Setter Property="IsEnabled" Value="False"/>
                                                     </DataTrigger>
-
                                                     <DataTrigger Binding="{Binding Status}" Value="{x:Static models:FriendStatus.RequestReceived}">
-                                                        <Setter Property="Content" Value="Phản hồi"/>
+                                                        <Setter Property="Content" Value="{DynamicResource RequestReceivedStatus}"/>
                                                         <Setter Property="IsEnabled" Value="False"/>
                                                     </DataTrigger>
-
                                                     <DataTrigger Binding="{Binding Status}" Value="{x:Static models:FriendStatus.Unknown}">
-                                                        <Setter Property="Content" Value="---"/>
+                                                        <Setter Property="Content" Value="{DynamicResource UnknownStatus}"/>
                                                         <Setter Property="IsEnabled" Value="False"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -211,11 +214,11 @@
                                         <Setter.Value>
                                             <ControlTemplate TargetType="ListBox">
                                                 <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5">
-                                                    <TextBlock Text="Nhập tên hoặc số điện thoại để tìm kiếm bạn bè."
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Center"
-                                                            Foreground="Gray"
-                                                            Margin="20"/>
+                                                    <TextBlock Text="{DynamicResource SearchPlaceholder}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="Gray"
+                                                               Margin="20"/>
                                                 </Border>
                                             </ControlTemplate>
                                         </Setter.Value>
@@ -224,7 +227,6 @@
                             </Style.Triggers>
                         </Style>
                     </ListBox.Style>
-
                 </ListBox>
             </Border>
         </Grid>

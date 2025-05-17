@@ -9,48 +9,54 @@
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="940">
     <UserControl.Resources>
-        <SolidColorBrush x:Key="PrimaryBrush" Color="#6c63ff"/>
-        <SolidColorBrush x:Key="LightGrayBrush" Color="#f0f0f0"/>
-        <SolidColorBrush x:Key="WhiteBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="Chatarea" Color="#FAFAFA"/>
-        <SolidColorBrush x:Key="Filearea" Color="#F7F9FB"/>
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#333333"/>
-        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#888888"/>
-        <SolidColorBrush x:Key="OnlineStatusBrush" Color="Green"/>
-        <SolidColorBrush x:Key="BorderBrush" Color="#E0E0E0"/>
-        <SolidColorBrush x:Key="ItemHoverBackgroundBrush" Color="#D8D8D8"/>
-        <SolidColorBrush x:Key="ItemSelectedBackgroundBrush" Color="#FBEFF5"/>
-        <SolidColorBrush x:Key="IconBackgroundPdf" Color="#E85050"/>
-        <SolidColorBrush x:Key="IconBackgroundExcel" Color="#1D8C4D"/>
-        <SolidColorBrush x:Key="IconBackgroundImage" Color="#50A6E8"/>
-        <SolidColorBrush x:Key="IconBackgroundWord" Color="#2B579A"/>
-        <SolidColorBrush x:Key="IconBackgroundPpt" Color="#CD853F"/>
-        <SolidColorBrush x:Key="IconBackgroundDefault" Color="#B0BEC5"/>
-        <SolidColorBrush x:Key="AvatarPlaceholderBackground" Color="#FFB74D"/>
-        <CornerRadius x:Key="DefaultCornerRadius">10</CornerRadius>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <!-- Giữ nguyên các SolidColorBrush và Converter -->
+            <SolidColorBrush x:Key="PrimaryBrush" Color="#6c63ff"/>
+            <SolidColorBrush x:Key="LightGrayBrush" Color="#f0f0f0"/>
+            <SolidColorBrush x:Key="WhiteBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="Chatarea" Color="#FAFAFA"/>
+            <SolidColorBrush x:Key="Filearea" Color="#F7F9FB"/>
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#333333"/>
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#888888"/>
+            <SolidColorBrush x:Key="OnlineStatusBrush" Color="Green"/>
+            <SolidColorBrush x:Key="BorderBrush" Color="#E0E0E0"/>
+            <SolidColorBrush x:Key="ItemHoverBackgroundBrush" Color="#D8D8D8"/>
+            <SolidColorBrush x:Key="ItemSelectedBackgroundBrush" Color="#FBEFF5"/>
+            <SolidColorBrush x:Key="IconBackgroundPdf" Color="#E85050"/>
+            <SolidColorBrush x:Key="IconBackgroundExcel" Color="#1D8C4D"/>
+            <SolidColorBrush x:Key="IconBackgroundImage" Color="#50A6E8"/>
+            <SolidColorBrush x:Key="IconBackgroundWord" Color="#2B579A"/>
+            <SolidColorBrush x:Key="IconBackgroundPpt" Color="#CD853F"/>
+            <SolidColorBrush x:Key="IconBackgroundDefault" Color="#B0BEC5"/>
+            <SolidColorBrush x:Key="AvatarPlaceholderBackground" Color="#FFB74D"/>
+            <CornerRadius x:Key="DefaultCornerRadius">10</CornerRadius>
 
-        <converters:StringNullOrEmptyToVisibilityConverter x:Key="StringNullOrEmptyToVisibilityConverter"/>
-        <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        <converters:MessageBackgroundConverter x:Key="MessageBackgroundConverter"/>
-        <converters:MessageAlignmentConverter x:Key="MessageAlignmentConverter"/>
-        <converters:TextColorConverter x:Key="TextColorConverter"/>
-        <converters:FileTypeToIconConverter x:Key="FileTypeToIconConverter"/>
-        <converters:ToLowerConverter x:Key="ToLowerConverter"/>
+            <converters:StringNullOrEmptyToVisibilityConverter x:Key="StringNullOrEmptyToVisibilityConverter"/>
+            <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:MessageBackgroundConverter x:Key="MessageBackgroundConverter"/>
+            <converters:MessageAlignmentConverter x:Key="MessageAlignmentConverter"/>
+            <converters:TextColorConverter x:Key="TextColorConverter"/>
+            <converters:FileTypeToIconConverter x:Key="FileTypeToIconConverter"/>
+            <converters:ToLowerConverter x:Key="ToLowerConverter"/>
 
-        <Style x:Key="SearchBoxPlaceholderStyle" TargetType="TextBox">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Grid>
-                            <TextBlock Text="Search"
-                                        Foreground="{StaticResource TextSecondaryBrush}"
-                                        Visibility="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}" />
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="0" />
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+            <Style x:Key="SearchBoxPlaceholderStyle" TargetType="TextBox">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TextBox">
+                            <Grid>
+                                <TextBlock Text="{DynamicResource SearchPlaceholderChat}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Visibility="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}" />
+                                <ScrollViewer x:Name="PART_ContentHost" Margin="0" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
     </UserControl.Resources>
 
     <Grid>
@@ -66,13 +72,14 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <DockPanel Grid.Row="0" Margin="0,0,0,10">
-                    <TextBlock Text="Messages" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="{DynamicResource MessagesTitle}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}"/>
                     <Button FontFamily="Segoe MDL2 Assets"
-                             Content="&#xecc8;" ToolTip="Add Friend"
-                             Command="{Binding DataContext.ShowAddFriendPopupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Width="40" Height="40" FontSize="30" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5" DockPanel.Dock="Right" HorizontalAlignment="Right" />
+                            Content="" ToolTip="{DynamicResource AddFriendTooltip}"
+                            Command="{Binding DataContext.ShowAddFriendPopupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Width="40" Height="40" FontSize="30" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5" DockPanel.Dock="Right" HorizontalAlignment="Right" />
                 </DockPanel>
                 <Border Grid.Row="1" CornerRadius="15" Background="{StaticResource LightGrayBrush}" BorderBrush="{StaticResource BorderBrush}" Padding="5,5" BorderThickness="1">
                     <TextBox x:Name="SearchContact" Style="{StaticResource SearchBoxPlaceholderStyle}" />
@@ -87,12 +94,12 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="&#xE77B;" FontFamily="Segoe Fluent Icons" FontSize="36" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="Gray"/>
+                                    <TextBlock Grid.Column="0" Text="" FontFamily="Segoe Fluent Icons" FontSize="36" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="Gray"/>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,2"/>
                                         <TextBlock Text="{Binding LastMessage}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
-                                    <TextBlock Grid.Column="2" Text="&#xE91F;" FontFamily="Segoe Fluent Icons" FontSize="8" VerticalAlignment="Bottom" Margin="5,0,0,5">
+                                    <TextBlock Grid.Column="2" Text="" FontFamily="Segoe Fluent Icons" FontSize="8" VerticalAlignment="Bottom" Margin="5,0,0,5">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
@@ -147,18 +154,18 @@
             <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Width="35" Height="35" CornerRadius="17.5" Background="{StaticResource AvatarPlaceholderBackground}" Margin="0,0,10,0">
-                        <TextBlock Text="&#xE77B;" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="{Binding SelectedContact.Name, FallbackValue='Select a contact'}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
                         <TextBlock FontSize="11">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Text" Value="Offline"/>
+                                    <Setter Property="Text" Value="{DynamicResource OfflineStatus}"/>
                                     <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding SelectedContact.IsOnline}" Value="True">
-                                            <Setter Property="Text" Value="Online"/>
+                                            <Setter Property="Text" Value="{DynamicResource OnlineStatus}"/>
                                             <Setter Property="Foreground" Value="{StaticResource OnlineStatusBrush}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -195,7 +202,7 @@
                                         <Setter.Value>
                                             <ControlTemplate TargetType="TextBox">
                                                 <Grid>
-                                                    <TextBlock Text="Type a message" Foreground="{StaticResource TextSecondaryBrush}" FontStyle="Italic" Margin="12,4" VerticalAlignment="Center" IsHitTestVisible="False" Visibility="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}" />
+                                                    <TextBlock Text="{DynamicResource MessagePlaceholder}" Foreground="{StaticResource TextSecondaryBrush}" FontStyle="Italic" Margin="12,4" VerticalAlignment="Center" IsHitTestVisible="False" Visibility="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}" />
                                                     <ScrollViewer x:Name="PART_ContentHost" Margin="0" />
                                                 </Grid>
                                             </ControlTemplate>
@@ -205,8 +212,8 @@
                             </TextBox.Style>
                         </TextBox>
                     </Border>
-                    <Button Grid.Column="1" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="Send" Command="{Binding SendMessageCommand}" CommandParameter="{Binding SelectedContact}">
-                        <TextBlock Text="&#xE122;" Margin="0,15,0,0" FontFamily="Segoe Fluent Icons" FontSize="20" Foreground="{StaticResource PrimaryBrush}">
+                    <Button Grid.Column="1" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource SendTooltip}" Command="{Binding SendMessageCommand}" CommandParameter="{Binding SelectedContact}">
+                        <TextBlock Text="" Margin="0,15,0,0" FontFamily="Segoe Fluent Icons" FontSize="20" Foreground="{StaticResource PrimaryBrush}">
                             <TextBlock.RenderTransform>
                                 <RotateTransform Angle="-45"/>
                             </TextBlock.RenderTransform>
@@ -223,8 +230,8 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <DockPanel Grid.Row="0" Margin="0,10,0,10">
-                    <TextBlock Text="Directory" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}"/>
-                    <Button Content="⋮" FontSize="25" Width="30" Height="30" ToolTip="More options" VerticalAlignment="Center" Background="Transparent" BorderThickness="0" HorizontalAlignment="Right" />
+                    <TextBlock Text="{DynamicResource DirectoryTitle}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <Button Content="⋮" FontSize="25" Width="30" Height="30" ToolTip="{DynamicResource MoreOptionsTooltip}" VerticalAlignment="Center" Background="Transparent" BorderThickness="0" HorizontalAlignment="Right" />
                 </DockPanel>
                 <ListBox Grid.Row="1" x:Name="FileListBox" ItemsSource="{Binding Files}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
                     <ListBox.ItemTemplate>
@@ -276,7 +283,7 @@
                                     <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding FileName}" Foreground="{StaticResource TextPrimaryBrush}"/>
                                     <TextBlock Text="{Binding FileInfo}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
-                                <Button Grid.Column="2" FontFamily="Segoe Fluent Icons" Content="&#xE896;" ToolTip="Download" Width="30" Height="30" Margin="10,0,0,0" FontSize="16" Background="Transparent" BorderThickness="0" Foreground="Gray" HorizontalAlignment="Right"/>
+                                <Button Grid.Column="2" FontFamily="Segoe Fluent Icons" Content="" ToolTip="{DynamicResource DownloadTooltip}" Width="30" Height="30" Margin="10,0,0,0" FontSize="16" Background="Transparent" BorderThickness="0" Foreground="Gray" HorizontalAlignment="Right"/>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -304,6 +311,5 @@
                 </ListBox>
             </Grid>
         </Border>
-
     </Grid>
 </UserControl>

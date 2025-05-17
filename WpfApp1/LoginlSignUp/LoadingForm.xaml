@@ -1,25 +1,35 @@
 ﻿<Window x:Class="WpfApp1.LoginlSignUp.LoadingForm"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Loading" Height="150" Width="300"
+        Title="{DynamicResource LoadingTitle}" Height="150" Width="300"
         WindowStyle="None" Background="#F0F0F0"
         WindowStartupLocation="CenterScreen"
         AllowsTransparency="True">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     <Border BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="5">
         <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Loading Icon (có thể thay bằng hình ảnh nếu muốn) -->
-            <TextBlock Grid.Row="0" Text="⏳" FontSize="30" Foreground="#4CAF50"
+            <!-- Loading Icon -->
+            <TextBlock Grid.Row="0" Text="{DynamicResource LoadingIcon}" FontSize="30" Foreground="#4CAF50"
                       HorizontalAlignment="Center" Margin="0,0,0,10"/>
 
             <!-- Loading Message -->
-            <TextBlock Grid.Row="1" Text="Đang đăng nhập..." 
+            <TextBlock Grid.Row="1" Text="{DynamicResource LoadingMessage}" 
                       FontSize="16" FontWeight="Bold" TextWrapping="Wrap"
-                      HorizontalAlignment="Center" TextAlignment="Center"/>
+                      HorizontalAlignment="Center" TextAlignment="Center"
+                      Margin="0,0,0,10"/>
         </Grid>
     </Border>
 </Window>

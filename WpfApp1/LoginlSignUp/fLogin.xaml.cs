@@ -195,8 +195,6 @@ namespace WpfApp1.LoginlSignUp
                         return;
                     }
                 }
-
-                // Store refresh token if "Remember Me" is checked
                 if (chkRemember.IsChecked == true)
                 {
                     StoreRefreshToken(refreshToken);
@@ -206,7 +204,6 @@ namespace WpfApp1.LoginlSignUp
                     ClearRefreshToken();
                 }
 
-                // Show success popup and proceed
                 this.Hide();
                 SuccessPopup successPopup = new SuccessPopup();
                 successPopup.Closed += (s, args) =>
@@ -302,9 +299,6 @@ namespace WpfApp1.LoginlSignUp
             }
             catch (Exception ex)
             {
-                // Log the exception for debugging
-                Console.WriteLine($"Token refresh error: {ex.Message}");
-                // Clear invalid refresh token to prevent future failures
                 ClearRefreshToken();
             }
             return null;
@@ -337,8 +331,6 @@ namespace WpfApp1.LoginlSignUp
             }
             catch (Exception ex)
             {
-                // Log the exception for debugging
-                Console.WriteLine($"Email lookup error: {ex.Message}");
             }
             return null;
         }
@@ -355,9 +347,6 @@ namespace WpfApp1.LoginlSignUp
             }
             catch (Exception ex)
             {
-                // Log exception for debugging
-                Console.WriteLine($"Store refresh token error: {ex.Message}");
-                // Handle silently to avoid interrupting login
             }
         }
 
@@ -374,9 +363,6 @@ namespace WpfApp1.LoginlSignUp
             }
             catch (Exception ex)
             {
-                // Log exception for debugging
-                Console.WriteLine($"Retrieve refresh token error: {ex.Message}");
-                // Clear corrupted refresh token
                 ClearRefreshToken();
                 return null;
             }

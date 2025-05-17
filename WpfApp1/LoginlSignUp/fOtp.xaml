@@ -8,20 +8,25 @@
         Background="#F5F5F5">
 
     <Window.Resources>
-        <Style TargetType="Button">
-            <Setter Property="Background" Value="#4CAF50"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="20,10"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#388E3C"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <Style TargetType="Button">
+                <Setter Property="Background" Value="#4CAF50"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Padding" Value="20,10"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#388E3C"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
     </Window.Resources>
 
     <Border Background="White" CornerRadius="8" Margin="15" BorderBrush="#E0E0E0" BorderThickness="1">
@@ -43,13 +48,11 @@
                         <DropShadowEffect BlurRadius="5" ShadowDepth="1" Opacity="0.1"/>
                     </Ellipse.Effect>
                 </Ellipse>
-
                 <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.59,8.09L11,13.67L7.91,10.59L6.5,12L11,16.5Z" 
                       Fill="#4CAF50" Width="30" Height="30" 
                       Margin="0,-52,0,0" 
                       Stretch="Uniform"/>
-
-                <TextBlock Text="Xác minh Email" 
+                <TextBlock Text="{DynamicResource EmailVerifyHeader}" 
                            FontSize="22" 
                            FontWeight="Bold" 
                            Foreground="#424242"
@@ -60,21 +63,21 @@
             <!-- Content -->
             <StackPanel Grid.Row="1" VerticalAlignment="Center">
                 <TextBlock x:Name="EmailTextBlock"
-                           Text="Chúng tôi đã gửi một email xác thực đến:"
+                           Text="{DynamicResource EmailSentMessage}"
                            TextWrapping="Wrap" 
                            FontSize="14" 
                            Foreground="#616161"
                            TextAlignment="Center" 
                            Margin="0,10,0,5"/>
-                <TextBlock Text="user@example.com"
+                <TextBlock x:Name="ActualEmailTextBlock"
+                           Text="{DynamicResource SampleEmailVerify}"
                            FontWeight="SemiBold"
                            FontSize="16"
                            Foreground="#2196F3"
-                           TextAlignment="Center"
-                           />
+                           TextAlignment="Center"/>
 
                 <Button x:Name="CheckVerifyButton" 
-                        Content="Tôi đã xác minh" 
+                        Content="{DynamicResource VerifiedButton}" 
                         Width="180"
                         Height="45"
                         Click="CheckVerifyButton_Click" 
@@ -89,19 +92,19 @@
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
-                <Button Content="Gửi lại email" 
+                <Button Content="{DynamicResource ResendEmailButton}" 
                         Background="Transparent"
                         Foreground="#4CAF50"
                         FontSize="13"
                         Width="120"
-                        Height="49" Click="Button_Click"
-                        />
+                        Height="49"
+                        Click="Button_Click"/>
             </StackPanel>
 
             <!-- Footer -->
             <TextBlock x:Name="StatusTextBlock"
                        Grid.Row="2"
-                       Text="Vui lòng kiểm tra hộp thư của bạn"
+                       Text="{DynamicResource CheckInboxMessage}"
                        FontSize="12" 
                        Foreground="#9E9E9E" 
                        TextAlignment="Center"
