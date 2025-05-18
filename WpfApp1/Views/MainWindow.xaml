@@ -16,26 +16,6 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <SolidColorBrush x:Key="PrimaryBrush" Color="#6c63ff"/>
-            <SolidColorBrush x:Key="LightGrayBrush" Color="#f0f0f0"/>
-            <SolidColorBrush x:Key="WhiteBrush" Color="#FFFFFF"/>
-            <SolidColorBrush x:Key="Sidebar" Color="#F3F4F6"/>
-            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#333333"/>
-            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#888888"/>
-            <SolidColorBrush x:Key="OnlineStatusBrush" Color="Green"/>
-            <SolidColorBrush x:Key="BorderBrush" Color="#E0E0E0"/>
-            <SolidColorBrush x:Key="ItemHoverBackgroundBrush" Color="#D8D8D8"/>
-            <SolidColorBrush x:Key="ItemSelectedBackgroundBrush" Color="#FBEFF5"/>
-            <SolidColorBrush x:Key="AvatarPlaceholderBackground" Color="#FFB74D"/>
-            <CornerRadius x:Key="DefaultCornerRadius">10</CornerRadius>
-
-            <converters:StringNullOrEmptyToVisibilityConverter x:Key="StringNullOrEmptyToVisibilityConverter"/>
-            <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-            <converters:MessageBackgroundConverter x:Key="MessageBackgroundConverter"/>
-            <converters:MessageAlignmentConverter x:Key="MessageAlignmentConverter"/>
-            <converters:TextColorConverter x:Key="TextColorConverter"/>
-            <converters:FileTypeToIconConverter x:Key="FileTypeToIconConverter"/>
-            <converters:ToLowerConverter x:Key="ToLowerConverter"/>
 
             <Style x:Key="SearchBoxPlaceholderStyle" TargetType="TextBox">
                 <Setter Property="Template">
@@ -58,6 +38,10 @@
 
             <DataTemplate DataType="{x:Type viewModels:FriendListViewModel}">
                 <views:FriendListView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModels:SettingsViewModel}">
+                <views:SettingsView/>
             </DataTemplate>
         </ResourceDictionary>
     </Window.Resources>
@@ -83,6 +67,7 @@
                         Command="{Binding ShowSettingsPopupCommand}" Width="40" Height="40" FontSize="18" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5"/>
             </StackPanel>
         </Border>
+
         <Popup x:Name="MessageNotificationPopup" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=chatGrid}">
             <Border Background="{StaticResource WhiteBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="{StaticResource DefaultCornerRadius}" Padding="10" MaxWidth="300">
                 <StackPanel>
@@ -91,6 +76,7 @@
                 </StackPanel>
             </Border>
         </Popup>
+
         <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}" Margin="0"/>
     </Grid>
 </Window>

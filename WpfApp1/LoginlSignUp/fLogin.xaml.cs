@@ -61,10 +61,52 @@ namespace WpfApp1.LoginlSignUp
                             "Lỗi tự động đăng nhập", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
-                else
-                {
-                }
             };
+        }
+
+        // Phương thức tĩnh để xử lý đăng xuất
+        public void PerformLogout()
+        {
+            // Xóa refresh token
+            ClearRefreshToken();
+
+            // Đóng MainWindow
+            foreach (Window window in Application.Current.Windows)
+            {
+                if (window is MainWindow)
+                {
+                    window.Close();
+                    break;
+                }
+            }
+
+            // Hiển thị form đăng nhập
+            fLogin loginWindow = null;
+            foreach (Window window in Application.Current.Windows)
+            {
+                if (window is fLogin)
+                {
+                    loginWindow = (fLogin)window;
+                    break;
+                }
+            }
+            if (loginWindow == null)
+            {
+                loginWindow = new fLogin();
+            }
+            if (loginWindow.Opacity == 0)
+            {
+                loginWindow.Opacity = 1;
+            }
+            if (!loginWindow.IsVisible)
+            {
+                loginWindow.Show();
+            }
+
+            // Đặt focus vào txtUsername
+            loginWindow.txtUsername.Text = "";
+            loginWindow.txtPassword.Password = "";
+            loginWindow.txtUsername.Focus();
         }
 
         private async Task AutoLoginAsync()
@@ -368,7 +410,7 @@ namespace WpfApp1.LoginlSignUp
             }
         }
 
-        private void ClearRefreshToken()
+        public void ClearRefreshToken()
         {
             Properties.Settings.Default.RefreshToken = null;
             Properties.Settings.Default.Save();
@@ -387,6 +429,7 @@ namespace WpfApp1.LoginlSignUp
             register.Show();
             this.Close();
         }
+
         private bool IsNetworkAvailable()
         {
             try
@@ -398,6 +441,7 @@ namespace WpfApp1.LoginlSignUp
                 return false;
             }
         }
+
         private void txtUsername_TextChanged(object sender, TextChangedEventArgs e)
         {
         }

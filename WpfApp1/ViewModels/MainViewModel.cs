@@ -73,13 +73,22 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void ShowSettingsPopup()
         {
-            // Tạo và hiển thị cửa sổ Settings
-            // SettingsWindow settingsWin = new SettingsWindow();
-            // settingsWin.Owner = Application.Current.MainWindow;
-            // settingsWin.Show();
-            MessageBox.Show("SettingsWindow chưa được tạo!"); // Thông báo tạm thời
+            var settingsWin = new SettingsWindow();
+            if (Application.Current.MainWindow != null)
+            {
+                settingsWin.Owner = Application.Current.MainWindow;
+            }
+            settingsWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            settingsWin.Show();
         }
-
+        [RelayCommand]
+        private void ShowSettings()
+        {
+            if (CurrentViewModel is not SettingsViewModel)
+            {
+                CurrentViewModel = new SettingsViewModel();
+            }
+        }
         // (Tùy chọn) Các thuộc tính khác cho MainWindow Shell
         // Ví dụ: Thông tin người dùng đang đăng nhập hiển thị ở đâu đó trên Shell
         // [ObservableProperty]

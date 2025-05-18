@@ -5,7 +5,22 @@
              xmlns:converters="clr-namespace:WpfApp1.Converters"
              StartupUri="LoginlSignUp/fLogin.xaml">
     <Application.Resources>
-        
+        <ResourceDictionary>
+            <!-- Brushes and CornerRadius -->
+            <SolidColorBrush x:Key="PrimaryBrush" Color="#6c63ff"/>
+            <SolidColorBrush x:Key="LightGrayBrush" Color="#f0f0f0"/>
+            <SolidColorBrush x:Key="WhiteBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="Sidebar" Color="#F3F4F6"/>
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#333333"/>
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#888888"/>
+            <SolidColorBrush x:Key="OnlineStatusBrush" Color="Green"/>
+            <SolidColorBrush x:Key="BorderBrush" Color="#E0E0E0"/>
+            <SolidColorBrush x:Key="ItemHoverBackgroundBrush" Color="#D8D8D8"/>
+            <SolidColorBrush x:Key="ItemSelectedBackgroundBrush" Color="#FBEFF5"/>
+            <SolidColorBrush x:Key="AvatarPlaceholderBackground" Color="#FFB74D"/>
+            <CornerRadius x:Key="DefaultCornerRadius">10</CornerRadius>
+
+            <!-- Converters -->
             <converters:MessageBackgroundConverter x:Key="MessageBackgroundConverter" />
             <converters:MessageAlignmentConverter x:Key="MessageAlignmentConverter" />
             <converters:TextColorConverter x:Key="TextColorConverter" />
@@ -13,74 +28,84 @@
             <converters:StringNullOrEmptyToVisibilityConverter x:Key="StringNullOrEmptyToVisibilityConverter"/>
             <converters:FileTypeToIconConverter x:Key="FileTypeToIconConverter"/>
             <converters:ToLowerConverter x:Key="ToLowerConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
+            <!-- Thêm converter này -->
+
+            <!-- ScrollBar Brushes -->
             <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#D0D0D0"/>
             <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="#B0B0B0"/>
             <SolidColorBrush x:Key="ScrollBarTrackBrush" Color="Transparent"/>
+
+            <!-- ScrollBar Thumb Style -->
             <Style x:Key="ScrollBarThumbStyle" TargetType="{x:Type Thumb}">
                 <Setter Property="OverridesDefaultStyle" Value="true"/>
                 <Setter Property="IsTabStop" Value="false"/>
                 <Setter Property="Focusable" Value="false"/>
                 <Setter Property="Template">
                     <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Thumb}">
-                        <Border x:Name="ThumbBorder"
-                                                Background="{StaticResource ScrollBarThumbBrush}"
-                                                BorderThickness="0"
-                                                Margin="4,0,0,0"
-                                                CornerRadius="4" SnapsToDevicePixels="True"/>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="true">
-                                <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ScrollBarThumbHoverBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsDragging" Value="true">
-                                <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ScrollBarThumbHoverBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
+                        <ControlTemplate TargetType="{x:Type Thumb}">
+                            <Border x:Name="ThumbBorder"
+                                    Background="{StaticResource ScrollBarThumbBrush}"
+                                    BorderThickness="0"
+                                    Margin="4,0,0,0"
+                                    CornerRadius="4" 
+                                    SnapsToDevicePixels="True"/>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="true">
+                                    <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ScrollBarThumbHoverBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsDragging" Value="true">
+                                    <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ScrollBarThumbHoverBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
                     </Setter.Value>
                 </Setter>
             </Style>
+
+            <!-- ScrollBar Style -->
             <Style TargetType="{x:Type ScrollBar}">
                 <Setter Property="Width" Value="4"/>
                 <Setter Property="Height" Value="4"/>
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="Template">
-                <Setter.Value>
-                  <ControlTemplate TargetType="{x:Type ScrollBar}">
-                     <Track x:Name="PART_Track"
-                       IsDirectionReversed="true" Focusable="false">
-                    <Track.Thumb>
-                        <Thumb Style="{StaticResource ScrollBarThumbStyle}" />
-                    </Track.Thumb>
-                    <Track.Resources>
-                        <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="Transparent" />
-                     </Track.Resources>
-                     <Track.IncreaseRepeatButton>
-                          <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="false" />
-                     </Track.IncreaseRepeatButton>
-                     <Track.DecreaseRepeatButton>
-                          <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="false" />
-                     </Track.DecreaseRepeatButton>
-                </Track>
-
-                <ControlTemplate.Triggers>
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ScrollBar}">
+                            <Track x:Name="PART_Track"
+                                   IsDirectionReversed="true" 
+                                   Focusable="false">
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ScrollBarThumbStyle}" />
+                                </Track.Thumb>
+                                <Track.Resources>
+                                    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="Transparent" />
+                                </Track.Resources>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="false" />
+                                </Track.IncreaseRepeatButton>
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="false" />
+                                </Track.DecreaseRepeatButton>
+                            </Track>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="Orientation" Value="Horizontal">
+                                    <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="false"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
                     <Trigger Property="Orientation" Value="Horizontal">
-                        <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="false"/>
+                        <Setter Property="Width" Value="Auto"/>
+                        <Setter Property="Height" Value="4"/>
                     </Trigger>
-                </ControlTemplate.Triggers>
-            </ControlTemplate>
-        </Setter.Value>
-    </Setter>
-    <Style.Triggers>
-         <Trigger Property="Orientation" Value="Horizontal">
-            <Setter Property="Width" Value="Auto"/>
-            <Setter Property="Height" Value="4"/>
-         </Trigger>
-          <Trigger Property="Orientation" Value="Vertical">
-            <Setter Property="Width" Value="4"/>
-            <Setter Property="Height" Value="Auto"/>
-        </Trigger>
-     </Style.Triggers>
-</Style>
+                    <Trigger Property="Orientation" Value="Vertical">
+                        <Setter Property="Width" Value="4"/>
+                        <Setter Property="Height" Value="Auto"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>
