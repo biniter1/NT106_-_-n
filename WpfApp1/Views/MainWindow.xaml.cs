@@ -75,6 +75,52 @@ namespace WpfApp1
             addFriendWin.Owner = this;
             addFriendWin.Show();
         }
+        public void ShowNotification(string message)
+        {
+            NotificationText.Text = message;
+            MessageNotificationPopup.IsOpen = true;
+
+            // Tạo và cấu hình Timer
+            System.Timers.Timer timer = new System.Timers.Timer(3000); // 3000ms = 3 giây
+            timer.AutoReset = false; // Chỉ chạy một lần
+
+            // Gán sự kiện Elapsed
+            timer.Elapsed += (s, e) =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    MessageNotificationPopup.IsOpen = false;
+                });
+                timer.Dispose(); // Giải phóng tài nguyên
+            };
+
+            timer.Start();
+        }
+        private void NotificationText_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // Tìm liên hệ từ nội dung thông báo
+            string notificationText = NotificationText.Text;
+            string contactName = notificationText.Split(':')[0].Replace("Tin nhắn mới từ ", "").Trim();
+
+            // Tìm ViewModel hiện tại
+            if (DataContext is MainViewModel mainViewModel && mainViewModel.CurrentViewModel is ChatViewModel chatViewModel)
+            {
+                // Tìm liên hệ trong danh sách Contacts
+                var contact = chatViewModel.Contacts.FirstOrDefault(c => c.Name == contactName);
+                if (contact != null)
+                {
+                    chatViewModel.SelectedContact = contact; // Chuyển đến cuộc trò chuyện
+                }
+            }
+
+            MessageNotificationPopup.IsOpen = false; // Đóng Popup
+        }
+
+        // Sự kiện đóng Popup
+        private void CloseNotification_Click(object sender, RoutedEventArgs e)
+        {
+            MessageNotificationPopup.IsOpen = false;
+        }
     }
 
 }

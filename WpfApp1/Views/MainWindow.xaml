@@ -83,7 +83,14 @@
                         Command="{Binding ShowSettingsPopupCommand}" Width="40" Height="40" FontSize="18" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5"/>
             </StackPanel>
         </Border>
-
+        <Popup x:Name="MessageNotificationPopup" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=chatGrid}">
+            <Border Background="{StaticResource WhiteBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="{StaticResource DefaultCornerRadius}" Padding="10" MaxWidth="300">
+                <StackPanel>
+                    <TextBlock x:Name="NotificationText" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" MouseLeftButtonDown="NotificationText_MouseLeftButtonDown"/>
+                    <Button Content="Đóng" Click="CloseNotification_Click" HorizontalAlignment="Right" Margin="5" Background="{StaticResource PrimaryBrush}" Foreground="{StaticResource WhiteBrush}" BorderThickness="0" Padding="5"/>
+                </StackPanel>
+            </Border>
+        </Popup>
         <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}" Margin="0"/>
     </Grid>
 </Window>

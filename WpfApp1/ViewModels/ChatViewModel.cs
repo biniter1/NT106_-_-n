@@ -86,28 +86,6 @@ namespace WpfApp1.ViewModels
         }
 
 
-        // Bổ sung phương thức để dọn dẹp tài nguyên khi đóng ứng dụng
-        public void Cleanup()
-        {
-            // Hủy tất cả các subscription để tránh rò rỉ bộ nhớ
-            foreach (var subscription in allMessageSubscriptions)
-            {
-                subscription?.Dispose();
-            }
-            allMessageSubscriptions.Clear();
-
-            messageSubscription?.Dispose();
-            messageSubscription = null;
-        }
-
-        // Phương thức để tải lại tin nhắn khi cần thiết
-        public void RefreshMessages()
-        {
-            if (SelectedContact != null)
-            {
-                LoadMessagesForContact(SelectedContact);
-            }
-        }
         private async void LoadMessagesForContact(Contact contact)
         {
             // Xóa danh sách tin nhắn hiện tại
@@ -204,6 +182,12 @@ namespace WpfApp1.ViewModels
                                         }
                                         Messages.Insert(insertIndex, message);
                                         Debug.WriteLine($"Đã thêm tin nhắn mới: {message.Id} tại vị trí {insertIndex}");
+                                        if (!message.IsMine && SelectedContact?.chatID != roomId)
+                                        {
+                                            string notificationMessage = $"Tin nhắn mới từ {SelectedContact?.Name ?? "Người gửi"}: {message.Content}";
+                                            var mainWindow = Application.Current.MainWindow as MainWindow;
+                                            mainWindow?.ShowNotification(notificationMessage);
+                                        }
                                     }
                                 });
                             }
