@@ -1,0 +1,123 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <!--flogin-->
+    <sys:String x:Key="Greeting">Xin chào</sys:String>
+    <sys:String x:Key="LoginTitle">Đăng nhập hệ thống</sys:String>
+    <sys:String x:Key="Welcome">CHÀO MỪNG</sys:String>
+    <sys:String x:Key="AppDescription">Đến với App chat siêu chuyên nghiệp</sys:String>
+    <sys:String x:Key="LoginPrompt">Hãy đăng nhập để Chat với bạn bè nào</sys:String>
+    <sys:String x:Key="LoginButton">ĐĂNG NHẬP</sys:String>
+    <sys:String x:Key="EmailLabel">Email</sys:String>
+    <sys:String x:Key="PasswordLabel">Mật khẩu</sys:String>
+    <sys:String x:Key="ForgotPassword">Quên mật khẩu?</sys:String>
+    <sys:String x:Key="NoAccount">Chưa có tài khoản?</sys:String>
+    <sys:String x:Key="Register">Đăng ký</sys:String>
+    <sys:String x:Key="CloseButton">✕</sys:String>
+    <sys:String x:Key="RememberLogin">Ghi nhớ đăng nhập</sys:String>
+    <sys:String x:Key="SignupTitle">Đăng ký tài khoản</sys:String>
+    <!--fsignup-->
+    <sys:String x:Key="CreateNew">TẠO MỚI</sys:String>
+    <sys:String x:Key="YourAccount">Tài khoản của bạn</sys:String>
+    <sys:String x:Key="SignupPrompt">Đăng ký để truy cập tất cả các tính năng của hệ thống</sys:String>
+    <sys:String x:Key="HasAccount">Đã có tài khoản?</sys:String>
+    <sys:String x:Key="SignupHeader">ĐĂNG KÝ TÀI KHOẢN</sys:String>
+    <sys:String x:Key="LastNameLabel">Họ</sys:String>
+    <sys:String x:Key="FirstNameLabel">Tên</sys:String>
+    <sys:String x:Key="UsernameLabel">Tên đăng nhập</sys:String>
+    <sys:String x:Key="ConfirmPasswordLabel">Xác nhận mật khẩu</sys:String>
+    <sys:String x:Key="PhoneLabel">Số điện thoại</sys:String>
+    <sys:String x:Key="BirthDateLabel">Ngày sinh</sys:String>
+    <sys:String x:Key="GenderLabel">Giới tính</sys:String>
+    <sys:String x:Key="AddressLabel">Địa chỉ</sys:String>
+    <sys:String x:Key="GenderMale">Nam</sys:String>
+    <sys:String x:Key="GenderFemale">Nữ</sys:String>
+    <sys:String x:Key="GenderOther">Khác</sys:String>
+    <sys:String x:Key="TermsAgreement">Tôi đồng ý với các điều khoản và điều kiện sử dụng</sys:String>
+    <sys:String x:Key="SignupButton">ĐĂNG KÝ</sys:String>
+    <!--fcode-->
+    <sys:String x:Key="OTPTitle">Xác thực OTP</sys:String>
+    <sys:String x:Key="OTPHeader">XÁC THỰC OTP</sys:String>
+    <sys:String x:Key="LockIcon">🔒</sys:String>
+    <sys:String x:Key="OTPDescription">Vui lòng nhập mã OTP gồm 6 chữ số đã được gửi đến</sys:String>
+    <sys:String x:Key="SampleEmail">email@example.com</sys:String>
+    <sys:String x:Key="VerifyButton">XÁC NHẬN</sys:String>
+    <sys:String x:Key="ResendPrompt">Gửi lại mã sau</sys:String>
+    <sys:String x:Key="CountdownDefault">01:30</sys:String>
+    <sys:String x:Key="ResendLink">Gửi lại mã</sys:String>
+
+    <!-- Các chuỗi mới từ fNewPassword.xaml -->
+    <sys:String x:Key="ResetPasswordTitle">Đặt lại mật khẩu</sys:String>
+    <sys:String x:Key="ResetPasswordHeader">Đặt lại mật khẩu</sys:String>
+    <sys:String x:Key="PasswordInstruction">Tạo mật khẩu mới an toàn cho tài khoản của bạn</sys:String>
+    <sys:String x:Key="NewPasswordLabel">Mật khẩu mới</sys:String>
+    <sys:String x:Key="UpdatePasswordButton">✔ Cập nhật mật khẩu</sys:String>
+    <sys:String x:Key="PasswordRequirements">Mật khẩu phải chứa ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và số</sys:String>
+
+    <!-- Các chuỗi mới từ fOtp.xaml -->
+    <sys:String x:Key="EmailVerifyTitle">Xác minh Email</sys:String>
+    <sys:String x:Key="EmailVerifyHeader">Xác minh Email</sys:String>
+    <sys:String x:Key="EmailSentMessage">Chúng tôi đã gửi một email xác thực đến:</sys:String>
+    <sys:String x:Key="SampleEmailVerify">user@example.com</sys:String>
+    <sys:String x:Key="VerifiedButton">Tôi đã xác minh</sys:String>
+    <sys:String x:Key="ResendEmailButton">Gửi lại email</sys:String>
+    <sys:String x:Key="CheckInboxMessage">Vui lòng kiểm tra hộp thư của bạn</sys:String>
+
+    <!-- Các chuỗi mới từ fResetPassword.xaml -->
+    <sys:String x:Key="RecoverPasswordTitle">Khôi phục mật khẩu</sys:String>
+    <sys:String x:Key="RecoverPasswordHeader">KHÔI PHỤC MẬT KHẨU</sys:String>
+    <sys:String x:Key="RecoverInstruction">Nhập email để nhận liên kết đặt lại mật khẩu</sys:String>
+    <sys:String x:Key="LoginEmailLabel">Email đăng nhập</sys:String>
+    <sys:String x:Key="SendResetLinkButton">GỬI LIÊN KẾT KHÔI PHỤC</sys:String>
+
+    <!-- Các chuỗi mới từ LoadingForm.xaml -->
+    <sys:String x:Key="LoadingTitle">Đang tải</sys:String>
+    <sys:String x:Key="LoadingIcon">⏳</sys:String>
+    <sys:String x:Key="LoadingMessage">Đang đăng nhập...</sys:String>
+
+    <!-- Các chuỗi mới từ SuccessPopup.xaml -->
+    <sys:String x:Key="SuccessTitle">Thành công</sys:String>
+    <sys:String x:Key="SuccessIcon">✓</sys:String>
+    <sys:String x:Key="SuccessMessage">Đăng nhập thành công!</sys:String>
+    <sys:String x:Key="OkButton">OK</sys:String>
+
+    <!-- Các chuỗi mới từ AddFriendWindow.xaml -->
+    <sys:String x:Key="AddFriendTitle">Thêm bạn bè</sys:String>
+    <sys:String x:Key="SearchButton">Tìm kiếm</sys:String>
+    <sys:String x:Key="AddFriendButton">Kết bạn</sys:String>
+    <sys:String x:Key="FriendStatus">Bạn bè</sys:String>
+    <sys:String x:Key="RequestSentStatus">Đã gửi</sys:String>
+    <sys:String x:Key="RequestReceivedStatus">Phản hồi</sys:String>
+    <sys:String x:Key="UnknownStatus">---</sys:String>
+    <sys:String x:Key="SearchPlaceholder">Nhập tên hoặc số điện thoại để tìm kiếm bạn bè.</sys:String>
+
+    <!-- Các chuỗi mới từ ChatView.xaml -->
+    <sys:String x:Key="MessagesTitle">Tin nhắn</sys:String>
+    <sys:String x:Key="AddFriendTooltip">Thêm bạn bè</sys:String>
+    <sys:String x:Key="SearchPlaceholderChat">Tìm kiếm</sys:String>
+    <sys:String x:Key="OfflineStatus">Ngoại tuyến</sys:String>
+    <sys:String x:Key="OnlineStatus">Trực tuyến</sys:String>
+    <sys:String x:Key="MessagePlaceholder">Nhập tin nhắn</sys:String>
+    <sys:String x:Key="SendTooltip">Gửi</sys:String>
+    <sys:String x:Key="DirectoryTitle">Thư mục</sys:String>
+    <sys:String x:Key="MoreOptionsTooltip">Thêm tùy chọn</sys:String>
+    <sys:String x:Key="DownloadTooltip">Tải xuống</sys:String>
+
+    <!-- Các chuỗi mới từ FriendListView.xaml -->
+    <sys:String x:Key="ContactsTitle">Danh bạ</sys:String>
+    <sys:String x:Key="UnfriendButton">Hủy kết bạn</sys:String>
+    <sys:String x:Key="SendMessageButton">Gửi tin nhắn</sys:String>
+    <sys:String x:Key="LeaveGroupButton">Rời nhóm</sys:String>
+    <sys:String x:Key="FriendRequestsTitle">Lời mời kết bạn</sys:String>
+    <sys:String x:Key="FriendRequestDescription">muốn kết bạn</sys:String>
+    <sys:String x:Key="AcceptRequestButton">Chấp nhận</sys:String>
+    <sys:String x:Key="DeclineRequestButton">Từ chối</sys:String>
+    <sys:String x:Key="SelectContactPrompt">Chọn một liên hệ hoặc nhóm để xem chi tiết</sys:String>
+
+    <!-- Các chuỗi mới từ MainWindow.xaml -->
+    <sys:String x:Key="AppTitle">Ứng dụng Chat</sys:String>
+    <sys:String x:Key="ProfileTooltip">Hồ sơ</sys:String>
+    <sys:String x:Key="MessageTooltip">Tin nhắn</sys:String>
+    <sys:String x:Key="FriendsTooltip">Bạn bè</sys:String>
+    <sys:String x:Key="SettingsTooltip">Cài đặt</sys:String>
+</ResourceDictionary>
