@@ -31,7 +31,7 @@ namespace WpfApp1.LoginlSignUp
         private User userData;
         private string idToken;
         private string userEmail;
-        private const string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg";
+        private const string apiKey = "AIzaSyCDIXwx-Zcv3Qcxt9e_y8eUNiNlnEXFDbw";
         public fOtp(string token, string email, User data)
         {
             InitializeComponent();

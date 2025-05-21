@@ -18,7 +18,10 @@ namespace WpfApp1.Models
         // Cờ xác định tin nhắn là của người dùng hiện tại
         public bool IsMine { get; set; }
 
-        public string Alignment { get; set; }   
+        public string Alignment { get; set; }
+        public bool IsImage { get; set; } // Thêm thuộc tính này
+        public string ImageUrl { get; set; }
+
         public Message()
         {
             // Gán mặc định

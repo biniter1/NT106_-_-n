@@ -9,7 +9,7 @@ namespace WpfApp1.Models
     internal static class FirestoreHelper
     {
         public static FirestoreDb database { get; private set; }
-        private static readonly string ProjectId = "fir-5b855";
+        private static readonly string ProjectId = "chatapp-177";
 
         // THAY TÊN TỆP JSON CỦA BẠN VÀO ĐÂY
         private static readonly string CredentialFileName = "firebase-credentials.json";

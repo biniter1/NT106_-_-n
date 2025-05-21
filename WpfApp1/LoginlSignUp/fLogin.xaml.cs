@@ -206,7 +206,7 @@ namespace WpfApp1.LoginlSignUp
                 // Check email verification status
                 using (HttpClient client = new HttpClient())
                 {
-                    string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg";
+                    string apiKey = "AIzaSyCDIXwx-Zcv3Qcxt9e_y8eUNiNlnEXFDbw";
                     string url = $"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={apiKey}";
 
                     var lookupPayload = new
@@ -268,7 +268,7 @@ namespace WpfApp1.LoginlSignUp
             {
                 using (HttpClient client = new HttpClient())
                 {
-                    string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg";
+                    string apiKey = "AIzaSyCDIXwx-Zcv3Qcxt9e_y8eUNiNlnEXFDbw";
                     string url = $"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={apiKey}";
 
                     var signInPayload = new
@@ -311,7 +311,7 @@ namespace WpfApp1.LoginlSignUp
             {
                 using (HttpClient client = new HttpClient())
                 {
-                    string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg";
+                    string apiKey = "AIzaSyCDIXwx-Zcv3Qcxt9e_y8eUNiNlnEXFDbw";
                     string url = $"https://securetoken.googleapis.com/v1/token?key={apiKey}";
 
                     var refreshPayload = new
@@ -352,7 +352,7 @@ namespace WpfApp1.LoginlSignUp
             {
                 using (HttpClient client = new HttpClient())
                 {
-                    string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg";
+                    string apiKey = "AIzaSyCDIXwx-Zcv3Qcxt9e_y8eUNiNlnEXFDbw";
                     string url = $"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={apiKey}";
 
                     var lookupPayload = new

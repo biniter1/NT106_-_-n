@@ -12,10 +12,11 @@ using Firebase.Database.Query;
 using System.Windows.Media;
 using Google.Cloud.Firestore;
 using Firebase.Database.Streaming;
-using System.Text;
 using System.Security.Cryptography;
-using System.Text;
 using System.Reactive.Linq;
+using Microsoft.Win32;
+using System.IO;
+using System.Windows.Input;
 
 namespace WpfApp1.ViewModels
 {
@@ -78,7 +79,7 @@ namespace WpfApp1.ViewModels
 
             firebaseClient = new FirebaseClient("https://fir-5b855-default-rtdb.firebaseio.com");
 
-            userdata= SharedData.Instance.userdata;
+            userdata = SharedData.Instance.userdata;
             SelectedContact = null;
             NewMessageText = string.Empty;
 
@@ -219,12 +220,14 @@ namespace WpfApp1.ViewModels
                 MessageBox.Show($"Không thể tải tin nhắn: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
         private void LoadFilesForContact(Contact contact)
         {
             Files.Clear();
 
-            if (contact == null) return; 
+            if (contact == null) return;
         }
+
         [RelayCommand(CanExecute = nameof(CanSendMessage))]
         private async void SendMessage(Contact contact)
         {
@@ -249,8 +252,122 @@ namespace WpfApp1.ViewModels
 
         private bool CanSendMessage()
         {
-            return !string.IsNullOrWhiteSpace(NewMessageText)&&SelectedContact != null; 
+            return !string.IsNullOrWhiteSpace(NewMessageText) && SelectedContact != null;
         }
+
+        [RelayCommand]
+        private async Task SelectFileAsync()
+        {
+            if (SelectedContact == null)
+            {
+                MessageBox.Show("Vui lòng chọn một liên hệ trước khi gửi tệp tin.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var openFileDialog = new OpenFileDialog
+            {
+                Title = "Chọn tệp để gửi",
+                Filter = "Tất cả tệp|*.*|Hình ảnh|*.jpg;*.jpeg;*.png;*.gif|Tài liệu|*.pdf;*.docx;*.doc;*.xlsx;*.xls;*.ppt;*.pptx",
+                Multiselect = false
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    string selectedFilePath = openFileDialog.FileName;
+                    string fileName = Path.GetFileName(selectedFilePath);
+                    string fileExtension = Path.GetExtension(selectedFilePath).ToLower();
+
+                    // Hiển thị thông báo đang tải lên
+                    Mouse.OverrideCursor = Cursors.Wait;
+
+                    try
+                    {
+                        // Upload file lên Firebase Storage
+                        string downloadUrl = await FirebaseStorageHelper.UploadFileAsync(selectedFilePath, fileName);
+
+                        // Xác định có phải là ảnh không
+                        bool isImage = IsImageFile(fileExtension);
+
+                        // Tạo đối tượng tin nhắn
+                        var newMessage = new Message
+                        {
+                            SenderId = SharedData.Instance.userdata.Email,
+                            Content = isImage ? string.Empty : fileName,
+                            Timestamp = DateTime.UtcNow,
+                            IsMine = true,
+                            IsImage = isImage,
+                            ImageUrl = isImage ? downloadUrl : null,
+                            Alignment = "Right"
+                        };
+
+                        // Gửi tin nhắn lên Firebase
+                        var result = await firebaseClient
+                            .Child("messages")
+                            .Child(SelectedContact.chatID)
+                            .PostAsync(newMessage);
+
+                        // Lấy ID từ kết quả và gán vào tin nhắn
+                        newMessage.Id = result.Key;
+
+                        // Thêm vào ObservableCollection
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            Messages.Add(newMessage);
+                        });
+
+                        // Nếu là tệp (không phải ảnh), thêm vào danh sách Files
+                        if (!isImage)
+                        {
+                            var fileItem = new FileItem
+                            {
+                                IconPathOrType = fileExtension.TrimStart('.'),
+                                FileName = fileName,
+                                FileInfo = $"{FormatFileSize(new FileInfo(selectedFilePath).Length)} • {DateTime.Now:dd/MM/yyyy}",
+                                FilePathOrUrl = downloadUrl,
+                                DownloadUrl = downloadUrl
+                            };
+
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                Files.Add(fileItem);
+                            });
+                        }
+
+                        Debug.WriteLine($"File uploaded successfully: {fileName}");
+                    }
+                    finally
+                    {
+                        // Khôi phục con trỏ chuột
+                        Mouse.OverrideCursor = null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error uploading file: {ex.Message}");
+                    MessageBox.Show($"Không thể tải lên tệp tin: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private bool IsImageFile(string extension)
+        {
+            string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
+            return Array.IndexOf(imageExtensions, extension.ToLower()) >= 0;
+        }
+
+        private string FormatFileSize(long byteCount)
+        {
+            string[] suf = { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
+            if (byteCount == 0)
+                return "0" + suf[0];
+            long bytes = Math.Abs(byteCount);
+            int place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
+            double num = Math.Round(bytes / Math.Pow(1024, place), 1);
+            return $"{(Math.Sign(byteCount) * num)}{suf[place]}";
+        }
+
         public async Task<List<Contact>> GetContactsAsync(string email)
         {
             if (string.IsNullOrEmpty(email))
@@ -289,6 +406,7 @@ namespace WpfApp1.ViewModels
                 return new List<Contact>();
             }
         }
+
         private async void LoadInitialData()
         {
             Contacts.Clear();

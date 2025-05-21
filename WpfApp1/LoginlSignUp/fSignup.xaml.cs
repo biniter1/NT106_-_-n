@@ -78,7 +78,7 @@ namespace WpfApp1.LoginlSignUp
             var data = GetWriteData(); // hàm lấy email + password từ form
             string email = data.Email.Trim();
             string password = data.Password.Trim();
-            string apiKey = "AIzaSyDbQedJtWK-vnQAbS_BpgQHCTBqyK8RPMg";
+            string apiKey = "AIzaSyCDIXwx-Zcv3Qcxt9e_y8eUNiNlnEXFDbw";
 
             try
             {
