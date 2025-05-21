@@ -1,0 +1,2 @@
+﻿Install-Package Google.Cloud.Firestore
+Install-Package FirebaseDatabase.net
