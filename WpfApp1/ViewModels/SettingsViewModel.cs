@@ -39,6 +39,14 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private string _selectedLanguage;
 
+        // Tạo tham chiếu, giúp gọi được hàm của chatviewmodel
+        private readonly ChatViewModel _chatViewModel;
+
+        public SettingsViewModel(ChatViewModel chatViewModel)
+        {
+            _chatViewModel = chatViewModel;
+        }
+
         // Danh sách các tùy chọn
         public ObservableCollection<string> Themes { get; } = new ObservableCollection<string> { "Light", "Dark" };
         public ObservableCollection<string> Languages { get; } = new ObservableCollection<string> { "Tiếng Việt", "English", "日本語" };
@@ -87,6 +95,7 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void Logout()
         {
+            _chatViewModel.Cleanup();
             MessageBox.Show("Đăng xuất thành công!");
 
             // Tạo instance của fLogin để gọi phương thức PerformLogout

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Windows;
@@ -28,6 +29,7 @@ namespace WpfApp1
             InitializeComponent();
             CurrentEmail = email;
             Loaded += MainWindow_Loaded; // Use Loaded event to ensure UI is ready
+            this.Closing += MainWindow_Closing;
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -120,6 +122,21 @@ namespace WpfApp1
         private void CloseNotification_Click(object sender, RoutedEventArgs e)
         {
             MessageNotificationPopup.IsOpen = false;
+        }
+
+        // Sự kiện closing
+        private void MainWindow_Closing(object sender, CancelEventArgs e)
+        {
+            // Lấy MainViewModel từ DataContext của MainWindow
+            if (this.DataContext is MainViewModel mainVM)
+            {
+                System.Diagnostics.Debug.WriteLine("MainWindow_Closing: Calling MainViewModel.Cleanup().");
+                mainVM.Cleanup(); // Gọi Cleanup của MainViewModel
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("MainWindow_Closing: MainViewModel not found in DataContext. Cleanup might be incomplete.");
+            }
         }
     }
 

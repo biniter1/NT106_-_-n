@@ -13,7 +13,7 @@ namespace WpfApp1.ViewModels
         // Thuộc tính quan trọng: Giữ ViewModel của View đang hiển thị trong ContentControl
         [ObservableProperty]
         private ObservableObject _currentViewModel; // Kiểu là ObservableObject hoặc lớp cơ sở chung khác
-
+        private ChatViewModel _chatViewModel = new ChatViewModel();
         // Constructor
         public MainViewModel()
         {
@@ -73,7 +73,12 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void ShowSettingsPopup()
         {
-            var settingsWin = new SettingsWindow();
+            var settingsVM = new SettingsViewModel(_chatViewModel);
+            var settingsWin = new SettingsWindow
+            {
+                DataContext = settingsVM
+            };
+
             if (Application.Current.MainWindow != null)
             {
                 settingsWin.Owner = Application.Current.MainWindow;
@@ -94,5 +99,13 @@ namespace WpfApp1.ViewModels
         // [ObservableProperty]
         // private User _loggedInUser;
 
+        public void Cleanup()
+        {
+            System.Diagnostics.Debug.WriteLine("MainViewModel: Starting Cleanup...");
+
+            _chatViewModel.Cleanup();
+
+            System.Diagnostics.Debug.WriteLine("MainViewModel: Cleanup of cached child ViewModels complete.");
+        }
     }
 }

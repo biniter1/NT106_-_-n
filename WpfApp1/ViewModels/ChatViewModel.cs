@@ -38,7 +38,7 @@ namespace WpfApp1.ViewModels
 
         public User userdata;
         private List<IDisposable> allMessageSubscriptions = new List<IDisposable>();
-
+        private Dictionary<string, IDisposable> _contactPresenceListeners = new Dictionary<string, IDisposable>();
         partial void OnSelectedContactChanged(Contact value)
         {
             // Thông báo cho Command cập nhật trạng thái có thể thực thi
@@ -80,6 +80,16 @@ namespace WpfApp1.ViewModels
             firebaseClient = new FirebaseClient("https://fir-5b855-default-rtdb.firebaseio.com");
 
             userdata = SharedData.Instance.userdata;
+
+            if (userdata != null && !string.IsNullOrEmpty(userdata.Email))
+            {
+                SetCurrentUserGlobalStatus(true); // Đặt trạng thái online khi khởi động
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("ChatViewModel Constructor: Userdata not available yet for initial online status set.");
+            }
+
             SelectedContact = null;
             NewMessageText = string.Empty;
 
@@ -439,6 +449,179 @@ namespace WpfApp1.ViewModels
                 Messages.Clear();
                 Files.Clear();
             }
+            // Bắt đầu lắng nghe trạng thái của tất cả các contact vừa tải
+            StartListeningToContactsPresence();
+        }
+
+        // Cập nhật trạng thái online của các users
+        // Hàm tiện ích để mã hóa email thành key hợp lệ cho RTDB
+        private string EscapeEmail(string email)
+        {
+            if (string.IsNullOrEmpty(email)) return string.Empty;
+            // Thay thế các ký tự không hợp lệ cho Firebase RTDB path
+            return email.Replace('.', ',')
+                        .Replace('#', '_')
+                        .Replace('$', '_')
+                        .Replace('[', '_')
+                        .Replace(']', '_')
+                        .Replace('/', '_');
+        }
+
+        private async void SetCurrentUserGlobalStatus(bool isOnline)
+        {
+            if (userdata == null || string.IsNullOrEmpty(userdata.Email))
+            {
+                System.Diagnostics.Debug.WriteLine("SetCurrentUserGlobalStatus: Userdata or Email is null. Khong the cap nhat trang thai toan cuc");
+                return;
+            }
+
+            string escapedUserEmail = EscapeEmail(userdata.Email);
+            var statusUpdate = new UserStatusData
+            {
+                isOnline = isOnline,
+                last_active = new Dictionary<string, string> { { ".sv", "timestamp" } }
+            };
+
+            try
+            {
+                await firebaseClient
+                      .Child("user_status")
+                      .Child(escapedUserEmail)
+                      .PutAsync(statusUpdate);
+
+                System.Diagnostics.Debug.WriteLine($"Current user global status set to: {(isOnline ? "Online" : "Offline")} at /user_status/{escapedUserEmail}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error setting current user global status: {ex.Message}");
+            }
+        }
+
+
+        private void StartListeningToContactsPresence()
+        {
+            if (Contacts == null || !Contacts.Any())
+            {
+                System.Diagnostics.Debug.WriteLine("StartListeningToContactsPresence: Contacts list is null or empty.");
+                return;
+            }
+
+            foreach (var listener in _contactPresenceListeners.Values)
+            {
+                listener?.Dispose();
+            }
+            _contactPresenceListeners.Clear();
+            System.Diagnostics.Debug.WriteLine("Cleared old contact presence listeners.");
+
+            foreach (var contact_trong_lap in Contacts)
+            {
+                if (contact_trong_lap == null || string.IsNullOrEmpty(contact_trong_lap.Email))
+                {
+                    System.Diagnostics.Debug.WriteLine("StartListeningToContactsPresence: Skipping a contact with null or empty email.");
+                    continue;
+                }
+
+                Contact contactHienTai = contact_trong_lap;
+                string contactEmailCanLangNghe = contactHienTai.Email;
+                string escapedContactEmail = EscapeEmail(contactEmailCanLangNghe);
+
+                System.Diagnostics.Debug.WriteLine($"Setting up listener for: {contactEmailCanLangNghe} (escaped: {escapedContactEmail}) at /user_status/{escapedContactEmail}");
+
+                try
+                {
+                    UserStatusData localStatus = new UserStatusData();
+
+                    var presenceListener = firebaseClient
+                    .Child("user_status")
+                    .Child(escapedContactEmail)
+                    .AsObservable<object>()
+                    .Subscribe(presenceEvent =>
+                    {
+                        System.Diagnostics.Debug.WriteLine($"EventType: {presenceEvent.EventType}, Key: {presenceEvent.Key}");
+
+                        if (presenceEvent.Object != null)
+                        {
+                            switch (presenceEvent.Key)
+                            {
+                                case "isOnline":
+                                    bool newIsOnline = Convert.ToBoolean(presenceEvent.Object);
+                                    localStatus.isOnline = newIsOnline;
+                                    System.Diagnostics.Debug.WriteLine($"Updated isOnline: {newIsOnline}");
+                                    break;
+
+                                case "last_active":
+
+                                    long newLastActive;
+                                    if (long.TryParse(presenceEvent.Object.ToString(), out newLastActive))
+                                    {
+                                        localStatus.last_active = newLastActive;
+                                        System.Diagnostics.Debug.WriteLine($"Updated last_active: {newLastActive}");
+                                    }
+                                    break;
+
+                                default:
+                                    System.Diagnostics.Debug.WriteLine($"Unknown key: {presenceEvent.Key}");
+                                    break;
+                            }
+
+                            // Cập nhật UI 
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                var localContactToUpdate = Contacts.FirstOrDefault(c => c.Email == contactEmailCanLangNghe);
+                                if (localContactToUpdate != null)
+                                {
+                                    localContactToUpdate.IsOnline = localStatus.isOnline;
+
+                                    //Chưa thực hiện cập nhật thời gian online gần nhất nên comment
+                                    //localContactToUpdate.last_active = localStatus.last_active;
+                                }
+                            });
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("Received null object in presenceEvent");
+
+                            // Gán là offline vì không có dữ liệu
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                var localContactToUpdate = Contacts.FirstOrDefault(c => c.Email == contactEmailCanLangNghe);
+                                if (localContactToUpdate != null)
+                                {
+                                    localContactToUpdate.IsOnline = false;
+                                }
+                            });
+                        }
+                    });
+
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PRESENCE SETUP FAIL] Failed for {contact_trong_lap.Email}: {ex.Message}");
+                }
+            }
+        }
+        // Dọn dẹp các đăng ký và set trạng thái offline, hàm này được gọi ở hàm logout bên cài đặt và các khi bấm đóng app
+        public void Cleanup()
+        {
+            SetCurrentUserGlobalStatus(false); // Đặt trạng thái offline khi dọn dẹp
+            // Hủy tất cả các subscription để tránh rò rỉ bộ nhớ
+            foreach (var subscription in allMessageSubscriptions)
+            {
+                subscription?.Dispose();
+            }
+            allMessageSubscriptions.Clear();
+
+            messageSubscription?.Dispose();
+            messageSubscription = null;
+
+            // Hủy tất cả các contact presence listeners
+            foreach (var listener in _contactPresenceListeners.Values)
+            {
+                listener?.Dispose();
+            }
+            _contactPresenceListeners.Clear();
+            System.Diagnostics.Debug.WriteLine("ChatViewModel cleanup complete.");
         }
     }
+
 }
