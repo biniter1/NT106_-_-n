@@ -120,4 +120,41 @@
     <sys:String x:Key="MessageTooltip">Messages</sys:String>
     <sys:String x:Key="FriendsTooltip">Friends</sys:String>
     <sys:String x:Key="SettingsTooltip">Settings</sys:String>
+
+    <!--SETTINGS-->
+    <sys:String x:Key="Settings">⚙️ Settings</sys:String>
+    <sys:String x:Key="Account">👤 Account</sys:String>
+    <sys:String x:Key="Appearance">🎨 Appearance</sys:String>
+    <sys:String x:Key="Data">💾 Data</sys:String>
+    <sys:String x:Key="Language">🌐 Language</sys:String>
+    <sys:String x:Key="Support">❓ Support</sys:String>
+    <sys:String x:Key="Logout">🚪 Logout</sys:String>
+    <sys:String x:Key="ExitApp">❌ Exit Application</sys:String>
+    <sys:String x:Key="AccountInfo">👤 Account Info</sys:String>
+    <sys:String x:Key="Username">Username</sys:String>
+    <sys:String x:Key="Email">Email</sys:String>
+    <sys:String x:Key="JoinDate">Join Date</sys:String>
+    <sys:String x:Key="Edit">✏️ Edit</sys:String>
+    <sys:String x:Key="AppearanceDisplay">🎨 Appearance Display</sys:String>
+    <sys:String x:Key="DisplayMode">Display Mode</sys:String>
+    <sys:String x:Key="Notifications">Notifications</sys:String>
+    <sys:String x:Key="EnableSoundNotifications">Enable Sound Notifications</sys:String>
+    <sys:String x:Key="ShowDesktopNotifications">Show Desktop Notifications</sys:String>
+    <sys:String x:Key="NotifyWhenOffline">Notify When Offline</sys:String>
+    <sys:String x:Key="DisplayLanguage">Display Language</sys:String>
+    <sys:String x:Key="SaveChanges">💾 Save Changes</sys:String>
+    <sys:String x:Key="DataManagement">💾 Data Management</sys:String>
+    <sys:String x:Key="ManageYourData">Manage your personal data and chat history.</sys:String>
+    <sys:String x:Key="Warning">⚠️ Warning</sys:String>
+    <sys:String x:Key="DeleteDataWarning">Data deletion is irreversible. Please consider carefully before proceeding.</sys:String>
+    <sys:String x:Key="ExportData">📤 Export Data</sys:String>
+    <sys:String x:Key="DeleteAllData">🗑️ Delete All Data</sys:String>
+    <sys:String x:Key="SelectLanguage">Select the display language for the application:</sys:String>
+    <sys:String x:Key="SupportHelp">❓ Support Help</sys:String>
+    <sys:String x:Key="NeedHelp">Need help? We are always ready to assist you!</sys:String>
+    <sys:String x:Key="EmailSupport">📧 Email Support</sys:String>
+    <sys:String x:Key="Hotline">📞 Hotline</sys:String>
+    <sys:String x:Key="SendFeedback">📝 Send Feedback</sys:String>
+    <sys:String x:Key="UserGuide">📋 User Guide</sys:String>
+    <sys:String x:Key="Apply">✅ Apply</sys:String>
 </ResourceDictionary>

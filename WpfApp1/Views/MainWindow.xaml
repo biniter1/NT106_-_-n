@@ -13,9 +13,6 @@
         Background="#F5F5F5">
     <Window.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
-            </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="SearchBoxPlaceholderStyle" TargetType="TextBox">
                 <Setter Property="Template">

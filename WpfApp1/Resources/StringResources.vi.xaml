@@ -120,4 +120,42 @@
     <sys:String x:Key="MessageTooltip">Tin nhắn</sys:String>
     <sys:String x:Key="FriendsTooltip">Bạn bè</sys:String>
     <sys:String x:Key="SettingsTooltip">Cài đặt</sys:String>
+
+    <!--Settings-->
+
+    <sys:String x:Key="Settings">⚙️ Cài đặt</sys:String>
+    <sys:String x:Key="Account">👤 Tài khoản</sys:String>
+    <sys:String x:Key="Appearance">🎨 Giao diện</sys:String>
+    <sys:String x:Key="Data">💾 Dữ liệu</sys:String>
+    <sys:String x:Key="Language">🌐 Ngôn ngữ</sys:String>
+    <sys:String x:Key="Support">❓ Hỗ trợ</sys:String>
+    <sys:String x:Key="Logout">🚪 Đăng xuất</sys:String>
+    <sys:String x:Key="ExitApp">❌ Thoát ứng dụng</sys:String>
+    <sys:String x:Key="AccountInfo">👤 Thông tin tài khoản</sys:String>
+    <sys:String x:Key="Username">Tên người dùng</sys:String>
+    <sys:String x:Key="Email">Email</sys:String>
+    <sys:String x:Key="JoinDate">Ngày tham gia</sys:String>
+    <sys:String x:Key="Edit">✏️ Chỉnh sửa</sys:String>
+    <sys:String x:Key="AppearanceDisplay">🎨 Giao diện Hiển thị</sys:String>
+    <sys:String x:Key="DisplayMode">Chế độ hiển thị</sys:String>
+    <sys:String x:Key="Notifications">Thông báo</sys:String>
+    <sys:String x:Key="EnableSoundNotifications">Bật thông báo âm thanh</sys:String>
+    <sys:String x:Key="ShowDesktopNotifications">Hiển thị thông báo trên desktop</sys:String>
+    <sys:String x:Key="NotifyWhenOffline">Thông báo khi offline</sys:String>
+    <sys:String x:Key="DisplayLanguage">Ngôn ngữ hiển thị</sys:String>
+    <sys:String x:Key="SaveChanges">💾 Lưu thay đổi</sys:String>
+    <sys:String x:Key="DataManagement">💾 Quản lý dữ liệu</sys:String>
+    <sys:String x:Key="ManageYourData">Quản lý dữ liệu cá nhân và lịch sử trò chuyện của bạn.</sys:String>
+    <sys:String x:Key="Warning">⚠️ Cảnh báo</sys:String>
+    <sys:String x:Key="DeleteDataWarning">Việc xóa dữ liệu không thể hoàn tác. Hãy cân nhắc kỹ trước khi thực hiện.</sys:String>
+    <sys:String x:Key="ExportData">📤 Xuất dữ liệu</sys:String>
+    <sys:String x:Key="DeleteAllData">🗑️ Xóa tất cả dữ liệu</sys:String>
+    <sys:String x:Key="SelectLanguage">Chọn ngôn ngữ hiển thị cho ứng dụng:</sys:String>
+    <sys:String x:Key="SupportHelp">❓ Hỗ trợ Trợ giúp</sys:String>
+    <sys:String x:Key="NeedHelp">Cần hỗ trợ? Chúng tôi luôn sẵn sàng giúp bạn!</sys:String>
+    <sys:String x:Key="EmailSupport">📧 Email hỗ trợ</sys:String>
+    <sys:String x:Key="Hotline">📞 Hotline</sys:String>
+    <sys:String x:Key="SendFeedback">📝 Gửi phản hồi</sys:String>
+    <sys:String x:Key="UserGuide">📋 Hướng dẫn sử dụng</sys:String>
+    <sys:String x:Key="Apply">✅ Áp dụng</sys:String>
 </ResourceDictionary>

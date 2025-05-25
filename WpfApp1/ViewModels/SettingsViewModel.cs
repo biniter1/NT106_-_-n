@@ -3,7 +3,9 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Windows;
-using WpfApp1.LoginlSignUp; // Thêm namespace để gọi fLogin.PerformLogout
+using WpfApp1.LoginlSignUp;
+using System.Windows.Markup;
+using System.Windows.Input;
 
 namespace WpfApp1.ViewModels
 {
@@ -45,6 +47,7 @@ namespace WpfApp1.ViewModels
         public SettingsViewModel(ChatViewModel chatViewModel)
         {
             _chatViewModel = chatViewModel;
+            InitializeSettings();
         }
 
         // Danh sách các tùy chọn
@@ -53,6 +56,11 @@ namespace WpfApp1.ViewModels
 
         public SettingsViewModel()
         {
+            InitializeSettings();
+        }
+
+        private void InitializeSettings()
+        {
             // Giá trị mặc định
             _selectedTheme = "Light";
             _enableNotifications = true;
@@ -60,6 +68,23 @@ namespace WpfApp1.ViewModels
             _notifyWhenOffline = false;
             _selectedLanguage = "Tiếng Việt";
             _currentView = "AccountInfo"; // Mặc định hiển thị thông tin tài khoản
+            var savedLanguage = Properties.Settings.Default.SelectedLanguage;
+            _selectedLanguage = savedLanguage switch
+            {
+                "Tiếng Việt" => "Tiếng Việt",
+                "English" => "English",
+                _ => "Tiếng Việt" // Default to Tiếng Việt
+            };
+        }
+
+        // Phương thức tiện ích để lấy chuỗi từ ResourceDictionary
+        private string GetLocalizedString(string key)
+        {
+            if (Application.Current.Resources["LocalizationDictionary"] is ResourceDictionary localizationDict)
+            {
+                return localizationDict.Contains(key) ? localizationDict[key].ToString() : key;
+            }
+            return key; // Fallback nếu không tìm thấy
         }
 
         [RelayCommand]
@@ -95,8 +120,8 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void Logout()
         {
-            _chatViewModel.Cleanup();
-            MessageBox.Show("Đăng xuất thành công!");
+            _chatViewModel?.Cleanup();
+            MessageBox.Show(GetLocalizedString("LogoutSuccessMessage"));
 
             // Tạo instance của fLogin để gọi phương thức PerformLogout
             fLogin loginWindow = new fLogin();
@@ -122,47 +147,157 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void EditProfile()
         {
-            MessageBox.Show("Tính năng chỉnh sửa hồ sơ đang được phát triển!");
+            MessageBox.Show(GetLocalizedString("EditProfileUnderDevelopment"));
         }
 
         [RelayCommand]
         private void SaveSettings()
         {
-            MessageBox.Show($"Cài đặt đã được lưu: Theme={SelectedTheme}, Notifications={EnableNotifications}, Desktop Notifications={ShowDesktopNotifications}, Notify Offline={NotifyWhenOffline}, Language={SelectedLanguage}");
+            MessageBox.Show(GetLocalizedString("SettingsSavedMessage") +
+                           $" Theme={SelectedTheme}, Notifications={EnableNotifications}, Desktop Notifications={ShowDesktopNotifications}, Notify Offline={NotifyWhenOffline}, Language={SelectedLanguage}");
         }
 
         [RelayCommand]
         private void ExportData()
         {
-            MessageBox.Show("Xuất dữ liệu thành công!");
+            MessageBox.Show(GetLocalizedString("ExportDataSuccess"));
         }
 
         [RelayCommand]
         private void DeleteData()
         {
-            var result = MessageBox.Show("Bạn có chắc chắn muốn xóa tất cả dữ liệu? Hành động này không thể hoàn tác.", "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            var result = MessageBox.Show(GetLocalizedString("DeleteDataConfirmation"), GetLocalizedString("Confirmation"),
+                                        MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result == MessageBoxResult.Yes)
             {
-                MessageBox.Show("Dữ liệu đã được xóa!");
+                MessageBox.Show(GetLocalizedString("DataDeletedMessage"));
             }
         }
 
         [RelayCommand]
         private void ApplyLanguage()
         {
-            MessageBox.Show($"Ngôn ngữ đã được áp dụng: {SelectedLanguage}");
+            try
+            {
+                // Áp dụng thay đổi ngôn ngữ toàn cục
+                ApplyLanguageGlobally(SelectedLanguage);
+
+                MessageBox.Show($"Language applied: {SelectedLanguage}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error applying language: {ex.Message}");
+            }
+        }
+
+        private void ApplyLanguageGlobally(string language)
+        {
+            try
+            {
+                // 1. Xác định đường dẫn resource file
+                string resourcePath = language switch
+                {
+                    "Tiếng Việt" => "Resources/StringResources.vi.xaml",
+                    "English" => "Resources/StringResources.en.xaml",
+                    _ => "Resources/StringResources.vi.xaml"
+                };
+
+                // 2. Cập nhật Application resources
+                var app = Application.Current;
+                if (app == null) return;
+
+                // 3. Tạo resource dictionary mới
+                ResourceDictionary newResourceDict;
+                try
+                {
+                    newResourceDict = new ResourceDictionary
+                    {
+                        Source = new Uri(resourcePath, UriKind.Relative)
+                    };
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Could not load resource: {resourcePath}. Error: {ex.Message}");
+                    return;
+                }
+
+                // 4. Tìm và xóa localization dictionary cũ
+                ResourceDictionary oldDict = null;
+                foreach (var dict in app.Resources.MergedDictionaries)
+                {
+                    if (dict.Source != null && dict.Source.ToString().Contains("StringResources"))
+                    {
+                        oldDict = dict;
+                        break;
+                    }
+                }
+
+                if (oldDict != null)
+                {
+                    app.Resources.MergedDictionaries.Remove(oldDict);
+                }
+
+                // 5. Thêm dictionary mới
+                app.Resources.MergedDictionaries.Add(newResourceDict);
+
+                // 6. Lưu cài đặt ngôn ngữ
+                Properties.Settings.Default.SelectedLanguage = language;
+                Properties.Settings.Default.Save();
+
+                // 7. Notify về việc thay đổi ngôn ngữ thay vì refresh windows
+                NotifyLanguageChanged();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in ApplyLanguageGlobally: {ex.Message}");
+                throw;
+            }
+        }
+
+        private void NotifyLanguageChanged()
+        {
+            try
+            {
+                // Sử dụng Dispatcher để đảm bảo UI update an toàn
+                Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                {
+                    // Trigger property changed để UI cập nhật
+                    OnPropertyChanged(nameof(SelectedLanguage));
+
+                    // Force update layout của current window
+                    foreach (Window window in Application.Current.Windows)
+                    {
+                        window?.InvalidateVisual();
+                    }
+                }));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error notifying language change: {ex.Message}");
+            }
         }
 
         [RelayCommand]
         private void SendFeedback()
         {
-            MessageBox.Show("Phản hồi của bạn đã được gửi!");
+            MessageBox.Show(GetLocalizedString("FeedbackSentMessage"));
         }
 
         [RelayCommand]
         private void ShowUserGuide()
         {
-            MessageBox.Show("Hướng dẫn sử dụng đang được phát triển!");
+            MessageBox.Show(GetLocalizedString("UserGuideUnderDevelopment"));
+        }
+
+        // Method được gọi từ RadioButton event trong code-behind
+        public void OnLanguageChanged(string language)
+        {
+            if (SelectedLanguage != language)
+            {
+                SelectedLanguage = language;
+                // Áp dụng ngay lập tức mà không cần nhấn Apply
+                ApplyLanguageGlobally(language);
+            }
         }
     }
 }
