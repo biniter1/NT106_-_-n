@@ -1,10 +1,13 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Google.Cloud.Firestore;
+using Microsoft.Win32;
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.IO;
 using System.Windows;
-using System.Xml.Linq;
+using System.Windows.Media.Imaging;
+using Firebase.Storage;
 using WpfApp1.Models;
 
 namespace WpfApp1.ViewModels
@@ -29,12 +32,18 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private DateTime _dateOfBirth;
 
+        [ObservableProperty]
+        private string _avatarUrl;
+
+        [ObservableProperty]
+        private string _avatarFilePath;
 
         // Original values to check for changes
         private string _originalName;
         private string _originalEmail;
         private string _originalPhone;
         private DateTime _originalDateOfBirth;
+        private string _originalAvatarUrl;
 
         // Events
         public event Action<bool> ProfileUpdated;
@@ -53,16 +62,43 @@ namespace WpfApp1.ViewModels
             _email = _originalEmail = userData.Email ?? "";
             _phone = _originalPhone = userData.Phone ?? "";
             _dateOfBirth = _originalDateOfBirth = userData.DateTime != default ? userData.DateTime : DateTime.Now.AddYears(-25);
+            _avatarUrl = _originalAvatarUrl = userData.AvatarUrl ?? "";
+            _avatarFilePath = "";
 
             // Notify properties changed
             OnPropertyChanged(nameof(Name));
             OnPropertyChanged(nameof(Email));
             OnPropertyChanged(nameof(Phone));
-            OnPropertyChanged(nameof(DateTime));
+            OnPropertyChanged(nameof(DateOfBirth));
+            OnPropertyChanged(nameof(AvatarUrl));
         }
 
         [RelayCommand]
-        private void SaveProfile()
+        private void ChangeAvatar()
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog
+            {
+                Filter = "Image files (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg|All files (*.*)|*.*",
+                Title = "Select Profile Avatar"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    AvatarFilePath = openFileDialog.FileName;
+                    AvatarUrl = openFileDialog.FileName; // Display local image immediately
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error selecting avatar: {ex.Message}", "Error",
+                                    MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        [RelayCommand]
+        private async void SaveProfile()
         {
             try
             {
@@ -72,7 +108,7 @@ namespace WpfApp1.ViewModels
                 if (HasErrors)
                 {
                     MessageBox.Show("Please fix all validation errors before saving.", "Validation Error",
-                                   MessageBoxButton.OK, MessageBoxImage.Warning);
+                                    MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -80,7 +116,7 @@ namespace WpfApp1.ViewModels
                 if (!HasChanges())
                 {
                     MessageBox.Show("No changes detected.", "Information",
-                                   MessageBoxButton.OK, MessageBoxImage.Information);
+                                    MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
 
@@ -91,10 +127,18 @@ namespace WpfApp1.ViewModels
                 userData.Phone = Phone;
                 userData.DateTime = DateOfBirth;
 
-                SaveToDatabase(userData);
+                // Handle avatar upload if a new file was selected
+                if (!string.IsNullOrEmpty(AvatarFilePath) && File.Exists(AvatarFilePath))
+                {
+                    string downloadUrl = await UploadAvatarToFirebase(AvatarFilePath, userData.Email);
+                    userData.AvatarUrl = downloadUrl;
+                    AvatarUrl = downloadUrl; // Update displayed URL
+                }
+
+                await SaveToDatabase(userData);
 
                 MessageBox.Show("Profile updated successfully!", "Success",
-                               MessageBoxButton.OK, MessageBoxImage.Information);
+                                MessageBoxButton.OK, MessageBoxImage.Information);
 
                 // Update original values
                 UpdateOriginalValues();
@@ -105,10 +149,35 @@ namespace WpfApp1.ViewModels
             catch (Exception ex)
             {
                 MessageBox.Show($"Error saving profile: {ex.Message}", "Error",
-                               MessageBoxButton.OK, MessageBoxImage.Error);
+                                MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        private async void SaveToDatabase(User user)
+
+        private async Task<string> UploadAvatarToFirebase(string filePath, string email)
+        {
+            try
+            {
+                // Initialize Firebase Storage
+                var storage = new FirebaseStorage("chatapp-177.firebasestorage.app"); // Replace with your Firebase Storage bucket
+
+                // Generate a unique file name (e.g., using email and timestamp)
+                string fileName = $"avatars/{email}_{DateTime.Now.Ticks}.jpg";
+
+                // Upload the file
+                var uploadTask = storage.Child(fileName).PutAsync(File.OpenRead(filePath));
+
+                // Get the download URL after upload
+                string downloadUrl = await uploadTask;
+
+                return downloadUrl;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to upload avatar to Firebase Storage: {ex.Message}", ex);
+            }
+        }
+
+        private async Task SaveToDatabase(User user)
         {
             try
             {
@@ -121,19 +190,19 @@ namespace WpfApp1.ViewModels
                     Name = user.Name,
                     Email = user.Email,
                     Phone = user.Phone,
-                    DateTime = user.DateTime
+                    DateTime = user.DateTime,
+                    AvatarUrl = user.AvatarUrl ?? ""
                 };
 
                 // Update or create the document in Firestore
                 await docRef.SetAsync(userData, SetOptions.MergeAll);
-
-                // Note: We don't need to fetch the snapshot again since we're updating directly
             }
             catch (Exception ex)
             {
                 throw new Exception($"Failed to save user data to Firestore: {ex.Message}", ex);
             }
         }
+
         [RelayCommand]
         private void CancelEdit()
         {
@@ -142,6 +211,8 @@ namespace WpfApp1.ViewModels
             Email = _originalEmail;
             Phone = _originalPhone;
             DateOfBirth = _originalDateOfBirth;
+            AvatarUrl = _originalAvatarUrl;
+            AvatarFilePath = "";
 
             ProfileUpdated?.Invoke(false);
         }
@@ -150,7 +221,7 @@ namespace WpfApp1.ViewModels
         private void ResetToDefaults()
         {
             var result = MessageBox.Show("Are you sure you want to reset all fields to their original values?",
-                                       "Confirm Reset", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                                        "Confirm Reset", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)
             {
@@ -163,7 +234,8 @@ namespace WpfApp1.ViewModels
             return Name != _originalName ||
                    Email != _originalEmail ||
                    Phone != _originalPhone ||
-                   DateOfBirth != _originalDateOfBirth;
+                   DateOfBirth != _originalDateOfBirth ||
+                   AvatarFilePath != "";
         }
 
         private void UpdateOriginalValues()
@@ -172,6 +244,8 @@ namespace WpfApp1.ViewModels
             _originalEmail = Email;
             _originalPhone = Phone;
             _originalDateOfBirth = DateOfBirth;
+            _originalAvatarUrl = AvatarUrl;
+            AvatarFilePath = "";
         }
     }
 }

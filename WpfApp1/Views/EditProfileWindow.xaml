@@ -176,16 +176,18 @@
             <!-- Form Content -->
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-
                     <!-- Avatar Section -->
                     <StackPanel HorizontalAlignment="Center" Margin="0,0,0,25">
                         <Border Width="100" Height="100" CornerRadius="50"
                                 Background="{StaticResource AvatarPlaceholderBackground}">
-                            <TextBlock Text="👤" FontSize="50"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                                       Foreground="White"/>
+                            <Image Source="{Binding AvatarUrl}" Stretch="UniformToFill">
+                                <Image.Clip>
+                                    <EllipseGeometry RadiusX="50" RadiusY="50" Center="50,50"/>
+                                </Image.Clip>
+                            </Image>
                         </Border>
                         <Button Content="{DynamicResource ChangeAvatar}" 
+                                Command="{Binding ChangeAvatarCommand}"
                                 Style="{StaticResource SecondaryButtonStyle}"
                                 Margin="0,10,0,0" Padding="15,8"
                                 FontSize="12"/>
@@ -213,9 +215,6 @@
                                 <TextBox Text="{Binding Phone, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBoxStyle}" Height="57"/>
                             </StackPanel>
-
-                            <!-- Location -->
-
                         </StackPanel>
 
                         <!-- Right Column -->
@@ -231,7 +230,7 @@
                             <StackPanel Margin="0,0,0,20">
                                 <TextBlock Text="{DynamicResource DateOfBirth}" Style="{StaticResource FieldLabelStyle}"/>
                                 <DatePicker SelectedDate="{Binding DateOfBirth}" 
-                                           Style="{StaticResource ModernDatePickerStyle}" Height="54"/>
+                                            Style="{StaticResource ModernDatePickerStyle}" Height="54"/>
                             </StackPanel>
                         </StackPanel>
                     </Grid>
@@ -240,13 +239,13 @@
 
             <!-- Buttons -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" 
-                       HorizontalAlignment="Right" Margin="0,25,0,0">
+                        HorizontalAlignment="Right" Margin="0,25,0,0">
                 <Button Content="{DynamicResource Reset}" Command="{Binding ResetToDefaultsCommand}"
-                       Style="{StaticResource SecondaryButtonStyle}"/>
+                        Style="{StaticResource SecondaryButtonStyle}"/>
                 <Button Content="{DynamicResource Cancel}" Command="{Binding CancelEditCommand}"
-                       Style="{StaticResource SecondaryButtonStyle}"/>
+                        Style="{StaticResource SecondaryButtonStyle}"/>
                 <Button Content="{DynamicResource SaveChanges}" Command="{Binding SaveProfileCommand}"
-                       Style="{StaticResource EditActionButtonStyle}"/>
+                        Style="{StaticResource EditActionButtonStyle}"/>
             </StackPanel>
         </Grid>
     </Border>

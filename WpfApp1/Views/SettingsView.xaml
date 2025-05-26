@@ -125,7 +125,6 @@
             </Setter>
         </Style>
 
-
         <!-- Modern ComboBox Style -->
         <Style TargetType="ComboBox">
             <Setter Property="Height" Value="35"/>
@@ -233,7 +232,7 @@
         <Style x:Key="MenuItemTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Frame
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
@@ -338,9 +337,11 @@
                                     Width="80" Height="80" CornerRadius="40"
                                     Background="{StaticResource AvatarPlaceholderBackground}"
                                     Margin="0,0,20,0">
-                                <TextBlock Text="👤" FontSize="40"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           Foreground="White"/>
+                                <Image Source="{Binding AvatarUrl}" Stretch="UniformToFill">
+                                    <Image.Clip>
+                                        <EllipseGeometry RadiusX="40" RadiusY="40" Center="40,40"/>
+                                    </Image.Clip>
+                                </Image>
                             </Border>
 
                             <!-- User Info -->
