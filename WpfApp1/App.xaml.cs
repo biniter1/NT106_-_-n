@@ -19,7 +19,6 @@ namespace WpfApp1
 
             try
             {
-                // Khởi tạo ngôn ngữ SAU khi Application.Current đã sẵn sàng
                 LocalizationManager.Initialize();
                 LocalizationManager.CheckResourceDictionaries(); // Debug
             }
@@ -31,9 +30,7 @@ namespace WpfApp1
 
             try
             {
-                // Khởi tạo FirestoreHelper
                 FirestoreHelper.Initialize();
-                // Kiểm tra xem kết nối có thành công không trước khi mở cửa sổ chính
                 if (FirestoreHelper.database == null)
                 {
                     string errorMessage = LocalizationManager.GetString("DatabaseConnectionError") ??

@@ -123,18 +123,18 @@
 
     <!--Settings-->
 
-    <sys:String x:Key="Settings">⚙️ Cài đặt</sys:String>
-    <sys:String x:Key="Account">👤 Tài khoản</sys:String>
-    <sys:String x:Key="Appearance">🎨 Giao diện</sys:String>
-    <sys:String x:Key="Data">💾 Dữ liệu</sys:String>
-    <sys:String x:Key="Language">🌐 Ngôn ngữ</sys:String>
-    <sys:String x:Key="Support">❓ Hỗ trợ</sys:String>
-    <sys:String x:Key="Logout">🚪 Đăng xuất</sys:String>
-    <sys:String x:Key="ExitApp">❌ Thoát ứng dụng</sys:String>
+    <sys:String x:Key="Settings">Cài đặt</sys:String>
+    <sys:String x:Key="Account">Tài khoản</sys:String>
+    <sys:String x:Key="Appearance">Giao diện</sys:String>
+    <sys:String x:Key="Data">Dữ liệu</sys:String>
+    <sys:String x:Key="Language">Ngôn ngữ</sys:String>
+    <sys:String x:Key="Support">Hỗ trợ</sys:String>
+    <sys:String x:Key="Logout">Đăng xuất</sys:String>
+    <sys:String x:Key="ExitApp">Thoát ứng dụng</sys:String>
     <sys:String x:Key="AccountInfo">👤 Thông tin tài khoản</sys:String>
     <sys:String x:Key="Username">Tên người dùng</sys:String>
     <sys:String x:Key="Email">Email</sys:String>
-    <sys:String x:Key="JoinDate">Ngày tham gia</sys:String>
+    <sys:String x:Key="JoinDate">Ngày sinh</sys:String>
     <sys:String x:Key="Edit">✏️ Chỉnh sửa</sys:String>
     <sys:String x:Key="AppearanceDisplay">🎨 Giao diện Hiển thị</sys:String>
     <sys:String x:Key="DisplayMode">Chế độ hiển thị</sys:String>
@@ -158,4 +158,17 @@
     <sys:String x:Key="SendFeedback">📝 Gửi phản hồi</sys:String>
     <sys:String x:Key="UserGuide">📋 Hướng dẫn sử dụng</sys:String>
     <sys:String x:Key="Apply">✅ Áp dụng</sys:String>
+
+    <!--EditProfile-->
+    <sys:String x:Key="EditProfile">Chỉnh sửa hồ sơ</sys:String>
+    <sys:String x:Key="EditProfileDescription">Cập nhật thông tin cá nhân của bạn</sys:String>
+    <sys:String x:Key="Name">Họ và tên</sys:String>
+    <sys:String x:Key="Phone">Số điện thoại</sys:String>
+    <sys:String x:Key="DateOfBirth">Ngày sinh</sys:String>
+    <sys:String x:Key="Bio">Giới thiệu</sys:String>
+    <sys:String x:Key="Location">Địa chỉ</sys:String>
+    <sys:String x:Key="ChangeAvatar">Đổi ảnh đại diện</sys:String>
+    <sys:String x:Key="Reset">Đặt lại</sys:String>
+    <sys:String x:Key="Cancel">Hủy</sys:String>
+    <sys:String x:Key="ProfileUpdatedMessage">Hồ sơ đã được cập nhật thành công!</sys:String>
 </ResourceDictionary>

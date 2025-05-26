@@ -6,6 +6,7 @@ using System.Windows;
 using WpfApp1.LoginlSignUp;
 using System.Windows.Markup;
 using System.Windows.Input;
+using WpfApp1.Models;
 
 namespace WpfApp1.ViewModels
 {
@@ -17,13 +18,13 @@ namespace WpfApp1.ViewModels
 
         // Thuộc tính cho thông tin tài khoản
         [ObservableProperty]
-        private string _userName = "Nguyễn Thị Hà";
+        private string _userName = SharedData.Instance.userdata.Name;
 
         [ObservableProperty]
-        private string _userEmail = "nguyenha@example.com";
+        private string _userEmail = SharedData.Instance.userdata.Email;
 
         [ObservableProperty]
-        private DateTime _joinDate = new DateTime(2025, 5, 18);
+        private DateTime _joinDate = SharedData.Instance.userdata.DateTime;
 
         // Thuộc tính cho phần "Cài đặt"
         [ObservableProperty]
@@ -147,7 +148,44 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void EditProfile()
         {
-            MessageBox.Show(GetLocalizedString("EditProfileUnderDevelopment"));
+            try
+            {
+                var editProfileViewModel = new EditProfileViewModel();
+                // Subscribe to ProfileUpdated event
+                editProfileViewModel.ProfileUpdated += OnProfileUpdated;
+
+                var editProfileWindow = new Views.EditProfileWindow
+                {
+                    Owner = Application.Current.MainWindow,
+                    DataContext = editProfileViewModel
+                };
+
+                bool? result = editProfileWindow.ShowDialog();
+
+                // No need to manually update here since ProfileUpdated event handles it
+                if (result == true)
+                {
+                    MessageBox.Show(GetLocalizedString("ProfileUpdatedMessage") ?? "Profile updated successfully!");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening edit profile: {ex.Message}", "Error",
+                               MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OnProfileUpdated(bool success)
+        {
+            if (success)
+            {
+                // Update properties from SharedData
+                UserName = SharedData.Instance.userdata.Name;
+                UserEmail = SharedData.Instance.userdata.Email;
+                // Notify UI to refresh
+                OnPropertyChanged(nameof(UserName));
+                OnPropertyChanged(nameof(UserEmail));
+            }
         }
 
         [RelayCommand]

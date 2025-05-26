@@ -122,18 +122,18 @@
     <sys:String x:Key="SettingsTooltip">Settings</sys:String>
 
     <!--SETTINGS-->
-    <sys:String x:Key="Settings">⚙️ Settings</sys:String>
-    <sys:String x:Key="Account">👤 Account</sys:String>
-    <sys:String x:Key="Appearance">🎨 Appearance</sys:String>
-    <sys:String x:Key="Data">💾 Data</sys:String>
-    <sys:String x:Key="Language">🌐 Language</sys:String>
-    <sys:String x:Key="Support">❓ Support</sys:String>
-    <sys:String x:Key="Logout">🚪 Logout</sys:String>
-    <sys:String x:Key="ExitApp">❌ Exit Application</sys:String>
+    <sys:String x:Key="Settings">Settings</sys:String>
+    <sys:String x:Key="Account">Account</sys:String>
+    <sys:String x:Key="Appearance">Appearance</sys:String>
+    <sys:String x:Key="Data">Data</sys:String>
+    <sys:String x:Key="Language">Language</sys:String>
+    <sys:String x:Key="Support">Support</sys:String>
+    <sys:String x:Key="Logout">Logout</sys:String>
+    <sys:String x:Key="ExitApp">Exit Application</sys:String>
     <sys:String x:Key="AccountInfo">👤 Account Info</sys:String>
     <sys:String x:Key="Username">Username</sys:String>
     <sys:String x:Key="Email">Email</sys:String>
-    <sys:String x:Key="JoinDate">Join Date</sys:String>
+    <sys:String x:Key="JoinDate">BirthDay</sys:String>
     <sys:String x:Key="Edit">✏️ Edit</sys:String>
     <sys:String x:Key="AppearanceDisplay">🎨 Appearance Display</sys:String>
     <sys:String x:Key="DisplayMode">Display Mode</sys:String>
@@ -157,4 +157,17 @@
     <sys:String x:Key="SendFeedback">📝 Send Feedback</sys:String>
     <sys:String x:Key="UserGuide">📋 User Guide</sys:String>
     <sys:String x:Key="Apply">✅ Apply</sys:String>
+    
+    <!--EditProfile-->
+    <sys:String x:Key="EditProfile">Edit Profile</sys:String>
+    <sys:String x:Key="EditProfileDescription">Update your personal information</sys:String>
+    <sys:String x:Key="Name">Full Name</sys:String>
+    <sys:String x:Key="Phone">Phone Number</sys:String>
+    <sys:String x:Key="DateOfBirth">Date of Birth</sys:String>
+    <sys:String x:Key="Bio">Bio</sys:String>
+    <sys:String x:Key="Location">Location</sys:String>
+    <sys:String x:Key="ChangeAvatar">Change Avatar</sys:String>
+    <sys:String x:Key="Reset">Reset</sys:String>
+    <sys:String x:Key="Cancel">Cancel</sys:String>
+    <sys:String x:Key="ProfileUpdatedMessage">Profile updated successfully!</sys:String>
 </ResourceDictionary>
