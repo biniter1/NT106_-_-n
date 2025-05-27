@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Firebase.Database;
 using System.Windows; // Cần cho Application.Current.MainWindow nếu dùng làm Owner popup
 
 // Thêm using cho các ViewModel khác và các View (Window) bạn sẽ mở popup
@@ -14,6 +15,7 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private ObservableObject _currentViewModel; // Kiểu là ObservableObject hoặc lớp cơ sở chung khác
         private ChatViewModel _chatViewModel = new ChatViewModel();
+        private readonly FirebaseClient _firebaseClient;
         // Constructor
         public MainViewModel()
         {
@@ -73,8 +75,8 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void ShowSettingsPopup()
         {
-            var settingsVM = new SettingsViewModel(_chatViewModel);
-            var settingsWin = new SettingsWindow
+            var settingsVM = new SettingsViewModel(_chatViewModel, _firebaseClient);
+            var settingsWin = new SettingsWindow(_chatViewModel, _firebaseClient)
             {
                 DataContext = settingsVM
             };
@@ -91,13 +93,9 @@ namespace WpfApp1.ViewModels
         {
             if (CurrentViewModel is not SettingsViewModel)
             {
-                CurrentViewModel = new SettingsViewModel();
+                CurrentViewModel = new SettingsViewModel(_chatViewModel, _firebaseClient);
             }
         }
-        // (Tùy chọn) Các thuộc tính khác cho MainWindow Shell
-        // Ví dụ: Thông tin người dùng đang đăng nhập hiển thị ở đâu đó trên Shell
-        // [ObservableProperty]
-        // private User _loggedInUser;
 
         public void Cleanup()
         {

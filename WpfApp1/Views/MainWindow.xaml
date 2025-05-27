@@ -9,7 +9,7 @@
         xmlns:viewModels="clr-namespace:WpfApp1.ViewModels"
         xmlns:views="clr-namespace:WpfApp1.Views"
         mc:Ignorable="d"
-        Title="{DynamicResource AppTitle}" Height="600" Width="1000"
+        Title="{DynamicResource AppTitle}" Height="600" Width="1269"
         Background="#F5F5F5">
     <Window.Resources>
         <ResourceDictionary>
@@ -74,6 +74,6 @@
             </Border>
         </Popup>
 
-        <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}" Margin="0"/>
+        <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}"/>
     </Grid>
 </Window>

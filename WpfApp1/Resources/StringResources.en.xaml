@@ -170,4 +170,48 @@
     <sys:String x:Key="Reset">Reset</sys:String>
     <sys:String x:Key="Cancel">Cancel</sys:String>
     <sys:String x:Key="ProfileUpdatedMessage">Profile updated successfully!</sys:String>
+
+    <!--FeedBack-->
+    <sys:String x:Key="FeedbackFormTitle">Send Feedback</sys:String>
+    <sys:String x:Key="FeedbackNameLabel">Name</sys:String>
+    <sys:String x:Key="FeedbackEmailLabel">Email</sys:String>
+    <sys:String x:Key="FeedbackMessageLabel">Feedback Message</sys:String>
+    <sys:String x:Key="SendButton">Send</sys:String>
+    <sys:String x:Key="CancelButton">Cancel</sys:String>
+    <sys:String x:Key="FeedbackEmptyMessage">Please enter a feedback message.</sys:String>
+    <sys:String x:Key="FeedbackSentMessage">Feedback sent successfully!</sys:String>
+    <sys:String x:Key="FeedbackErrorMessage">Error sending feedback</sys:String>
+    <sys:String x:Key="FeedbackEmailSubject">User Feedback</sys:String>
+    <sys:String x:Key="Greetingg">We welcome your feedback!</sys:String>
+
+    <sys:String x:Key="UserGuideContent" xml:space="preserve">
+        Welcome to the User Guide for our application!
+            ### Getting Started
+            1. **Login/Sign Up**: Use the login window to sign in with your credentials or create a new account.
+            2. **Navigating the App**: The main interface includes a settings menu where you can customize your experience.
+
+            ### Settings
+            - **Account Info**: View and edit your profile details, such as name and email.
+            - **Theme**: Switch between Light and Dark themes for a comfortable viewing experience.
+            - **Notifications**: Enable or disable notifications, including desktop notifications and offline alerts.
+            - **Language**: Choose your preferred language (e.g., English, Vietnamese).
+            - **Feedback**: Send feedback to help us improve the application.
+            - **Data Management**: Export or delete your data as needed.
+
+            ### Editing Your Profile
+            1. Go to Settings > Account Info.
+            2. Click "Edit Profile" to update your name, email, or avatar.
+            3. Save changes to update your account information.
+
+            ### Sending Feedback
+            1. Navigate to Settings > Support.
+            2. Click "Send Feedback" to open the feedback form.
+            3. Enter your message and submit to send it to our team.
+
+            ### Logging Out
+            1. In the Settings menu, click "Logout" to sign out of your account.
+            2. You will be redirected to the login screen.
+
+            For further assistance, contact our support team via the Support section.
+    </sys:String>
 </ResourceDictionary>

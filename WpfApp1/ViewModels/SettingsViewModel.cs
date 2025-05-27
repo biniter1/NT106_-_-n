@@ -7,16 +7,22 @@ using WpfApp1.LoginlSignUp;
 using System.Windows.Markup;
 using System.Windows.Input;
 using WpfApp1.Models;
+using Firebase.Database;
+using System.Diagnostics;
 
 namespace WpfApp1.ViewModels
 {
     public partial class SettingsViewModel : ObservableObject
     {
+        private readonly FirebaseClient _firebaseClient;
+        private readonly ChatViewModel _chatViewModel;
 
         [ObservableProperty]
         private string _currentView;
 
-        // Thuộc tính cho thông tin tài khoản
+        [ObservableProperty]
+        private object _currentViewContent;
+
         [ObservableProperty]
         private string _userName = SharedData.Instance.userdata.Name;
 
@@ -26,7 +32,6 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private DateTime _joinDate = SharedData.Instance.userdata.DateTime;
 
-        // Thuộc tính cho phần "Cài đặt"
         [ObservableProperty]
         private string _selectedTheme;
 
@@ -45,62 +50,54 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private string _userAvatarUrl;
 
-        // Tạo tham chiếu, giúp gọi được hàm của chatviewmodel
-        private readonly ChatViewModel _chatViewModel;
-
-        public SettingsViewModel(ChatViewModel chatViewModel)
-        {
-            _chatViewModel = chatViewModel;
-            InitializeSettings();
-            // Subscribe to AvatarUpdated event from EditProfileViewModel
-            EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
-        }
-
-        public SettingsViewModel()
-        {
-            InitializeSettings();
-            // Subscribe to AvatarUpdated event from EditProfileViewModel
-            EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
-        }
-
-        // Danh sách các tùy chọn
         public ObservableCollection<string> Themes { get; } = new ObservableCollection<string> { "Light", "Dark" };
         public ObservableCollection<string> Languages { get; } = new ObservableCollection<string> { "Tiếng Việt", "English", "日本語" };
 
+        public SettingsViewModel(ChatViewModel chatViewModel, FirebaseClient firebaseClient)
+        {
+            _chatViewModel = chatViewModel;
+            _firebaseClient = firebaseClient;
+            InitializeSettings();
+            EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
+        }
+
+        //public SettingsViewModel()
+        //{
+        //    InitializeSettings();
+        //    EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
+        //}
+
         private void InitializeSettings()
         {
-            // Giá trị mặc định
             _selectedTheme = "Light";
             _enableNotifications = true;
             _showDesktopNotifications = true;
             _notifyWhenOffline = false;
             _selectedLanguage = "Tiếng Việt";
-            _currentView = "AccountInfo"; // Mặc định hiển thị thông tin tài khoản
+            _currentView = "AccountInfo";
             _userAvatarUrl = SharedData.Instance.userdata.AvatarUrl ?? "";
             var savedLanguage = Properties.Settings.Default.SelectedLanguage;
             _selectedLanguage = savedLanguage switch
             {
                 "Tiếng Việt" => "Tiếng Việt",
                 "English" => "English",
-                _ => "Tiếng Việt" // Default to Tiếng Việt
+                _ => "Tiếng Việt"
             };
         }
 
-        // Handle avatar update from EditProfileViewModel
         private void OnAvatarUpdated(string newAvatarUrl)
         {
             UserAvatarUrl = newAvatarUrl;
             OnPropertyChanged(nameof(UserAvatarUrl));
         }
 
-        // Phương thức tiện ích để lấy chuỗi từ ResourceDictionary
         private string GetLocalizedString(string key)
         {
             if (Application.Current.Resources["LocalizationDictionary"] is ResourceDictionary localizationDict)
             {
                 return localizationDict.Contains(key) ? localizationDict[key].ToString() : key;
             }
-            return key; // Fallback nếu không tìm thấy
+            return key;
         }
 
         [RelayCommand]
@@ -122,13 +119,13 @@ namespace WpfApp1.ViewModels
         }
 
         [RelayCommand]
-        private void ChangeLanguage()
+        private void ShowLanguage()
         {
             CurrentView = "Language";
         }
 
         [RelayCommand]
-        private void GetSupport()
+        private void ShowSupport()
         {
             CurrentView = "Support";
         }
@@ -138,12 +135,8 @@ namespace WpfApp1.ViewModels
         {
             _chatViewModel?.Cleanup();
             MessageBox.Show(GetLocalizedString("LogoutSuccessMessage"));
-
-            // Tạo instance của fLogin để gọi phương thức PerformLogout
-            fLogin loginWindow = new fLogin();
+            var loginWindow = new fLogin();
             loginWindow.PerformLogout();
-
-            // Đóng SettingsWindow
             foreach (Window window in Application.Current.Windows)
             {
                 if (window.DataContext == this)
@@ -166,18 +159,13 @@ namespace WpfApp1.ViewModels
             try
             {
                 var editProfileViewModel = new EditProfileViewModel();
-                // Subscribe to ProfileUpdated event
                 editProfileViewModel.ProfileUpdated += OnProfileUpdated;
-
                 var editProfileWindow = new Views.EditProfileWindow
                 {
                     Owner = Application.Current.MainWindow,
                     DataContext = editProfileViewModel
                 };
-
                 bool? result = editProfileWindow.ShowDialog();
-
-                // No need to manually update here since ProfileUpdated event handles it
                 if (result == true)
                 {
                     MessageBox.Show(GetLocalizedString("ProfileUpdatedMessage") ?? "Profile updated successfully!");
@@ -194,10 +182,8 @@ namespace WpfApp1.ViewModels
         {
             if (success)
             {
-                // Update properties from SharedData
                 UserName = SharedData.Instance.userdata.Name;
                 UserEmail = SharedData.Instance.userdata.Email;
-                // Notify UI to refresh
                 OnPropertyChanged(nameof(UserName));
                 OnPropertyChanged(nameof(UserEmail));
             }
@@ -217,13 +203,132 @@ namespace WpfApp1.ViewModels
         }
 
         [RelayCommand]
-        private void DeleteData()
+        private async void DeleteData()
         {
-            var result = MessageBox.Show(GetLocalizedString("DeleteDataConfirmation"), GetLocalizedString("Confirmation"),
-                                        MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            var result = MessageBox.Show(GetLocalizedString("DeleteDataConfirmation"),
+                                       GetLocalizedString("Confirmation"),
+                                       MessageBoxButton.YesNo,
+                                       MessageBoxImage.Warning);
             if (result == MessageBoxResult.Yes)
             {
-                MessageBox.Show(GetLocalizedString("DataDeletedMessage"));
+                try
+                {
+                    string userEmail = SharedData.Instance.userdata.Email;
+                    if (string.IsNullOrEmpty(userEmail))
+                    {
+                        MessageBox.Show(GetLocalizedString("DataDeletionError"),
+                                      GetLocalizedString("Error"),
+                                      MessageBoxButton.OK,
+                                      MessageBoxImage.Error);
+                        return;
+                    }
+                    if (_chatViewModel == null)
+                    {
+                        MessageBox.Show("ChatViewModel is not initialized.",
+                                        "Error",
+                                        MessageBoxButton.OK,
+                                        MessageBoxImage.Error);
+                        return;
+                    }
+                    var contacts = await _chatViewModel.GetContactsAsync(SharedData.Instance.userdata.Email);
+                    if (contacts == null || contacts.Count == 0)
+                    {
+                        MessageBox.Show(GetLocalizedString("NoContactsFound"),
+                                      GetLocalizedString("Info"),
+                                      MessageBoxButton.OK,
+                                      MessageBoxImage.Information);
+                        return;
+                    }
+
+                    foreach (var contact in contacts)
+                    {
+                        if (!string.IsNullOrEmpty(contact.chatID))
+                        {
+                            // Fix: Use single Child call with combined path
+                            await _firebaseClient
+                                .Child($"messages/{contact.chatID}")
+                                .DeleteAsync();
+                            Debug.WriteLine($"Deleted messages for chatID: {contact.chatID}");
+                        }
+                    }
+
+                    if (_chatViewModel?.Messages != null)
+                    {
+                        _chatViewModel.Messages.Clear();
+                    }
+
+                    MessageBox.Show(GetLocalizedString("DataDeletedMessage"),
+                                  GetLocalizedString("Success"),
+                                  MessageBoxButton.OK,
+                                  MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error deleting data: {ex.Message}");
+                    MessageBox.Show($"{GetLocalizedString("DataDeletionError")}: {ex.Message}",
+                                  GetLocalizedString("Error"),
+                                  MessageBoxButton.OK,
+                                  MessageBoxImage.Error);
+                }
+            }
+        }
+
+        [RelayCommand]
+        private void SendFeedback()
+        {
+            try
+            {
+                var feedbackViewModel = new FeedbackViewModel();
+                var feedbackUserControl = new Views.FeedbackUserControl
+                {
+                    DataContext = feedbackViewModel
+                };
+
+                // Tạo Window để chứa UserControl
+                var feedbackWindow = new Window
+                {
+                    Title = GetLocalizedString("FeedbackFormTitle"),
+                    Content = feedbackUserControl,
+                    Owner = Application.Current.MainWindow,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    ResizeMode = ResizeMode.NoResize,
+                    SizeToContent = SizeToContent.WidthAndHeight,
+                    WindowStyle = WindowStyle.SingleBorderWindow
+                };
+
+                // Xử lý sự kiện đóng window từ ViewModel
+                feedbackViewModel.CloseRequested += () => feedbackWindow.Close();
+
+                feedbackWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"{GetLocalizedString("FeedbackErrorMessage")}: {ex.Message}",
+                              GetLocalizedString("Error"),
+                              MessageBoxButton.OK,
+                              MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        private void ShowUserGuide()
+        {
+            try
+            {
+                var userGuideViewModel = new UserGuideViewModel(this);
+                var userGuideWindow = new Views.UserGuideContainerWindow
+                {
+                    Owner = Application.Current.MainWindow,
+                    DataContext = userGuideViewModel
+                };
+                userGuideWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"{GetLocalizedString("UserGuideErrorMessage")}: {ex.Message}",
+                              GetLocalizedString("Error"),
+                              MessageBoxButton.OK,
+                              MessageBoxImage.Error);
             }
         }
 
@@ -232,9 +337,7 @@ namespace WpfApp1.ViewModels
         {
             try
             {
-                // Áp dụng thay đổi ngôn ngữ toàn cục
                 ApplyLanguageGlobally(SelectedLanguage);
-
                 MessageBox.Show($"Language applied: {SelectedLanguage}");
             }
             catch (Exception ex)
@@ -243,23 +346,35 @@ namespace WpfApp1.ViewModels
             }
         }
 
+        [RelayCommand]
+        private void ChangeLanguage(string languageCode)
+        {
+            try
+            {
+                ApplyLanguageGlobally(languageCode);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error changing language: {ex.Message}");
+            }
+        }
+
         private void ApplyLanguageGlobally(string language)
         {
             try
             {
-                // 1. Xác định đường dẫn resource file
                 string resourcePath = language switch
                 {
+                    "vi-VN" => "Resources/StringResources.vi.xaml",
+                    "en-US" => "Resources/StringResources.en.xaml",
                     "Tiếng Việt" => "Resources/StringResources.vi.xaml",
                     "English" => "Resources/StringResources.en.xaml",
                     _ => "Resources/StringResources.vi.xaml"
                 };
 
-                // 2. Cập nhật Application resources
                 var app = Application.Current;
                 if (app == null) return;
 
-                // 3. Tạo resource dictionary mới
                 ResourceDictionary newResourceDict;
                 try
                 {
@@ -274,7 +389,6 @@ namespace WpfApp1.ViewModels
                     return;
                 }
 
-                // 4. Tìm và xóa localization dictionary cũ
                 ResourceDictionary oldDict = null;
                 foreach (var dict in app.Resources.MergedDictionaries)
                 {
@@ -290,14 +404,9 @@ namespace WpfApp1.ViewModels
                     app.Resources.MergedDictionaries.Remove(oldDict);
                 }
 
-                // 5. Thêm dictionary mới
                 app.Resources.MergedDictionaries.Add(newResourceDict);
-
-                // 6. Lưu cài đặt ngôn ngữ
                 Properties.Settings.Default.SelectedLanguage = language;
                 Properties.Settings.Default.Save();
-
-                // 7. Notify về việc thay đổi ngôn ngữ thay vì refresh windows
                 NotifyLanguageChanged();
             }
             catch (Exception ex)
@@ -311,13 +420,9 @@ namespace WpfApp1.ViewModels
         {
             try
             {
-                // Sử dụng Dispatcher để đảm bảo UI update an toàn
                 Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                 {
-                    // Trigger property changed để UI cập nhật
                     OnPropertyChanged(nameof(SelectedLanguage));
-
-                    // Force update layout của current window
                     foreach (Window window in Application.Current.Windows)
                     {
                         window?.InvalidateVisual();
@@ -330,27 +435,16 @@ namespace WpfApp1.ViewModels
             }
         }
 
-        [RelayCommand]
-        private void SendFeedback()
-        {
-            MessageBox.Show(GetLocalizedString("FeedbackSentMessage"));
-        }
-
-        [RelayCommand]
-        private void ShowUserGuide()
-        {
-            MessageBox.Show(GetLocalizedString("UserGuideUnderDevelopment"));
-        }
-
-        // Method được gọi từ RadioButton event trong code-behind
         public void OnLanguageChanged(string language)
         {
             if (SelectedLanguage != language)
             {
                 SelectedLanguage = language;
-                // Áp dụng ngay lập tức mà không cần nhấn Apply
                 ApplyLanguageGlobally(language);
             }
         }
+
+        public bool HasLanguageChanges => true;
+        public bool HasChanges => true;
     }
 }

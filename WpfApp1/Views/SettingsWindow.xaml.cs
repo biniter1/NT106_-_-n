@@ -11,6 +11,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using Firebase.Database;
 using WpfApp1.ViewModels;
 
 namespace WpfApp1.Views
@@ -20,10 +21,11 @@ namespace WpfApp1.Views
     /// </summary>
     public partial class SettingsWindow : Window
     {
-        public SettingsWindow()
+        public SettingsWindow(ChatViewModel chatVM, FirebaseClient firebaseClient)
         {
             InitializeComponent();
-            DataContext = new SettingsViewModel();
+            var view = new SettingsView(chatVM, firebaseClient);
+            this.Content = view; // Đặt vào nội dung cửa sổ
         }
     }
 }

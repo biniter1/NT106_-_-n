@@ -1,13 +1,16 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using Firebase.Database;
+using WpfApp1.ViewModels;
 
 namespace WpfApp1.Views
 {
     public partial class SettingsView : UserControl
     {
-        public SettingsView()
+        public SettingsView(ChatViewModel chatVM, FirebaseClient firebaseClient)
         {
             InitializeComponent();
+            DataContext = new SettingsViewModel(chatVM, firebaseClient);
         }
 
         private void RadioButton_Checked(object sender, RoutedEventArgs e)

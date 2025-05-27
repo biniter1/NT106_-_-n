@@ -7,7 +7,7 @@
              xmlns:vm="clr-namespace:WpfApp1.ViewModels" 
              xmlns:models="clr-namespace:WpfApp1.Models" 
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="900">
+             d:DesignHeight="600" Width="1122">
 
     <UserControl.Resources>
         <ResourceDictionary>
@@ -193,7 +193,7 @@
                                    FontWeight="SemiBold" 
                                    FontSize="14"
                                    Foreground="{StaticResource TextPrimaryColor}"/>
-                        <TextBlock Text="Online" 
+                        <TextBlock Text="{StaticResource FriendListOnlineStatus}" 
                                    FontSize="11" 
                                    Foreground="{StaticResource SuccessColor}"/>
                     </StackPanel>
@@ -210,7 +210,7 @@
                                    FontWeight="SemiBold" 
                                    FontSize="14"
                                    Foreground="{StaticResource TextPrimaryColor}"/>
-                        <TextBlock Text="Group Chat" 
+                        <TextBlock Text="{StaticResource FriendListGroupChat}" 
                                    FontSize="11" 
                                    Foreground="{StaticResource TextSecondaryColor}"/>
                     </StackPanel>
@@ -233,17 +233,17 @@
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,24">
                             <Ellipse Width="8" Height="8" Fill="{StaticResource SuccessColor}" Margin="0,0,6,0"/>
-                            <TextBlock Text="Online" 
+                            <TextBlock Text="{StaticResource FriendListOnlineStatus}" 
                                        FontSize="14" 
                                        Foreground="{StaticResource SuccessColor}"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Content="💬 Send Message" 
+                            <Button Content="{StaticResource SendMessageButton}" 
                                     Style="{StaticResource ModernButtonStyle}"
                                     Command="{Binding DataContext.SendMessageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
-                            <Button Content="❌ Unfriend" 
+                            <Button Content="{StaticResource UnfriendButton}" 
                                     Style="{StaticResource DangerButtonStyle}"
                                     Command="{Binding DataContext.UnfriendCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
@@ -266,18 +266,18 @@
                                    HorizontalAlignment="Center" 
                                    Margin="0,0,0,8"/>
 
-                        <TextBlock Text="Group Chat" 
+                        <TextBlock Text="{StaticResource FriendListGroupChat}" 
                                    FontSize="14" 
                                    Foreground="{StaticResource TextSecondaryColor}"
                                    HorizontalAlignment="Center" 
                                    Margin="0,0,0,24"/>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Content="💬 Send Message" 
+                            <Button Content="{StaticResource SendMessageButton}" 
                                     Style="{StaticResource ModernButtonStyle}"
                                     Command="{Binding DataContext.SendMessageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
-                            <Button Content="🚪 Leave Group" 
+                            <Button Content="{StaticResource LeaveGroupButton}" 
                                     Style="{StaticResource DangerButtonStyle}"
                                     Command="{Binding DataContext.LeaveGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
@@ -304,7 +304,7 @@
                                        FontWeight="SemiBold" 
                                        FontSize="15"
                                        Foreground="{StaticResource TextPrimaryColor}"/>
-                            <TextBlock Text="wants to be your friend" 
+                            <TextBlock Text="{StaticResource FriendRequestDescription}" 
                                        FontSize="12" 
                                        Foreground="{StaticResource TextSecondaryColor}"/>
                         </StackPanel>
@@ -312,13 +312,13 @@
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                             <Button Content="✔" 
                                     Style="{StaticResource IconButtonStyle}"
-                                    ToolTip="Accept Request" 
+                                    ToolTip="{StaticResource FriendListAcceptRequestTooltip}" 
                                     Foreground="{StaticResource SuccessColor}"
                                     Command="{Binding DataContext.AcceptRequestCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
                             <Button Content="✖" 
                                     Style="{StaticResource IconButtonStyle}"
-                                    ToolTip="Decline Request" 
+                                    ToolTip="{StaticResource FriendListDeclineRequestTooltip}" 
                                     Foreground="{StaticResource DangerColor}"
                                     Command="{Binding DataContext.DeclineRequestCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
@@ -331,6 +331,10 @@
 
     <Border Background="{StaticResource BackgroundColor}">
         <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="147*"/>
+                <RowDefinition Height="137*"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="280"/>
                 <ColumnDefinition Width="*"/>
@@ -338,10 +342,10 @@
             </Grid.ColumnDefinitions>
 
             <!-- Left Panel - Contacts -->
-            <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,8,0">
+            <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,8,0" Grid.RowSpan="2">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
-                        <TextBlock Text="Contacts" 
+                        <TextBlock Text="{StaticResource ContactsTitle}" 
                                    FontSize="20" 
                                    FontWeight="Bold" 
                                    Foreground="{StaticResource TextPrimaryColor}"/>
@@ -372,7 +376,7 @@
             </Border>
 
             <!-- Center Panel - Selected Contact -->
-            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="8,0,8,0">
+            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="8,0,84,0" Grid.RowSpan="2">
                 <ContentControl Content="{Binding SelectedContact}">
                     <ContentControl.Style>
                         <Style TargetType="ContentControl">
@@ -383,7 +387,7 @@
                                             <ControlTemplate TargetType="ContentControl">
                                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <TextBlock Text="👥" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
-                                                    <TextBlock Text="Select a contact to view details"
+                                                    <TextBlock Text="{StaticResource SelectContactPrompt}"
                                                                FontSize="18"
                                                                HorizontalAlignment="Center"
                                                                Foreground="{StaticResource TextSecondaryColor}"/>
@@ -399,19 +403,27 @@
             </Border>
 
             <!-- Right Panel - Friend Requests -->
-            <Border Grid.Column="2" Style="{StaticResource CardStyle}" Margin="8,0,0,0">
+            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="451,0,0,0" Grid.RowSpan="2" Grid.ColumnSpan="2">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
-                        <TextBlock Text="Friend Requests" 
+                        <TextBlock Text="{StaticResource FriendRequestsTitle}" 
                                    FontSize="20" 
                                    FontWeight="Bold" 
                                    Foreground="{StaticResource TextPrimaryColor}"/>
                         <Rectangle Height="1" Fill="{StaticResource BorderColor}" Margin="0,8,0,0"/>
                     </StackPanel>
 
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" RenderTransformOrigin="0.5,0.5" Width="288">
+                        <ScrollViewer.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform AngleY="-0.783"/>
+                                <RotateTransform/>
+                                <TranslateTransform Y="-1.586"/>
+                            </TransformGroup>
+                        </ScrollViewer.RenderTransform>
                         <ItemsControl ItemsSource="{Binding FriendRequests}"
-                                      ItemTemplate="{StaticResource FriendRequestItemTemplate}"/>
+                                      ItemTemplate="{StaticResource FriendRequestItemTemplate}" Width="300"/>
                     </ScrollViewer>
                 </DockPanel>
             </Border>

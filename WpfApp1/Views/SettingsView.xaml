@@ -9,10 +9,6 @@
              mc:Ignorable="d"
              d:DesignHeight="500" d:DesignWidth="800">
 
-    <UserControl.DataContext>
-        <viewModels:SettingsViewModel/>
-    </UserControl.DataContext>
-
     <UserControl.Resources>
         <!-- Converters -->
         <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
