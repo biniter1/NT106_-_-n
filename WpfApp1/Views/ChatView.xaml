@@ -92,7 +92,29 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="" FontFamily="Segoe Fluent Icons" FontSize="36" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="Gray"/>
+                                    <!-- Avatar container with loading overlay -->
+                                    <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Margin="0,0,10,0" Background="#20000000" Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+                                        <!-- Loading overlay, semi-transparent -->
+                                    </Border>
+                                    <Image Grid.Column="0" Width="40" Height="40" Margin="0,0,10,0" VerticalAlignment="Center" 
+                           Source="{Binding AvatarUrl}" 
+                           Stretch="UniformToFill">
+                                        <Image.Clip>
+                                            <EllipseGeometry Center="20,20" RadiusX="20" RadiusY="20"/>
+                                        </Image.Clip>
+                                        <Image.Style>
+                                            <Style TargetType="Image">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <!-- Show image only when not loading -->
+                                                    <DataTrigger Binding="{Binding IsLoadingAvatar}" Value="True">
+                                                        <Setter Property="Visibility" Value="Hidden"/>
+                                                    </DataTrigger>
+
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,2"/>
                                         <TextBlock Text="{Binding LastMessage}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>

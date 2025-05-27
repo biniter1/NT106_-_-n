@@ -8,7 +8,27 @@
              xmlns:converters="clr-namespace:WpfApp1.Converters"
              mc:Ignorable="d"
              d:DesignHeight="500" d:DesignWidth="800">
+
+    <UserControl.DataContext>
+        <viewModels:SettingsViewModel/>
+    </UserControl.DataContext>
+
     <UserControl.Resources>
+        <!-- Converters -->
+        <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+        <converters:LanguageConverter x:Key="LanguageConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <!-- Color Resources -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#6C5CE7"/>
+        <SolidColorBrush x:Key="WhiteBrush" Color="White"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#E0E0E0"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#2D3436"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#636E72"/>
+        <SolidColorBrush x:Key="ItemHoverBackgroundBrush" Color="#F8F9FA"/>
+        <SolidColorBrush x:Key="AvatarPlaceholderBackground" Color="#DDD6FE"/>
+        <CornerRadius x:Key="DefaultCornerRadius">8</CornerRadius>
+
         <!-- Animation for menu buttons -->
         <Storyboard x:Key="ButtonHoverAnimation">
             <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
@@ -80,11 +100,11 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="ButtonBorder"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}">
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="8"
+                        Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
+                                      VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -93,10 +113,20 @@
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="Background" Value="#4A42D3"/>
                             </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#CCCCCC"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+
+            <!-- Thêm Cursor đổi khi bị Disable -->
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- Danger Button Style -->
@@ -119,6 +149,9 @@
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="Background" Value="#FF2732"/>
                             </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#CCCCCC"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -132,6 +165,7 @@
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="{StaticResource WhiteBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBox">
@@ -166,6 +200,9 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
                             </Trigger>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -175,6 +212,7 @@
         <!-- Modern CheckBox Style -->
         <Style TargetType="CheckBox">
             <Setter Property="Margin" Value="0,10"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
@@ -207,6 +245,41 @@
             </Setter>
         </Style>
 
+        <!-- Modern RadioButton Style -->
+        <Style TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,8"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="radioBorder"
+                                    Width="20" Height="20"
+                                    Background="{StaticResource WhiteBrush}"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="2"
+                                    CornerRadius="10">
+                                <Ellipse x:Name="radioCheck"
+                                         Width="8" Height="8"
+                                         Fill="{StaticResource PrimaryBrush}"
+                                         Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="radioCheck" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="radioBorder" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="radioBorder" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Text Styles -->
         <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="24"/>
@@ -227,12 +300,13 @@
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="Margin" Value="0,5"/>
             <Setter Property="LineHeight" Value="20"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
         <Style x:Key="MenuItemTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Medium"/>
-            <Frame
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
@@ -279,14 +353,14 @@
                     </StackPanel>
                 </Button>
 
-                <Button Style="{StaticResource ModernMenuButtonStyle}" Command="{Binding ChangeLanguageCommand}">
+                <Button Style="{StaticResource ModernMenuButtonStyle}" Command="{Binding ShowLanguageCommand}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="🌐" Style="{StaticResource MenuIconStyle}"/>
                         <TextBlock Text="{DynamicResource Language}" Style="{StaticResource MenuItemTextStyle}"/>
                     </StackPanel>
                 </Button>
 
-                <Button Style="{StaticResource ModernMenuButtonStyle}" Command="{Binding GetSupportCommand}">
+                <Button Style="{StaticResource ModernMenuButtonStyle}" Command="{Binding ShowSupportCommand}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="❓" Style="{StaticResource MenuIconStyle}"/>
                         <TextBlock Text="{DynamicResource Support}" Style="{StaticResource MenuItemTextStyle}"/>
@@ -334,26 +408,63 @@
 
                             <!-- Avatar -->
                             <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
-                                    Width="80" Height="80" CornerRadius="40"
-                                    Background="{StaticResource AvatarPlaceholderBackground}"
-                                    Margin="0,0,20,0">
-                                <Image Source="{Binding AvatarUrl}" Stretch="UniformToFill">
-                                    <Image.Clip>
-                                        <EllipseGeometry RadiusX="40" RadiusY="40" Center="40,40"/>
-                                    </Image.Clip>
-                                </Image>
+                                Width="80" Height="80" CornerRadius="40"
+                                Margin="0,0,20,0">              
+                                <!-- Avatar Image Background -->
+                                <Border.Background>
+                                    <ImageBrush x:Name="AvatarImageBrush" Stretch="UniformToFill">
+                                        <ImageBrush.ImageSource>
+                                            <Binding Path="UserAvatarUrl">
+                                                <Binding.TargetNullValue>
+                                                    <x:Null/>
+                                                </Binding.TargetNullValue>
+                                            </Binding>
+                                        </ImageBrush.ImageSource>
+                                    </ImageBrush>
+                                </Border.Background>
+
+                                <!-- Đây là phần tử duy nhất: một Grid chứa tất cả nội dung -->
+                                <Grid>
+                                    <!-- Fallback Icon khi không có avatar -->
+                                    <TextBlock Text="👤" FontSize="40"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="White">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding UserAvatarUrl}" Value="">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding UserAvatarUrl}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <!-- Loading Indicator -->
+                                    <Border x:Name="LoadingBorder"
+                                    
+                                    CornerRadius="40"
+                                    Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                </Grid>
                             </Border>
 
                             <!-- User Info -->
                             <StackPanel Grid.Row="0" Grid.Column="1">
                                 <TextBlock Text="{DynamicResource Username}" Style="{StaticResource SubHeaderTextStyle}"/>
-                                <TextBlock Text="{Binding UserName}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding UserName, FallbackValue='Not Available'}" 
+                                           Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
 
                                 <TextBlock Text="{DynamicResource Email}" Style="{StaticResource SubHeaderTextStyle}"/>
-                                <TextBlock Text="{Binding UserEmail}" Style="{StaticResource BodyTextStyle}"/>
+                                <TextBlock Text="{Binding UserEmail, FallbackValue='Not Available'}" 
+                                           Style="{StaticResource BodyTextStyle}"/>
 
                                 <TextBlock Text="{DynamicResource JoinDate}" Style="{StaticResource SubHeaderTextStyle}"/>
-                                <TextBlock Text="{Binding JoinDate, StringFormat='dd/MM/yyyy'}" Style="{StaticResource BodyTextStyle}"/>
+                                <TextBlock Text="{Binding JoinDate, StringFormat='dd/MM/yyyy', FallbackValue='Not Available'}" 
+                                           Style="{StaticResource BodyTextStyle}"/>
                             </StackPanel>
                         </Grid>
 
@@ -371,21 +482,31 @@
                         <TextBlock Text="{DynamicResource AppearanceDisplay}" Style="{StaticResource HeaderTextStyle}"/>
 
                         <TextBlock Text="{DynamicResource DisplayMode}" Style="{StaticResource SubHeaderTextStyle}"/>
-                        <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}"
+                        <ComboBox ItemsSource="{Binding Themes}" 
+                                  SelectedItem="{Binding SelectedTheme}"
+                                  DisplayMemberPath="Name"
+                                  SelectedValuePath="Value"
                                   Width="200" HorizontalAlignment="Left"/>
 
                         <TextBlock Text="{DynamicResource Notifications}" Style="{StaticResource SubHeaderTextStyle}"/>
-                        <CheckBox Content="{DynamicResource EnableSoundNotifications}" IsChecked="{Binding EnableNotifications}"/>
-                        <CheckBox Content="{DynamicResource ShowDesktopNotifications}" IsChecked="{Binding ShowDesktopNotifications}"/>
-                        <CheckBox Content="{DynamicResource NotifyWhenOffline}" IsChecked="{Binding NotifyWhenOffline}"/>
+                        <CheckBox Content="{DynamicResource EnableSoundNotifications}" 
+                                  IsChecked="{Binding EnableNotifications}"/>
+                        <CheckBox Content="{DynamicResource ShowDesktopNotifications}" 
+                                  IsChecked="{Binding ShowDesktopNotifications}"/>
+                        <CheckBox Content="{DynamicResource NotifyWhenOffline}" 
+                                  IsChecked="{Binding NotifyWhenOffline}"/>
 
                         <TextBlock Text="{DynamicResource DisplayLanguage}" Style="{StaticResource SubHeaderTextStyle}"/>
-                        <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}"
+                        <ComboBox ItemsSource="{Binding Languages}" 
+                                  SelectedItem="{Binding SelectedLanguage}"
+                                  DisplayMemberPath="Name"
+                                  SelectedValuePath="Code"
                                   Width="200" HorizontalAlignment="Left"/>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
                             <Button Content="{DynamicResource SaveChanges}" Style="{StaticResource ModernActionButtonStyle}"
-                                    Command="{Binding SaveSettingsCommand}"/>
+                                    Command="{Binding SaveSettingsCommand}"
+                                    IsEnabled="{Binding HasChanges}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -402,7 +523,8 @@
                         <Border Background="#FFF9E6" BorderBrush="#FFE58F" BorderThickness="1"
                                 CornerRadius="8" Padding="15" Margin="0,15">
                             <StackPanel>
-                                <TextBlock Text="{DynamicResource Warning}" FontWeight="Bold" Foreground="#D48806" Margin="0,0,0,5"/>
+                                <TextBlock Text="{DynamicResource Warning}" FontWeight="Bold" 
+                                           Foreground="#D48806" Margin="0,0,0,5"/>
                                 <TextBlock Text="{DynamicResource DeleteDataWarning}"
                                            Foreground="#D48806" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -428,21 +550,22 @@
                         <StackPanel>
                             <RadioButton Content="🇻🇳 Tiếng Việt"
                                          GroupName="Language"
-                                         IsChecked="{Binding SelectedLanguage, Converter={StaticResource LanguageConverter}, ConverterParameter='Tiếng Việt'}"
-                                         Checked="RadioButton_Checked"
-                                         Tag="Tiếng Việt"
+                                         IsChecked="{Binding SelectedLanguage, Converter={StaticResource LanguageConverter}, ConverterParameter='vi-VN'}"
+                                         Command="{Binding ChangeLanguageCommand}"
+                                         CommandParameter="vi-VN"
                                          FontSize="14"/>
                             <RadioButton Content="🇺🇸 English"
                                          GroupName="Language"
-                                         IsChecked="{Binding SelectedLanguage, Converter={StaticResource LanguageConverter}, ConverterParameter='English'}"
-                                         Checked="RadioButton_Checked"
-                                         Tag="English"
+                                         IsChecked="{Binding SelectedLanguage, Converter={StaticResource LanguageConverter}, ConverterParameter='en-US'}"
+                                         Command="{Binding ChangeLanguageCommand}"
+                                         CommandParameter="en-US"
                                          FontSize="14"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
                             <Button Content="{DynamicResource Apply}" Style="{StaticResource ModernActionButtonStyle}"
-                                    Command="{Binding ApplyLanguageCommand}"/>
+                                    Command="{Binding ApplyLanguageCommand}"
+                                    IsEnabled="{Binding HasLanguageChanges}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>

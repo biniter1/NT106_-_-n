@@ -48,6 +48,9 @@ namespace WpfApp1.ViewModels
         // Events
         public event Action<bool> ProfileUpdated;
 
+        // Static event để notify toàn bộ app khi avatar được update
+        public static event Action<string> AvatarUpdated;
+
         public EditProfileViewModel()
         {
             LoadCurrentProfile();
@@ -127,12 +130,17 @@ namespace WpfApp1.ViewModels
                 userData.Phone = Phone;
                 userData.DateTime = DateOfBirth;
 
+                string newAvatarUrl = userData.AvatarUrl;
+                bool avatarChanged = false;
+
                 // Handle avatar upload if a new file was selected
                 if (!string.IsNullOrEmpty(AvatarFilePath) && File.Exists(AvatarFilePath))
                 {
                     string downloadUrl = await UploadAvatarToFirebase(AvatarFilePath, userData.Email);
                     userData.AvatarUrl = downloadUrl;
                     AvatarUrl = downloadUrl; // Update displayed URL
+                    newAvatarUrl = downloadUrl;
+                    avatarChanged = true;
                 }
 
                 await SaveToDatabase(userData);
@@ -142,6 +150,12 @@ namespace WpfApp1.ViewModels
 
                 // Update original values
                 UpdateOriginalValues();
+
+                // Fire avatar updated event nếu avatar đã thay đổi
+                if (avatarChanged)
+                {
+                    AvatarUpdated?.Invoke(newAvatarUrl);
+                }
 
                 // Notify parent that profile was updated
                 ProfileUpdated?.Invoke(true);
@@ -161,7 +175,7 @@ namespace WpfApp1.ViewModels
                 var storage = new FirebaseStorage("chatapp-177.firebasestorage.app"); // Replace with your Firebase Storage bucket
 
                 // Generate a unique file name (e.g., using email and timestamp)
-                string fileName = $"avatars/{email}_{DateTime.Now.Ticks}.jpg";
+                string fileName = $"avatars/{email}.jpg";
 
                 // Upload the file
                 var uploadTask = storage.Child(fileName).PutAsync(File.OpenRead(filePath));

@@ -12,7 +12,7 @@ namespace WpfApp1.ViewModels
 {
     public partial class SettingsViewModel : ObservableObject
     {
-        // Thuộc tính để điều khiển nội dung hiển thị bên phải
+
         [ObservableProperty]
         private string _currentView;
 
@@ -42,6 +42,9 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private string _selectedLanguage;
 
+        [ObservableProperty]
+        private string _userAvatarUrl;
+
         // Tạo tham chiếu, giúp gọi được hàm của chatviewmodel
         private readonly ChatViewModel _chatViewModel;
 
@@ -49,16 +52,20 @@ namespace WpfApp1.ViewModels
         {
             _chatViewModel = chatViewModel;
             InitializeSettings();
+            // Subscribe to AvatarUpdated event from EditProfileViewModel
+            EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
+        }
+
+        public SettingsViewModel()
+        {
+            InitializeSettings();
+            // Subscribe to AvatarUpdated event from EditProfileViewModel
+            EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
         }
 
         // Danh sách các tùy chọn
         public ObservableCollection<string> Themes { get; } = new ObservableCollection<string> { "Light", "Dark" };
         public ObservableCollection<string> Languages { get; } = new ObservableCollection<string> { "Tiếng Việt", "English", "日本語" };
-
-        public SettingsViewModel()
-        {
-            InitializeSettings();
-        }
 
         private void InitializeSettings()
         {
@@ -69,6 +76,7 @@ namespace WpfApp1.ViewModels
             _notifyWhenOffline = false;
             _selectedLanguage = "Tiếng Việt";
             _currentView = "AccountInfo"; // Mặc định hiển thị thông tin tài khoản
+            _userAvatarUrl = SharedData.Instance.userdata.AvatarUrl ?? "";
             var savedLanguage = Properties.Settings.Default.SelectedLanguage;
             _selectedLanguage = savedLanguage switch
             {
@@ -76,6 +84,13 @@ namespace WpfApp1.ViewModels
                 "English" => "English",
                 _ => "Tiếng Việt" // Default to Tiếng Việt
             };
+        }
+
+        // Handle avatar update from EditProfileViewModel
+        private void OnAvatarUpdated(string newAvatarUrl)
+        {
+            UserAvatarUrl = newAvatarUrl;
+            OnPropertyChanged(nameof(UserAvatarUrl));
         }
 
         // Phương thức tiện ích để lấy chuỗi từ ResourceDictionary

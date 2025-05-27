@@ -16,7 +16,7 @@ using System.Security.Cryptography;
 using System.Reactive.Linq;
 using Microsoft.Win32;
 using System.IO;
-using System.Windows.Input;
+using WpfApp1; // Ensure FirebaseStorageHelper namespace is included
 
 namespace WpfApp1.ViewModels
 {
@@ -39,23 +39,20 @@ namespace WpfApp1.ViewModels
         public User userdata;
         private List<IDisposable> allMessageSubscriptions = new List<IDisposable>();
         private Dictionary<string, IDisposable> _contactPresenceListeners = new Dictionary<string, IDisposable>();
+
         partial void OnSelectedContactChanged(Contact value)
         {
-            // Thông báo cho Command cập nhật trạng thái có thể thực thi
             SendMessageCommand.NotifyCanExecuteChanged();
 
-            // Nếu đã chọn một contact, tải tin nhắn của contact đó
             if (value != null)
             {
                 LoadMessagesForContact(value);
             }
             else
             {
-                // Nếu không có contact nào được chọn, xóa danh sách tin nhắn
                 Messages.Clear();
                 Files.Clear();
 
-                // Hủy đăng ký lắng nghe tin nhắn nếu có
                 if (messageSubscription != null)
                 {
                     messageSubscription.Dispose();
@@ -63,6 +60,7 @@ namespace WpfApp1.ViewModels
                 }
             }
         }
+
         partial void OnNewMessageTextChanged(string value)
         {
             SendMessageCommand.NotifyCanExecuteChanged();
@@ -83,33 +81,65 @@ namespace WpfApp1.ViewModels
 
             if (userdata != null && !string.IsNullOrEmpty(userdata.Email))
             {
-                SetCurrentUserGlobalStatus(true); // Đặt trạng thái online khi khởi động
+                SetCurrentUserGlobalStatus(true);
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("ChatViewModel Constructor: Userdata not available yet for initial online status set.");
+                Debug.WriteLine("ChatViewModel Constructor: Userdata not available yet for initial online status set.");
             }
 
-            SelectedContact = null;
-            NewMessageText = string.Empty;
+            EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
 
             LoadInitialData();
+        }
+        [RelayCommand]
+        private async void OnAvatarUpdated(string newAvatarUrl)
+        {
+            if (string.IsNullOrEmpty(newAvatarUrl)) return;
+
+            try
+            {
+                // Cập nhật avatar cho người dùng hiện tại trong SharedData
+                if (SharedData.Instance.userdata != null &&
+                    !string.IsNullOrEmpty(userdata?.Email) &&
+                    SharedData.Instance.userdata.Email == userdata.Email)
+                {
+                    SharedData.Instance.userdata.AvatarUrl = newAvatarUrl;
+                }
+
+                // Cập nhật avatar cho contact tương ứng trong danh sách Contacts
+                var contactToUpdate = Contacts.FirstOrDefault(c => c.Email == userdata?.Email);
+                if (contactToUpdate != null)
+                {
+                    contactToUpdate.IsLoadingAvatar = true;
+                    contactToUpdate.AvatarUrl = newAvatarUrl;
+                    contactToUpdate.IsLoadingAvatar = false;
+                    Debug.WriteLine($"Updated avatar for contact {contactToUpdate.Name}: {newAvatarUrl}");
+                }
+
+                // Nếu người dùng hiện tại là contact đang được chọn, cập nhật lại UI
+                if (SelectedContact != null && SelectedContact.Email == userdata?.Email)
+                {
+                    OnPropertyChanged(nameof(SelectedContact));
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in OnAvatarUpdated: {ex.Message}");
+            }
         }
 
 
         private async void LoadMessagesForContact(Contact contact)
         {
-            // Xóa danh sách tin nhắn hiện tại
             Messages.Clear();
 
-            // Dừng subscription cũ nếu có
             if (messageSubscription != null)
             {
                 messageSubscription.Dispose();
                 messageSubscription = null;
             }
 
-            // Kiểm tra contact có tồn tại không
             if (contact == null || string.IsNullOrEmpty(contact.chatID))
             {
                 Debug.WriteLine("Contact không hợp lệ hoặc không có chatID");
@@ -121,22 +151,22 @@ namespace WpfApp1.ViewModels
 
             try
             {
-                // 1. Tải tin nhắn cũ từ Firebase
                 var messagesQuery = await firebaseClient
                     .Child("messages")
                     .Child(roomId)
                     .OrderByKey()
-                    .LimitToLast(100)  // Giới hạn 100 tin nhắn gần nhất để tránh quá tải
+                    .LimitToLast(100)
                     .OnceAsync<Message>();
 
                 if (messagesQuery != null)
                 {
                     var oldMessages = messagesQuery
-                        .Select(item => {
+                        .Select(item =>
+                        {
                             var msg = item.Object;
-                            msg.Id = item.Key;  // Đặt Id là khóa của tin nhắn trong Firebase
-                            msg.IsMine = msg.SenderId == SharedData.Instance.userdata.Email;  // Đặt IsMine dựa trên SenderId
-                            msg.Alignment = msg.IsMine ? "Right" : "Left";  // Đặt Alignment
+                            msg.Id = item.Key;
+                            msg.IsMine = msg.SenderId == SharedData.Instance.userdata.Email;
+                            msg.Alignment = msg.IsMine ? "Right" : "Left";
                             return msg;
                         })
                         .OrderBy(m => m.Timestamp)
@@ -144,7 +174,8 @@ namespace WpfApp1.ViewModels
 
                     Debug.WriteLine($"Đã tải {oldMessages.Count} tin nhắn cũ");
 
-                    Application.Current.Dispatcher.Invoke(() => {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
                         foreach (var message in oldMessages)
                         {
                             Messages.Add(message);
@@ -152,60 +183,46 @@ namespace WpfApp1.ViewModels
                     });
                 }
 
-                // 2. Đăng ký lắng nghe tin nhắn mới
                 messageSubscription = firebaseClient
                     .Child("messages")
                     .Child(roomId)
                     .AsObservable<Message>()
-                    .Subscribe(messageEvent => {
+                    .Subscribe(messageEvent =>
+                    {
                         if (messageEvent.EventType == FirebaseEventType.InsertOrUpdate && messageEvent.Object != null)
                         {
                             var message = messageEvent.Object;
-                            message.Id = messageEvent.Key;  // Đặt Id là khóa Firebase
-                            message.IsMine = message.SenderId == SharedData.Instance.userdata.Email;  // Đặt IsMine dựa trên SenderId
-                            message.Alignment = message.IsMine ? "Right" : "Left";  // Đặt Alignment
+                            message.Id = messageEvent.Key;
+                            message.IsMine = message.SenderId == SharedData.Instance.userdata.Email;
+                            message.Alignment = message.IsMine ? "Right" : "Left";
 
-                            // Chỉ thêm tin nhắn từ đối phương hoặc cập nhật nếu không phải của mình
-                            if (!message.IsMine || Messages.Any(m => m.Id == message.Id))
+                            Application.Current.Dispatcher.Invoke(() =>
                             {
-                                Application.Current.Dispatcher.Invoke(() => {
-                                    int existingIndex = -1;
-                                    for (int i = 0; i < Messages.Count; i++)
+                                int existingIndex = Messages.IndexOf(Messages.FirstOrDefault(m => m.Id == message.Id));
+                                if (existingIndex >= 0)
+                                {
+                                    Messages[existingIndex] = message;
+                                    Debug.WriteLine($"Đã cập nhật tin nhắn: {message.Id}");
+                                }
+                                else if (!message.IsMine)
+                                {
+                                    int insertIndex = Messages.ToList().FindIndex(m => m.Timestamp > message.Timestamp) + 1;
+                                    if (insertIndex < 0) insertIndex = 0;
+                                    Messages.Insert(insertIndex, message);
+                                    Debug.WriteLine($"Đã thêm tin nhắn mới: {message.Id} tại vị trí {insertIndex}");
+                                    if (SelectedContact?.chatID != roomId)
                                     {
-                                        if (Messages[i].Id == message.Id)
-                                        {
-                                            existingIndex = i;
-                                            break;
-                                        }
+                                        string notificationMessage = $"Tin nhắn mới từ {SelectedContact?.Name ?? "Người gửi"}: {message.Content}";
+                                        var mainWindow = Application.Current.MainWindow as MainWindow;
+                                        mainWindow?.ShowNotification(notificationMessage);
                                     }
-
-                                    if (existingIndex >= 0)
-                                    {
-                                        Messages[existingIndex] = message;
-                                        Debug.WriteLine($"Đã cập nhật tin nhắn: {message.Id}");
-                                    }
-                                    else if (!message.IsMine) // Chỉ thêm tin nhắn từ đối phương
-                                    {
-                                        int insertIndex = 0;
-                                        while (insertIndex < Messages.Count && Messages[insertIndex].Timestamp < message.Timestamp)
-                                        {
-                                            insertIndex++;
-                                        }
-                                        Messages.Insert(insertIndex, message);
-                                        Debug.WriteLine($"Đã thêm tin nhắn mới: {message.Id} tại vị trí {insertIndex}");
-                                        if (!message.IsMine && SelectedContact?.chatID != roomId)
-                                        {
-                                            string notificationMessage = $"Tin nhắn mới từ {SelectedContact?.Name ?? "Người gửi"}: {message.Content}";
-                                            var mainWindow = Application.Current.MainWindow as MainWindow;
-                                            mainWindow?.ShowNotification(notificationMessage);
-                                        }
-                                    }
-                                });
-                            }
+                                }
+                            });
                         }
                         else if (messageEvent.EventType == FirebaseEventType.Delete)
                         {
-                            Application.Current.Dispatcher.Invoke(() => {
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
                                 var messageToRemove = Messages.FirstOrDefault(m => m.Id == messageEvent.Key);
                                 if (messageToRemove != null)
                                 {
@@ -214,14 +231,12 @@ namespace WpfApp1.ViewModels
                                 }
                             });
                         }
-                    }, ex => {
+                    }, ex =>
+                    {
                         Debug.WriteLine($"Lỗi khi lắng nghe tin nhắn: {ex.Message}");
                     });
 
-                // Lưu subscription để có thể dọn dẹp sau này
                 allMessageSubscriptions.Add(messageSubscription);
-
-                // Tải danh sách tệp tin nếu có
                 LoadFilesForContact(contact);
             }
             catch (Exception ex)
@@ -236,6 +251,9 @@ namespace WpfApp1.ViewModels
             Files.Clear();
 
             if (contact == null) return;
+
+            // TODO: Implement logic to load files from Firebase Storage or Firestore
+            // Example: Fetch files associated with the contact's chatID
         }
 
         [RelayCommand(CanExecute = nameof(CanSendMessage))]
@@ -246,14 +264,14 @@ namespace WpfApp1.ViewModels
                 var newMessage = new Message
                 {
                     SenderId = SharedData.Instance.userdata.Email,
-                    Content = this.NewMessageText,
+                    Content = NewMessageText,
                     Timestamp = DateTime.UtcNow,
                     IsMine = true,
                 };
                 await firebaseClient
-                .Child("messages")
-                .Child(contact.chatID)
-                .PostAsync(newMessage);
+                    .Child("messages")
+                    .Child(contact.chatID)
+                    .PostAsync(newMessage);
 
                 Messages.Add(newMessage);
                 NewMessageText = string.Empty;
@@ -289,18 +307,14 @@ namespace WpfApp1.ViewModels
                     string fileName = Path.GetFileName(selectedFilePath);
                     string fileExtension = Path.GetExtension(selectedFilePath).ToLower();
 
-                    // Hiển thị thông báo đang tải lên
                     Mouse.OverrideCursor = Cursors.Wait;
 
                     try
                     {
-                        // Upload file lên Firebase Storage
                         string downloadUrl = await FirebaseStorageHelper.UploadFileAsync(selectedFilePath, fileName);
 
-                        // Xác định có phải là ảnh không
                         bool isImage = IsImageFile(fileExtension);
 
-                        // Tạo đối tượng tin nhắn
                         var newMessage = new Message
                         {
                             SenderId = SharedData.Instance.userdata.Email,
@@ -312,22 +326,18 @@ namespace WpfApp1.ViewModels
                             Alignment = "Right"
                         };
 
-                        // Gửi tin nhắn lên Firebase
                         var result = await firebaseClient
                             .Child("messages")
                             .Child(SelectedContact.chatID)
                             .PostAsync(newMessage);
 
-                        // Lấy ID từ kết quả và gán vào tin nhắn
                         newMessage.Id = result.Key;
 
-                        // Thêm vào ObservableCollection
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             Messages.Add(newMessage);
                         });
 
-                        // Nếu là tệp (không phải ảnh), thêm vào danh sách Files
                         if (!isImage)
                         {
                             var fileItem = new FileItem
@@ -349,7 +359,6 @@ namespace WpfApp1.ViewModels
                     }
                     finally
                     {
-                        // Khôi phục con trỏ chuột
                         Mouse.OverrideCursor = null;
                     }
                 }
@@ -370,8 +379,7 @@ namespace WpfApp1.ViewModels
         private string FormatFileSize(long byteCount)
         {
             string[] suf = { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
-            if (byteCount == 0)
-                return "0" + suf[0];
+            if (byteCount == 0) return "0" + suf[0];
             long bytes = Math.Abs(byteCount);
             int place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
             double num = Math.Round(bytes / Math.Pow(1024, place), 1);
@@ -404,6 +412,13 @@ namespace WpfApp1.ViewModels
                 foreach (var contactDoc in contactsSnapshot.Documents)
                 {
                     var contact = contactDoc.ConvertTo<Contact>();
+                    contact.IsLoadingAvatar = true;
+                    contact.AvatarUrl = await FirebaseStorageHelper.GetAvatarUrlAsync(contact.Email);
+                    if (string.IsNullOrEmpty(contact.AvatarUrl))
+                    {
+                        contact.AvatarUrl = "/Assets/DefaultAvatar.png"; // Use resource path instead of relative path
+                    }
+                    contact.IsLoadingAvatar = false;
                     contacts.Add(contact);
                 }
 
@@ -426,7 +441,6 @@ namespace WpfApp1.ViewModels
             if (contacts.Count == 0)
             {
                 Debug.WriteLine("No contacts found for the user.");
-                MessageBox.Show("No contacts found.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
                 SelectedContact = null;
                 Messages.Clear();
                 Files.Clear();
@@ -449,16 +463,13 @@ namespace WpfApp1.ViewModels
                 Messages.Clear();
                 Files.Clear();
             }
-            // Bắt đầu lắng nghe trạng thái của tất cả các contact vừa tải
+
             StartListeningToContactsPresence();
         }
 
-        // Cập nhật trạng thái online của các users
-        // Hàm tiện ích để mã hóa email thành key hợp lệ cho RTDB
         private string EscapeEmail(string email)
         {
             if (string.IsNullOrEmpty(email)) return string.Empty;
-            // Thay thế các ký tự không hợp lệ cho Firebase RTDB path
             return email.Replace('.', ',')
                         .Replace('#', '_')
                         .Replace('$', '_')
@@ -471,7 +482,7 @@ namespace WpfApp1.ViewModels
         {
             if (userdata == null || string.IsNullOrEmpty(userdata.Email))
             {
-                System.Diagnostics.Debug.WriteLine("SetCurrentUserGlobalStatus: Userdata or Email is null. Khong the cap nhat trang thai toan cuc");
+                Debug.WriteLine("SetCurrentUserGlobalStatus: Userdata or Email is null. Khong the cap nhat trang thai toan cuc");
                 return;
             }
 
@@ -489,20 +500,19 @@ namespace WpfApp1.ViewModels
                       .Child(escapedUserEmail)
                       .PutAsync(statusUpdate);
 
-                System.Diagnostics.Debug.WriteLine($"Current user global status set to: {(isOnline ? "Online" : "Offline")} at /user_status/{escapedUserEmail}");
+                Debug.WriteLine($"Current user global status set to: {(isOnline ? "Online" : "Offline")} at /user_status/{escapedUserEmail}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error setting current user global status: {ex.Message}");
+                Debug.WriteLine($"Error setting current user global status: {ex.Message}");
             }
         }
-
 
         private void StartListeningToContactsPresence()
         {
             if (Contacts == null || !Contacts.Any())
             {
-                System.Diagnostics.Debug.WriteLine("StartListeningToContactsPresence: Contacts list is null or empty.");
+                Debug.WriteLine("StartListeningToContactsPresence: Contacts list is null or empty.");
                 return;
             }
 
@@ -511,100 +521,93 @@ namespace WpfApp1.ViewModels
                 listener?.Dispose();
             }
             _contactPresenceListeners.Clear();
-            System.Diagnostics.Debug.WriteLine("Cleared old contact presence listeners.");
+            Debug.WriteLine("Cleared old contact presence listeners.");
 
-            foreach (var contact_trong_lap in Contacts)
+            foreach (var contact in Contacts)
             {
-                if (contact_trong_lap == null || string.IsNullOrEmpty(contact_trong_lap.Email))
+                if (contact == null || string.IsNullOrEmpty(contact.Email))
                 {
-                    System.Diagnostics.Debug.WriteLine("StartListeningToContactsPresence: Skipping a contact with null or empty email.");
+                    Debug.WriteLine("StartListeningToContactsPresence: Skipping a contact with null or empty email.");
                     continue;
                 }
 
-                Contact contactHienTai = contact_trong_lap;
-                string contactEmailCanLangNghe = contactHienTai.Email;
+                string contactEmailCanLangNghe = contact.Email;
                 string escapedContactEmail = EscapeEmail(contactEmailCanLangNghe);
 
-                System.Diagnostics.Debug.WriteLine($"Setting up listener for: {contactEmailCanLangNghe} (escaped: {escapedContactEmail}) at /user_status/{escapedContactEmail}");
+                Debug.WriteLine($"Setting up listener for: {contactEmailCanLangNghe} (escaped: {escapedContactEmail}) at /user_status/{escapedContactEmail}");
 
                 try
                 {
                     UserStatusData localStatus = new UserStatusData();
 
                     var presenceListener = firebaseClient
-                    .Child("user_status")
-                    .Child(escapedContactEmail)
-                    .AsObservable<object>()
-                    .Subscribe(presenceEvent =>
-                    {
-                        System.Diagnostics.Debug.WriteLine($"EventType: {presenceEvent.EventType}, Key: {presenceEvent.Key}");
-
-                        if (presenceEvent.Object != null)
+                        .Child("user_status")
+                        .Child(escapedContactEmail)
+                        .AsObservable<object>()
+                        .Subscribe(presenceEvent =>
                         {
-                            switch (presenceEvent.Key)
+                            Debug.WriteLine($"EventType: {presenceEvent.EventType}, Key: {presenceEvent.Key}");
+
+                            if (presenceEvent.Object != null)
                             {
-                                case "isOnline":
-                                    bool newIsOnline = Convert.ToBoolean(presenceEvent.Object);
-                                    localStatus.isOnline = newIsOnline;
-                                    System.Diagnostics.Debug.WriteLine($"Updated isOnline: {newIsOnline}");
-                                    break;
+                                switch (presenceEvent.Key)
+                                {
+                                    case "isOnline":
+                                        bool newIsOnline = Convert.ToBoolean(presenceEvent.Object);
+                                        localStatus.isOnline = newIsOnline;
+                                        Debug.WriteLine($"Updated isOnline: {newIsOnline}");
+                                        break;
 
-                                case "last_active":
+                                    case "last_active":
+                                        if (long.TryParse(presenceEvent.Object.ToString(), out long newLastActive))
+                                        {
+                                            localStatus.last_active = newLastActive;
+                                            Debug.WriteLine($"Updated last_active: {newLastActive}");
+                                        }
+                                        break;
 
-                                    long newLastActive;
-                                    if (long.TryParse(presenceEvent.Object.ToString(), out newLastActive))
+                                    default:
+                                        Debug.WriteLine($"Unknown key: {presenceEvent.Key}");
+                                        break;
+                                }
+
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    var localContactToUpdate = Contacts.FirstOrDefault(c => c.Email == contactEmailCanLangNghe);
+                                    if (localContactToUpdate != null)
                                     {
-                                        localStatus.last_active = newLastActive;
-                                        System.Diagnostics.Debug.WriteLine($"Updated last_active: {newLastActive}");
+                                        localContactToUpdate.IsOnline = localStatus.isOnline;
+                                        // Uncomment if you want to update last_active
+                                        // localContactToUpdate.last_active = localStatus.last_active;
                                     }
-                                    break;
-
-                                default:
-                                    System.Diagnostics.Debug.WriteLine($"Unknown key: {presenceEvent.Key}");
-                                    break;
+                                });
                             }
-
-                            // Cập nhật UI 
-                            Application.Current.Dispatcher.Invoke(() =>
+                            else
                             {
-                                var localContactToUpdate = Contacts.FirstOrDefault(c => c.Email == contactEmailCanLangNghe);
-                                if (localContactToUpdate != null)
+                                Debug.WriteLine("Received null object in presenceEvent");
+                                Application.Current.Dispatcher.Invoke(() =>
                                 {
-                                    localContactToUpdate.IsOnline = localStatus.isOnline;
+                                    var localContactToUpdate = Contacts.FirstOrDefault(c => c.Email == contactEmailCanLangNghe);
+                                    if (localContactToUpdate != null)
+                                    {
+                                        localContactToUpdate.IsOnline = false;
+                                    }
+                                });
+                            }
+                        });
 
-                                    //Chưa thực hiện cập nhật thời gian online gần nhất nên comment
-                                    //localContactToUpdate.last_active = localStatus.last_active;
-                                }
-                            });
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine("Received null object in presenceEvent");
-
-                            // Gán là offline vì không có dữ liệu
-                            Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                var localContactToUpdate = Contacts.FirstOrDefault(c => c.Email == contactEmailCanLangNghe);
-                                if (localContactToUpdate != null)
-                                {
-                                    localContactToUpdate.IsOnline = false;
-                                }
-                            });
-                        }
-                    });
-
+                    _contactPresenceListeners[contactEmailCanLangNghe] = presenceListener;
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[PRESENCE SETUP FAIL] Failed for {contact_trong_lap.Email}: {ex.Message}");
+                    Debug.WriteLine($"[PRESENCE SETUP FAIL] Failed for {contact.Email}: {ex.Message}");
                 }
             }
         }
-        // Dọn dẹp các đăng ký và set trạng thái offline, hàm này được gọi ở hàm logout bên cài đặt và các khi bấm đóng app
+
         public void Cleanup()
         {
-            SetCurrentUserGlobalStatus(false); // Đặt trạng thái offline khi dọn dẹp
-            // Hủy tất cả các subscription để tránh rò rỉ bộ nhớ
+            SetCurrentUserGlobalStatus(false);
             foreach (var subscription in allMessageSubscriptions)
             {
                 subscription?.Dispose();
@@ -614,14 +617,15 @@ namespace WpfApp1.ViewModels
             messageSubscription?.Dispose();
             messageSubscription = null;
 
-            // Hủy tất cả các contact presence listeners
             foreach (var listener in _contactPresenceListeners.Values)
             {
                 listener?.Dispose();
             }
             _contactPresenceListeners.Clear();
-            System.Diagnostics.Debug.WriteLine("ChatViewModel cleanup complete.");
+
+            EditProfileViewModel.AvatarUpdated -= OnAvatarUpdated;
+
+            Debug.WriteLine("ChatViewModel cleanup complete.");
         }
     }
-
 }

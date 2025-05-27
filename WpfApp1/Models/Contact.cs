@@ -40,5 +40,8 @@ namespace WpfApp1.Models
         [FirestoreProperty]
         public string chatID { get; set; }
 
+        [FirestoreProperty]
+        public bool IsLoadingAvatar { get; set; }
+
     }
 }
