@@ -167,6 +167,22 @@ namespace WpfApp1.ViewModels
                             msg.Id = item.Key;
                             msg.IsMine = msg.SenderId == SharedData.Instance.userdata.Email;
                             msg.Alignment = msg.IsMine ? "Right" : "Left";
+                            // --- Bổ sung nhận diện ảnh ---
+                            if (!string.IsNullOrEmpty(msg.ImageUrl))
+                            {
+                                msg.IsImage = true;
+                            }
+                            else if (!string.IsNullOrEmpty(msg.Content) && IsImageFile(System.IO.Path.GetExtension(msg.Content)))
+                            {
+                                msg.IsImage = true;
+                                msg.ImageUrl = msg.Content;
+                            }
+                            else
+                            {
+                                msg.IsImage = false;
+                                msg.ImageUrl = null;
+                            }
+                            // --- Kết thúc bổ sung ---
                             return msg;
                         })
                         .OrderBy(m => m.Timestamp)
@@ -195,6 +211,33 @@ namespace WpfApp1.ViewModels
                             message.Id = messageEvent.Key;
                             message.IsMine = message.SenderId == SharedData.Instance.userdata.Email;
                             message.Alignment = message.IsMine ? "Right" : "Left";
+
+                            // --- Bổ sung nhận diện ảnh và điều chỉnh URL (cho tin nhắn mới/cập nhật) ---
+                            if (!string.IsNullOrEmpty(message.ImageUrl))
+                            {
+                                message.IsImage = true;
+                            }
+                            else if (!string.IsNullOrEmpty(message.Content) && IsImageFile(System.IO.Path.GetExtension(message.Content)))
+                            {
+                                message.IsImage = true;
+                                message.ImageUrl = message.Content;
+                            }
+                            else
+                            {
+                                message.IsImage = false;
+                                message.ImageUrl = null;
+                            }
+
+                            if (message.IsImage && !string.IsNullOrEmpty(message.ImageUrl))
+                            {
+                                message.ImageUrl = EnsureFirebaseMediaUrl(message.ImageUrl);
+                            }
+                            else if (message.IsImage) // Nếu là ảnh nhưng ImageUrl rỗng/không hợp lệ sau các bước trên
+                            {
+                                message.IsImage = false; // Coi như không phải ảnh nếu không có URL hợp lệ
+                                message.ImageUrl = null;
+                            }
+                            // --- Kết thúc bổ sung ---
 
                             Application.Current.Dispatcher.Invoke(() =>
                             {
@@ -372,8 +415,11 @@ namespace WpfApp1.ViewModels
 
         private bool IsImageFile(string extension)
         {
-            string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
-            return Array.IndexOf(imageExtensions, extension.ToLower()) >= 0;
+            if (string.IsNullOrEmpty(extension))
+                return false;
+
+            string ext = extension.ToLowerInvariant();
+            return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".bmp";
         }
 
         private string FormatFileSize(long byteCount)
@@ -413,13 +459,21 @@ namespace WpfApp1.ViewModels
                 {
                     var contact = contactDoc.ConvertTo<Contact>();
                     contact.IsLoadingAvatar = true;
-                    contact.AvatarUrl = await FirebaseStorageHelper.GetAvatarUrlAsync(contact.Email);
-                    if (string.IsNullOrEmpty(contact.AvatarUrl))
+
+                    // Nếu contact đã có AvatarUrl (từ Firestore) thì dùng luôn, không lấy từ Firebase Storage nữa
+                    if (!string.IsNullOrEmpty(contact.AvatarUrl) && contact.AvatarUrl != "/Assets/DefaultAvatar.png")
                     {
-                        contact.AvatarUrl = "/Assets/DefaultAvatar.png"; // Use resource path instead of relative path
+                        // Đã có avatar, không cần lấy lại
                     }
+                    else
+                    {
+                        // Nếu không có AvatarUrl, có thể bỏ qua hoặc lấy mặc định, KHÔNG gọi GetAvatarUrlAsync
+                        contact.AvatarUrl = "/Assets/DefaultAvatar.png";
+                    }
+
                     contact.IsLoadingAvatar = false;
                     contacts.Add(contact);
+
                 }
 
                 Debug.WriteLine($"Loaded {contacts.Count} contacts for user {email}");
@@ -627,5 +681,49 @@ namespace WpfApp1.ViewModels
 
             Debug.WriteLine("ChatViewModel cleanup complete.");
         }
+        public string EnsureFirebaseMediaUrl(string url)
+{
+    if (string.IsNullOrEmpty(url))
+        return url;
+
+    // Kiểm tra xem có phải là URL Firebase Storage không
+    if (url.StartsWith("https://firebasestorage.googleapis.com/v0/b/"))
+    {
+        // Kiểm tra xem 'alt=media' đã tồn tại chưa
+        if (url.Contains("alt=media"))
+        {
+            return url; // Đã có, không cần làm gì
+        }
+
+        // Kiểm tra xem URL đã có tham số truy vấn nào chưa (dấu '?')
+        if (url.Contains("?"))
+        {
+            // Đã có tham số khác, nối thêm bằng dấu '&'
+            return url + "&alt=media";
+        }
+        else
+        {
+            // Chưa có tham số nào, thêm bằng dấu '?'
+            return url + "?alt=media";
+        }
+    }
+    return url; // Không phải URL Firebase Storage hoặc không cần sửa đổi
+}
+        [RelayCommand]
+        private void InsertEmoji(string emoji)
+        {
+            // Thêm emoji vào vị trí con trỏ hoặc cuối chuỗi
+            if (string.IsNullOrEmpty(NewMessageText))
+                NewMessageText = emoji;
+            else
+                NewMessageText += emoji;
+        }
+        [RelayCommand]
+        public void ShowEmojiPicker()
+        {
+            // Thực hiện mở EmojiPicker (ví dụ: đặt biến IsEmojiPickerOpen = true)
+            // Hoặc raise event để View mở popup
+        }
+
     }
 }

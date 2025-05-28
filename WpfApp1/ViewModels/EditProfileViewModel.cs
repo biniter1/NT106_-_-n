@@ -15,6 +15,7 @@ namespace WpfApp1.ViewModels
     public partial class EditProfileViewModel : ObservableValidator
     {
         [ObservableProperty]
+        [ObservableProperty]
         [NotifyDataErrorInfo]
         [Required(ErrorMessage = "Name is required")]
         [MinLength(2, ErrorMessage = "Name must be at least 2 characters")]

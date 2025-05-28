@@ -202,11 +202,21 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border MaxWidth="400" Background="{Binding IsMine, Converter={StaticResource MessageBackgroundConverter}}" CornerRadius="10" Padding="10" Margin="5" HorizontalAlignment="{Binding IsMine, Converter={StaticResource MessageAlignmentConverter}}">
-                                <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"/>
+                                <StackPanel>
+                                    <!-- Nếu là ảnh thì hiển thị ảnh -->
+                                    <Image Source="{Binding ImageUrl}" 
+                           MaxWidth="200" 
+                           MaxHeight="200" 
+                           Margin="0,0,0,5"
+                           Visibility="{Binding IsImage, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    <!-- Nếu là text thì hiển thị text -->
+                                    <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"/>
+                                </StackPanel>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
             </ScrollViewer>
 
             <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10" Background="{StaticResource WhiteBrush}">
@@ -227,6 +237,7 @@
                     <Button Grid.Column="1" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource InsertEmojiTooltip}" Command="{Binding ShowEmojiPickerCommand}">
                         <TextBlock Text="😊" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Button>
+                    
 
                     <!-- Ô nhập tin nhắn -->
                     <Border Grid.Column="2" CornerRadius="15" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="{StaticResource WhiteBrush}" Margin="0,0,10,0">
