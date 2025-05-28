@@ -1,28 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Firebase.Database;
+using WpfApp1.ViewModels;
 
 namespace WpfApp1.Views
 {
-    /// <summary>
-    /// Interaction logic for SettingsView.xaml
-    /// </summary>
     public partial class SettingsView : UserControl
     {
-        public SettingsView()
+        public SettingsView(ChatViewModel chatVM, FirebaseClient firebaseClient)
         {
             InitializeComponent();
+            DataContext = new SettingsViewModel(chatVM, firebaseClient);
+        }
+
+        private void RadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+            if (sender is RadioButton radioButton && radioButton.Tag is string language)
+            {
+                // Assuming the DataContext is the ViewModel with SelectedLanguage and ApplyLanguageCommand
+                if (DataContext is WpfApp1.ViewModels.SettingsViewModel viewModel)
+                {
+                    // Sử dụng method mới để xử lý thay đổi ngôn ngữ
+                    viewModel.OnLanguageChanged(language);
+                }
+            }
         }
     }
 }

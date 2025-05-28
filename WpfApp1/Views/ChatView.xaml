@@ -10,9 +10,6 @@
              d:DesignHeight="600" d:DesignWidth="940">
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
-            </ResourceDictionary.MergedDictionaries>
             <!-- Giữ nguyên các SolidColorBrush và Converter -->
             <SolidColorBrush x:Key="PrimaryBrush" Color="#6c63ff"/>
             <SolidColorBrush x:Key="LightGrayBrush" Color="#f0f0f0"/>
@@ -79,7 +76,8 @@
                     <TextBlock Text="{DynamicResource MessagesTitle}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}"/>
                     <Button FontFamily="Segoe MDL2 Assets"
                             Content="" ToolTip="{DynamicResource AddFriendTooltip}"
-                            Command="{Binding DataContext.ShowAddFriendPopupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Width="40" Height="40" FontSize="30" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5" DockPanel.Dock="Right" HorizontalAlignment="Right" />
+                            Command="{Binding DataContext.ShowAddFriendPopupCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                            Width="40" Height="40" FontSize="30" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5" DockPanel.Dock="Right" HorizontalAlignment="Right" />
                 </DockPanel>
                 <Border Grid.Row="1" CornerRadius="15" Background="{StaticResource LightGrayBrush}" BorderBrush="{StaticResource BorderBrush}" Padding="5,5" BorderThickness="1">
                     <TextBox x:Name="SearchContact" Style="{StaticResource SearchBoxPlaceholderStyle}" />
@@ -94,7 +92,29 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="" FontFamily="Segoe Fluent Icons" FontSize="36" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="Gray"/>
+                                    <!-- Avatar container with loading overlay -->
+                                    <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Margin="0,0,10,0" Background="#20000000" Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+                                        <!-- Loading overlay, semi-transparent -->
+                                    </Border>
+                                    <Image Grid.Column="0" Width="40" Height="40" Margin="0,0,10,0" VerticalAlignment="Center" 
+                           Source="{Binding AvatarUrl}" 
+                           Stretch="UniformToFill">
+                                        <Image.Clip>
+                                            <EllipseGeometry Center="20,20" RadiusX="20" RadiusY="20"/>
+                                        </Image.Clip>
+                                        <Image.Style>
+                                            <Style TargetType="Image">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <!-- Show image only when not loading -->
+                                                    <DataTrigger Binding="{Binding IsLoadingAvatar}" Value="True">
+                                                        <Setter Property="Visibility" Value="Hidden"/>
+                                                    </DataTrigger>
+
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,2"/>
                                         <TextBlock Text="{Binding LastMessage}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
@@ -157,7 +177,8 @@
                         <TextBlock Text="" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="{Binding SelectedContact.Name, FallbackValue='Select a contact'}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding SelectedContact.Name, Converter={StaticResource NameToFallbackConverter}}"
+           FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
                         <TextBlock FontSize="11">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -177,18 +198,15 @@
             </Border>
 
             <ScrollViewer Grid.Row="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="10">
-                <!-- WpfApp1/Views/ChatView.xaml -->
-<ItemsControl ItemsSource="{Binding Messages}">
-    <ItemsControl.ItemTemplate>
+                <ItemsControl ItemsSource="{Binding Messages}">
+                    <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border MaxWidth="400" Background="{Binding IsMine, Converter={StaticResource MessageBackgroundConverter}}" CornerRadius="10" Padding="10" Margin="5" HorizontalAlignment="{Binding IsMine, Converter={StaticResource MessageAlignmentConverter}}">
                                 <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"/>
                             </Border>
                         </DataTemplate>
-
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-
             </ScrollViewer>
 
             <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10" Background="{StaticResource WhiteBrush}">
@@ -201,12 +219,12 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Nút chọn file -->
-                    <Button Grid.Column="0" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="Đính kèm tệp" Command="{Binding SelectFileCommand}">
+                    <Button Grid.Column="0" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource AttachFileTooltip}" Command="{Binding SelectFileCommand}">
                         <TextBlock Text="📎" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Button>
 
                     <!-- Nút chọn emoji -->
-                    <Button Grid.Column="1" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="Chèn emoji" Command="{Binding ShowEmojiPickerCommand}">
+                    <Button Grid.Column="1" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource InsertEmojiTooltip}" Command="{Binding ShowEmojiPickerCommand}">
                         <TextBlock Text="😊" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Button>
 
@@ -240,7 +258,6 @@
                     </Button>
                 </Grid>
             </Border>
-
         </Grid>
 
         <Border Grid.Column="2" Background="{StaticResource Filearea}" Padding="10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">

@@ -1,12 +1,15 @@
-﻿using System; // Cần cho DateTime nếu bạn dùng
+﻿using System;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Google.Cloud.Firestore;
 
-namespace WpfApp1.Models // Đảm bảo namespace khớp với cấu trúc thư mục của bạn
+namespace WpfApp1.Models
 {
 
     [FirestoreData]
-    public class Contact
+    public class Contact : ObservableObject
     {
+
+        private bool _isOnline;
         public Contact()
         {
             IsOnline = false;
@@ -28,10 +31,17 @@ namespace WpfApp1.Models // Đảm bảo namespace khớp với cấu trúc thư
         public DateTime? LastMessageTime { get; set; }
 
         [FirestoreProperty]
-        public bool IsOnline { get; set; }
+        public bool IsOnline
+        {
+            get => _isOnline;
+            set => SetProperty(ref _isOnline, value);
+        }
 
         [FirestoreProperty]
         public string chatID { get; set; }
+
+        [FirestoreProperty]
+        public bool IsLoadingAvatar { get; set; }
 
     }
 }

@@ -113,6 +113,10 @@
     <sys:String x:Key="AcceptRequestButton">Chấp nhận</sys:String>
     <sys:String x:Key="DeclineRequestButton">Từ chối</sys:String>
     <sys:String x:Key="SelectContactPrompt">Chọn một liên hệ hoặc nhóm để xem chi tiết</sys:String>
+    <sys:String x:Key="FriendListOnlineStatus">Trực tuyến</sys:String>
+    <sys:String x:Key="FriendListGroupChat">Nhóm chat</sys:String>
+    <sys:String x:Key="FriendListAcceptRequestTooltip">Chấp nhận yêu cầu</sys:String>
+    <sys:String x:Key="FriendListDeclineRequestTooltip">Từ chối yêu cầu</sys:String>
 
     <!-- Các chuỗi mới từ MainWindow.xaml -->
     <sys:String x:Key="AppTitle">Ứng dụng Chat</sys:String>
@@ -120,4 +124,99 @@
     <sys:String x:Key="MessageTooltip">Tin nhắn</sys:String>
     <sys:String x:Key="FriendsTooltip">Bạn bè</sys:String>
     <sys:String x:Key="SettingsTooltip">Cài đặt</sys:String>
+
+    <!--Settings-->
+
+    <sys:String x:Key="Settings">Cài đặt</sys:String>
+    <sys:String x:Key="Account">Tài khoản</sys:String>
+    <sys:String x:Key="Appearance">Giao diện</sys:String>
+    <sys:String x:Key="Data">Dữ liệu</sys:String>
+    <sys:String x:Key="Language">Ngôn ngữ</sys:String>
+    <sys:String x:Key="Support">Hỗ trợ</sys:String>
+    <sys:String x:Key="Logout">Đăng xuất</sys:String>
+    <sys:String x:Key="ExitApp">Thoát ứng dụng</sys:String>
+    <sys:String x:Key="AccountInfo">👤 Thông tin tài khoản</sys:String>
+    <sys:String x:Key="Username">Tên người dùng</sys:String>
+    <sys:String x:Key="Email">Email</sys:String>
+    <sys:String x:Key="JoinDate">Ngày sinh</sys:String>
+    <sys:String x:Key="Edit">✏️ Chỉnh sửa</sys:String>
+    <sys:String x:Key="AppearanceDisplay">🎨 Giao diện Hiển thị</sys:String>
+    <sys:String x:Key="DisplayMode">Chế độ hiển thị</sys:String>
+    <sys:String x:Key="Notifications">Thông báo</sys:String>
+    <sys:String x:Key="EnableSoundNotifications">Bật thông báo âm thanh</sys:String>
+    <sys:String x:Key="ShowDesktopNotifications">Hiển thị thông báo trên desktop</sys:String>
+    <sys:String x:Key="NotifyWhenOffline">Thông báo khi offline</sys:String>
+    <sys:String x:Key="DisplayLanguage">Ngôn ngữ hiển thị</sys:String>
+    <sys:String x:Key="SaveChanges">💾 Lưu thay đổi</sys:String>
+    <sys:String x:Key="DataManagement">💾 Quản lý dữ liệu</sys:String>
+    <sys:String x:Key="ManageYourData">Quản lý dữ liệu cá nhân và lịch sử trò chuyện của bạn.</sys:String>
+    <sys:String x:Key="Warning">⚠️ Cảnh báo</sys:String>
+    <sys:String x:Key="DeleteDataWarning">Việc xóa dữ liệu không thể hoàn tác. Hãy cân nhắc kỹ trước khi thực hiện.</sys:String>
+    <sys:String x:Key="ExportData">📤 Xuất dữ liệu</sys:String>
+    <sys:String x:Key="DeleteAllData">🗑️ Xóa tất cả dữ liệu</sys:String>
+    <sys:String x:Key="SelectLanguage">Chọn ngôn ngữ hiển thị cho ứng dụng:</sys:String>
+    <sys:String x:Key="SupportHelp">❓ Hỗ trợ Trợ giúp</sys:String>
+    <sys:String x:Key="NeedHelp">Cần hỗ trợ? Chúng tôi luôn sẵn sàng giúp bạn!</sys:String>
+    <sys:String x:Key="EmailSupport">📧 Email hỗ trợ</sys:String>
+    <sys:String x:Key="Hotline">📞 Hotline</sys:String>
+    <sys:String x:Key="SendFeedback">📝 Gửi phản hồi</sys:String>
+    <sys:String x:Key="UserGuide">📋 Hướng dẫn sử dụng</sys:String>
+    <sys:String x:Key="Apply">✅ Áp dụng</sys:String>
+
+    <!--EditProfile-->
+    <sys:String x:Key="EditProfile">Chỉnh sửa hồ sơ</sys:String>
+    <sys:String x:Key="EditProfileDescription">Cập nhật thông tin cá nhân của bạn</sys:String>
+    <sys:String x:Key="Name">Họ và tên</sys:String>
+    <sys:String x:Key="Phone">Số điện thoại</sys:String>
+    <sys:String x:Key="DateOfBirth">Ngày sinh</sys:String>
+    <sys:String x:Key="Bio">Giới thiệu</sys:String>
+    <sys:String x:Key="Location">Địa chỉ</sys:String>
+    <sys:String x:Key="ChangeAvatar">Đổi ảnh đại diện</sys:String>
+    <sys:String x:Key="Reset">Đặt lại</sys:String>
+    <sys:String x:Key="Cancel">Hủy</sys:String>
+    <sys:String x:Key="ProfileUpdatedMessage">Hồ sơ đã được cập nhật thành công!</sys:String>
+    
+    <!--FeedBack-->
+    <sys:String x:Key="FeedbackFormTitle">Gửi Phản Hồi</sys:String>
+    <sys:String x:Key="FeedbackNameLabel">Tên</sys:String>
+    <sys:String x:Key="FeedbackEmailLabel">Email</sys:String>
+    <sys:String x:Key="FeedbackMessageLabel">Nội Dung Phản Hồi</sys:String>
+    <sys:String x:Key="SendButton">Gửi</sys:String>
+    <sys:String x:Key="CancelButton">Hủy</sys:String>
+    <sys:String x:Key="FeedbackEmptyMessage">Vui lòng nhập nội dung phản hồi.</sys:String>
+    <sys:String x:Key="FeedbackSentMessage">Phản hồi đã được gửi thành công!</sys:String>
+    <sys:String x:Key="FeedbackErrorMessage">Lỗi khi gửi phản hồi</sys:String>
+    <sys:String x:Key="FeedbackEmailSubject">Phản Hồi Người Dùng</sys:String>
+    <sys:String x:Key="Greetingg">Chúng tôi rất vui khi nhận phản hồi từ bạn!</sys:String>
+
+    <sys:String x:Key="UserGuideContent" xml:space="preserve">
+        Chào mừng bạn đến với Hướng Dẫn Sử Dụng của ứng dụng!
+        ### Bắt Đầu
+        1. **Đăng Nhập/Đăng Ký**: Sử dụng cửa sổ đăng nhập để đăng nhập bằng thông tin của bạn hoặc tạo tài khoản mới.
+        2. **Điều Hướng Ứng Dụng**: Giao diện chính bao gồm menu cài đặt nơi bạn có thể tùy chỉnh trải nghiệm.
+
+        ### Cài Đặt
+        - **Thông Tin Tài Khoản**: Xem và chỉnh sửa chi tiết hồ sơ của bạn, như tên và email.
+        - **Chủ Đề**: Chuyển đổi giữa chủ đề Sáng và Tối để có trải nghiệm xem thoải mái.
+        - **Thông Báo**: Bật hoặc tắt thông báo, bao gồm thông báo trên màn hình và cảnh báo khi ngoại tuyến.
+        - **Ngôn Ngữ**: Chọn ngôn ngữ ưa thích của bạn (ví dụ: Tiếng Việt, English).
+        - **Phản Hồi**: Gửi phản hồi để giúp chúng tôi cải thiện ứng dụng.
+        - **Quản Lý Dữ Liệu**: Xuất hoặc xóa dữ liệu của bạn khi cần.
+
+        ### Chỉnh Sửa Hồ Sơ
+        1. Vào Cài Đặt > Thông Tin Tài Khoản.
+        2. Nhấn "Chỉnh Sửa Hồ Sơ" để cập nhật tên, email hoặc ảnh đại diện.
+        3. Lưu thay đổi để cập nhật thông tin tài khoản.
+
+        ### Gửi Phản Hồi
+        1. Vào Cài Đặt > Hỗ Trợ.
+        2. Nhấn "Gửi Phản Hồi" để mở biểu mẫu phản hồi.
+        3. Nhập thông điệp của bạn và gửi cho đội ngũ của chúng tôi.
+
+        ### Đăng Xuất
+        1. Trong menu Cài Đặt, nhấn "Đăng Xuất" để thoát khỏi tài khoản của bạn.
+        2. Bạn sẽ được chuyển hướng đến màn hình đăng nhập.
+
+        Để được hỗ trợ thêm, liên hệ với đội ngũ hỗ trợ của chúng tôi qua phần Hỗ Trợ.
+    </sys:String>
 </ResourceDictionary>

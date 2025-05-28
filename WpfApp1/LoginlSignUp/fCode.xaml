@@ -116,7 +116,6 @@
                     Click="btnClose_Click"/>
 
             <!-- Nội dung chính -->
-            pronunciation: /ˈstæk ˈpænəl/
             <StackPanel Margin="30,40,30,30">
                 <!-- Icon -->
                 <Border Width="70" Height="70"

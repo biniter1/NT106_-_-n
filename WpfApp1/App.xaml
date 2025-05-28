@@ -29,6 +29,10 @@
             <converters:FileTypeToIconConverter x:Key="FileTypeToIconConverter"/>
             <converters:ToLowerConverter x:Key="ToLowerConverter"/>
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
+            <converters:NameToFallbackConverter x:Key="NameToFallbackConverter"/>
+            <converters:StringToBooleanConverter x:Key="StringToBooleanConverter"/>
+            <converters:LanguageConverter x:Key="LanguageConverter"/>
+            <converters:AvatarUrlConverter x:Key="AvatarUrlConverter"/>
             <!-- Thêm converter này -->
 
             <!-- ScrollBar Brushes -->

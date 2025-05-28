@@ -7,57 +7,287 @@
              xmlns:vm="clr-namespace:WpfApp1.ViewModels" 
              xmlns:models="clr-namespace:WpfApp1.Models" 
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="900"
-             Background="#F0F2F5">
+             d:DesignHeight="600" Width="1122">
+
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
-            </ResourceDictionary.MergedDictionaries>
+            <!-- Colors -->
+            <SolidColorBrush x:Key="PrimaryColor" Color="#6366F1"/>
+            <SolidColorBrush x:Key="SecondaryColor" Color="#8B5CF6"/>
+            <SolidColorBrush x:Key="AccentColor" Color="#06B6D4"/>
+            <SolidColorBrush x:Key="BackgroundColor" Color="#F8FAFC"/>
+            <SolidColorBrush x:Key="SurfaceColor" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="TextPrimaryColor" Color="#1E293B"/>
+            <SolidColorBrush x:Key="TextSecondaryColor" Color="#64748B"/>
+            <SolidColorBrush x:Key="BorderColor" Color="#E2E8F0"/>
+            <SolidColorBrush x:Key="HoverColor" Color="#F1F5F9"/>
+            <SolidColorBrush x:Key="SuccessColor" Color="#10B981"/>
+            <SolidColorBrush x:Key="DangerColor" Color="#EF4444"/>
+
+            <!-- Gradients -->
+            <LinearGradientBrush x:Key="FriendGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#6366F1" Offset="0"/>
+                <GradientStop Color="#8B5CF6" Offset="1"/>
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="GroupGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#06B6D4" Offset="0"/>
+                <GradientStop Color="#0891B2" Offset="1"/>
+            </LinearGradientBrush>
+
+            <!-- Button Styles -->
+            <Style x:Key="ModernButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource PrimaryColor}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="16,8"/>
+                <Setter Property="Margin" Value="4"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="8"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#000000" Opacity="0.1" BlurRadius="8" ShadowDepth="2"/>
+                                </Border.Effect>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource SecondaryColor}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="RenderTransform">
+                                        <Setter.Value>
+                                            <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource DangerColor}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#DC2626"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="SuccessButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource SuccessColor}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#059669"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="IconButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="8"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="16"/>
+                <Setter Property="Width" Value="36"/>
+                <Setter Property="Height" Value="36"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="18"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource HoverColor}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Avatar Style -->
+            <Style x:Key="AvatarStyle" TargetType="Border">
+                <Style.Resources>
+                    <Style TargetType="Ellipse">
+                        <Setter Property="StrokeThickness" Value="3"/>
+                        <Setter Property="Stroke" Value="White"/>
+                    </Style>
+                </Style.Resources>
+                <Setter Property="CornerRadius" Value="50"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect Color="#000000" Opacity="0.15" BlurRadius="12" ShadowDepth="4"/>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- ListBox Styles -->
+            <Style x:Key="ModernListBoxStyle" TargetType="ListBox">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+                <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+                <Setter Property="ItemContainerStyle">
+                    <Setter.Value>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="12,8"/>
+                            <Setter Property="Margin" Value="8,2"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border Background="{TemplateBinding Background}"
+                                                CornerRadius="12"
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource HoverColor}"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="#EEF2FF"/>
+                                                <Setter Property="Foreground" Value="{StaticResource PrimaryColor}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Card Style -->
+            <Style x:Key="CardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource SurfaceColor}"/>
+                <Setter Property="CornerRadius" Value="16"/>
+                <Setter Property="Padding" Value="20"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect Color="#000000" Opacity="0.1" BlurRadius="16" ShadowDepth="4"/>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Data Templates -->
             <DataTemplate x:Key="FriendListItemTemplate">
-                <StackPanel Orientation="Horizontal" Margin="5">
-                    <Ellipse Width="30" Height="30" Fill="LightBlue" Margin="0,0,10,0"/>
-                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                <StackPanel Orientation="Horizontal">
+                    <Border Style="{StaticResource AvatarStyle}" Width="40" Height="40">
+                        <Ellipse Fill="{StaticResource FriendGradient}"/>
+                    </Border>
+                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="14"
+                                   Foreground="{StaticResource TextPrimaryColor}"/>
+                        <TextBlock Text="{StaticResource FriendListOnlineStatus}" 
+                                   FontSize="11" 
+                                   Foreground="{StaticResource SuccessColor}"/>
+                    </StackPanel>
                 </StackPanel>
             </DataTemplate>
 
             <DataTemplate x:Key="GroupListItemTemplate">
-                <StackPanel Orientation="Horizontal" Margin="5">
-                    <Ellipse Width="30" Height="30" Fill="LightGreen" Margin="0,0,10,0"/>
-                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                <StackPanel Orientation="Horizontal">
+                    <Border Style="{StaticResource AvatarStyle}" Width="40" Height="40">
+                        <Ellipse Fill="{StaticResource GroupGradient}"/>
+                    </Border>
+                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="14"
+                                   Foreground="{StaticResource TextPrimaryColor}"/>
+                        <TextBlock Text="{StaticResource FriendListGroupChat}" 
+                                   FontSize="11" 
+                                   Foreground="{StaticResource TextSecondaryColor}"/>
+                    </StackPanel>
                 </StackPanel>
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type vm:FriendViewModel}">
-                <StackPanel Margin="10">
-                    <Ellipse Width="80" Height="80" Fill="LightBlue" Margin="0,0,0,15" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Border Style="{StaticResource AvatarStyle}" Width="100" Height="100" Margin="0,0,0,20">
+                            <Ellipse Fill="{StaticResource FriendGradient}"/>
+                        </Border>
 
-                    <Button Content="{DynamicResource UnfriendButton}" Margin="0,5" Padding="10,5" Cursor="Hand"
-                            Command="{Binding DataContext.UnfriendCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            CommandParameter="{Binding}"/>
-                    <Button Content="{DynamicResource SendMessageButton}" Margin="0,5" Padding="10,5" Cursor="Hand"
-                            Command="{Binding DataContext.SendMessageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            CommandParameter="{Binding}"/>
-                </StackPanel>
+                        <TextBlock Text="{Binding Name}" 
+                                   FontWeight="Bold" 
+                                   FontSize="24" 
+                                   Foreground="{StaticResource TextPrimaryColor}"
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,0,0,8"/>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,24">
+                            <Ellipse Width="8" Height="8" Fill="{StaticResource SuccessColor}" Margin="0,0,6,0"/>
+                            <TextBlock Text="{StaticResource FriendListOnlineStatus}" 
+                                       FontSize="14" 
+                                       Foreground="{StaticResource SuccessColor}"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Content="{StaticResource SendMessageButton}" 
+                                    Style="{StaticResource ModernButtonStyle}"
+                                    Command="{Binding DataContext.SendMessageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                            <Button Content="{StaticResource UnfriendButton}" 
+                                    Style="{StaticResource DangerButtonStyle}"
+                                    Command="{Binding DataContext.UnfriendCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type vm:GroupViewModel}">
-                <StackPanel Margin="10">
-                    <Ellipse Width="80" Height="80" Fill="LightGreen" Margin="0,0,0,15" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Border Style="{StaticResource AvatarStyle}" Width="100" Height="100" Margin="0,0,0,20">
+                            <Ellipse Fill="{StaticResource GroupGradient}"/>
+                        </Border>
 
-                    <Button Content="{DynamicResource LeaveGroupButton}" Margin="0,5" Padding="10,5" Cursor="Hand" Background="OrangeRed" Foreground="White"
-                            Command="{Binding DataContext.LeaveGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            CommandParameter="{Binding}"/>
-                    <Button Content="{DynamicResource SendMessageButton}" Margin="0,5" Padding="10,5" Cursor="Hand"
-                            Command="{Binding DataContext.SendMessageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            CommandParameter="{Binding}"/>
-                </StackPanel>
+                        <TextBlock Text="{Binding Name}" 
+                                   FontWeight="Bold" 
+                                   FontSize="24" 
+                                   Foreground="{StaticResource TextPrimaryColor}"
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,0,0,8"/>
+
+                        <TextBlock Text="{StaticResource FriendListGroupChat}" 
+                                   FontSize="14" 
+                                   Foreground="{StaticResource TextSecondaryColor}"
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,0,0,24"/>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Content="{StaticResource SendMessageButton}" 
+                                    Style="{StaticResource ModernButtonStyle}"
+                                    Command="{Binding DataContext.SendMessageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                            <Button Content="{StaticResource LeaveGroupButton}" 
+                                    Style="{StaticResource DangerButtonStyle}"
+                                    Command="{Binding DataContext.LeaveGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </DataTemplate>
 
             <DataTemplate x:Key="FriendRequestItemTemplate">
-                <Border Background="White" CornerRadius="3" Padding="10" Margin="0,0,0,5">
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,8">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -65,18 +295,31 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <Ellipse Grid.Column="0" Width="40" Height="40" Fill="Gray" Margin="0,0,10,0"/>
+                        <Border Grid.Column="0" Style="{StaticResource AvatarStyle}" Width="50" Height="50" Margin="0,0,16,0">
+                            <Ellipse Fill="{StaticResource FriendGradient}"/>
+                        </Border>
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding RequesterName}" FontWeight="SemiBold"/>
-                            <TextBlock Text="{DynamicResource FriendRequestDescription}" FontSize="11" Foreground="Gray"/>
+                            <TextBlock Text="{Binding RequesterName}" 
+                                       FontWeight="SemiBold" 
+                                       FontSize="15"
+                                       Foreground="{StaticResource TextPrimaryColor}"/>
+                            <TextBlock Text="{StaticResource FriendRequestDescription}" 
+                                       FontSize="12" 
+                                       Foreground="{StaticResource TextSecondaryColor}"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Content="✔" ToolTip="{DynamicResource AcceptRequestButton}" Margin="0,0,5,0" Padding="5,3" Background="LightGreen" Cursor="Hand"
+                            <Button Content="✔" 
+                                    Style="{StaticResource IconButtonStyle}"
+                                    ToolTip="{StaticResource FriendListAcceptRequestTooltip}" 
+                                    Foreground="{StaticResource SuccessColor}"
                                     Command="{Binding DataContext.AcceptRequestCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
-                            <Button Content="✖" ToolTip="{DynamicResource DeclineRequestButton}" Padding="5,3" Background="Salmon" Cursor="Hand"
+                            <Button Content="✖" 
+                                    Style="{StaticResource IconButtonStyle}"
+                                    ToolTip="{StaticResource FriendListDeclineRequestTooltip}" 
+                                    Foreground="{StaticResource DangerColor}"
                                     Command="{Binding DataContext.DeclineRequestCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
                         </StackPanel>
@@ -86,93 +329,104 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250"/>
-            <ColumnDefinition Width="2*"/>
-            <ColumnDefinition Width="250"/>
-        </Grid.ColumnDefinitions>
+    <Border Background="{StaticResource BackgroundColor}">
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="147*"/>
+                <RowDefinition Height="137*"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="280"/>
+            </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="White" CornerRadius="5,0,0,5" Margin="5">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="{DynamicResource ContactsTitle}" FontSize="16" FontWeight="Bold" Margin="10"/>
-                <ListBox x:Name="ContactsListBox"
-                         ItemsSource="{Binding CombinedContacts}"
-                         SelectedItem="{Binding SelectedContact}"
-                         BorderThickness="0"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Padding" Value="5,2"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <!-- Left Panel - Contacts -->
+            <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,8,0" Grid.RowSpan="2">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+                        <TextBlock Text="{StaticResource ContactsTitle}" 
+                                   FontSize="20" 
+                                   FontWeight="Bold" 
+                                   Foreground="{StaticResource TextPrimaryColor}"/>
+                        <Rectangle Height="1" Fill="{StaticResource BorderColor}" Margin="0,8,0,0"/>
+                    </StackPanel>
+
+                    <ListBox x:Name="ContactsListBox"
+                             ItemsSource="{Binding CombinedContacts}"
+                             SelectedItem="{Binding SelectedContact}"
+                             Style="{StaticResource ModernListBoxStyle}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Style="{StaticResource AvatarStyle}" Width="36" Height="36">
+                                        <Ellipse Fill="{StaticResource AccentColor}"/>
+                                    </Border>
+                                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" 
+                                                   FontWeight="Medium" 
+                                                   FontSize="14"
+                                                   Foreground="{StaticResource TextPrimaryColor}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <!-- Center Panel - Selected Contact -->
+            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="8,0,84,0" Grid.RowSpan="2">
+                <ContentControl Content="{Binding SelectedContact}">
+                    <ContentControl.Style>
+                        <Style TargetType="ContentControl">
                             <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="LightSkyBlue"/>
-                                </Trigger>
+                                <DataTrigger Binding="{Binding SelectedContact}" Value="{x:Null}">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ContentControl">
+                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock Text="👥" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                                                    <TextBlock Text="{StaticResource SelectContactPrompt}"
+                                                               FontSize="18"
+                                                               HorizontalAlignment="Center"
+                                                               Foreground="{StaticResource TextSecondaryColor}"/>
+                                                </StackPanel>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="5">
-                                <Ellipse Width="30" Height="30" Fill="Silver" Margin="0,0,10,0"/>
-                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
-        </Border>
+                    </ContentControl.Style>
+                </ContentControl>
+            </Border>
 
-        <Border Grid.Column="1" Background="White" Margin="0,5,0,5">
-            <ContentControl Content="{Binding SelectedContact}">
-                <ContentControl.Style>
-                    <Style TargetType="ContentControl">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedContact}" Value="{x:Null}">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ContentControl">
-                                            <TextBlock Text="{DynamicResource SelectContactPrompt}"
-                                                       HorizontalAlignment="Center"
-                                                       VerticalAlignment="Center"
-                                                       Foreground="Gray"/>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ContentControl.Style>
-            </ContentControl>
-        </Border>
+            <!-- Right Panel - Friend Requests -->
+            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="451,0,0,0" Grid.RowSpan="2" Grid.ColumnSpan="2">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+                        <TextBlock Text="{StaticResource FriendRequestsTitle}" 
+                                   FontSize="20" 
+                                   FontWeight="Bold" 
+                                   Foreground="{StaticResource TextPrimaryColor}"/>
+                        <Rectangle Height="1" Fill="{StaticResource BorderColor}" Margin="0,8,0,0"/>
+                    </StackPanel>
 
-        <Border Grid.Column="2" Background="White" CornerRadius="0,5,5,0" Margin="5">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="{DynamicResource FriendRequestsTitle}" FontSize="16" FontWeight="Bold" Margin="10"/>
-                <ListBox ItemsSource="{Binding FriendRequests}"
-                         ItemTemplate="{StaticResource FriendRequestItemTemplate}"
-                         BorderThickness="0"
-                         Background="Transparent"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         SelectionMode="Single">
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Focusable" Value="False"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <ContentPresenter/>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                </ListBox>
-            </DockPanel>
-        </Border>
-
-        <GridSplitter Grid.Column="0" Width="3" Background="LightGray" HorizontalAlignment="Right" VerticalAlignment="Stretch"/>
-        <GridSplitter Grid.Column="1" Width="3" Background="LightGray" HorizontalAlignment="Right" VerticalAlignment="Stretch"/>
-    </Grid>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" RenderTransformOrigin="0.5,0.5" Width="288">
+                        <ScrollViewer.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform AngleY="-0.783"/>
+                                <RotateTransform/>
+                                <TranslateTransform Y="-1.586"/>
+                            </TransformGroup>
+                        </ScrollViewer.RenderTransform>
+                        <ItemsControl ItemsSource="{Binding FriendRequests}"
+                                      ItemTemplate="{StaticResource FriendRequestItemTemplate}" Width="300"/>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Border>
 </UserControl>

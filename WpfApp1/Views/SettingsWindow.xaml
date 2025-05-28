@@ -9,10 +9,6 @@
         Title="Settings" Height="600" Width="900"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource WhiteBrush}">
-    <Window.DataContext>
-        <viewModels:SettingsViewModel/>
-    </Window.DataContext>
     <Grid>
-        <local:SettingsView/>
     </Grid>
 </Window>

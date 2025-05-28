@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Firebase.Database;
 using System.Windows; // Cần cho Application.Current.MainWindow nếu dùng làm Owner popup
 
 // Thêm using cho các ViewModel khác và các View (Window) bạn sẽ mở popup
@@ -13,7 +14,8 @@ namespace WpfApp1.ViewModels
         // Thuộc tính quan trọng: Giữ ViewModel của View đang hiển thị trong ContentControl
         [ObservableProperty]
         private ObservableObject _currentViewModel; // Kiểu là ObservableObject hoặc lớp cơ sở chung khác
-
+        private ChatViewModel _chatViewModel = new ChatViewModel();
+        private readonly FirebaseClient _firebaseClient;
         // Constructor
         public MainViewModel()
         {
@@ -73,7 +75,12 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void ShowSettingsPopup()
         {
-            var settingsWin = new SettingsWindow();
+            var settingsVM = new SettingsViewModel(_chatViewModel, _firebaseClient);
+            var settingsWin = new SettingsWindow(_chatViewModel, _firebaseClient)
+            {
+                DataContext = settingsVM
+            };
+
             if (Application.Current.MainWindow != null)
             {
                 settingsWin.Owner = Application.Current.MainWindow;
@@ -86,13 +93,17 @@ namespace WpfApp1.ViewModels
         {
             if (CurrentViewModel is not SettingsViewModel)
             {
-                CurrentViewModel = new SettingsViewModel();
+                CurrentViewModel = new SettingsViewModel(_chatViewModel, _firebaseClient);
             }
         }
-        // (Tùy chọn) Các thuộc tính khác cho MainWindow Shell
-        // Ví dụ: Thông tin người dùng đang đăng nhập hiển thị ở đâu đó trên Shell
-        // [ObservableProperty]
-        // private User _loggedInUser;
 
+        public void Cleanup()
+        {
+            System.Diagnostics.Debug.WriteLine("MainViewModel: Starting Cleanup...");
+
+            _chatViewModel.Cleanup();
+
+            System.Diagnostics.Debug.WriteLine("MainViewModel: Cleanup of cached child ViewModels complete.");
+        }
     }
 }

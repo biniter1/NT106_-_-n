@@ -7,14 +7,11 @@
         xmlns:viewModels="clr-namespace:WpfApp1.ViewModels"
         xmlns:models="clr-namespace:WpfApp1.Models"
         mc:Ignorable="d"
-        Title="Thêm bạn bè" Height="500" Width="450"
+        Title="{DynamicResource AddFriendTitle}" Height="500" Width="450"
         WindowStartupLocation="CenterOwner"
         Background="#F0F0F0">
     <Window.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
-            </ResourceDictionary.MergedDictionaries>
             <Style TargetType="TextBox" x:Key="SearchBoxStyle">
                 <Setter Property="Padding" Value="8,5"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -108,7 +105,6 @@
                     </Setter.Value>
                 </Setter>
             </Style>
-
         </ResourceDictionary>
     </Window.Resources>
 

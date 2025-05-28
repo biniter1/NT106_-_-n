@@ -120,4 +120,98 @@
     <sys:String x:Key="MessageTooltip">Messages</sys:String>
     <sys:String x:Key="FriendsTooltip">Friends</sys:String>
     <sys:String x:Key="SettingsTooltip">Settings</sys:String>
+
+    <!--SETTINGS-->
+    <sys:String x:Key="Settings">Settings</sys:String>
+    <sys:String x:Key="Account">Account</sys:String>
+    <sys:String x:Key="Appearance">Appearance</sys:String>
+    <sys:String x:Key="Data">Data</sys:String>
+    <sys:String x:Key="Language">Language</sys:String>
+    <sys:String x:Key="Support">Support</sys:String>
+    <sys:String x:Key="Logout">Logout</sys:String>
+    <sys:String x:Key="ExitApp">Exit Application</sys:String>
+    <sys:String x:Key="AccountInfo">👤 Account Info</sys:String>
+    <sys:String x:Key="Username">Username</sys:String>
+    <sys:String x:Key="Email">Email</sys:String>
+    <sys:String x:Key="JoinDate">BirthDay</sys:String>
+    <sys:String x:Key="Edit">✏️ Edit</sys:String>
+    <sys:String x:Key="AppearanceDisplay">🎨 Appearance Display</sys:String>
+    <sys:String x:Key="DisplayMode">Display Mode</sys:String>
+    <sys:String x:Key="Notifications">Notifications</sys:String>
+    <sys:String x:Key="EnableSoundNotifications">Enable Sound Notifications</sys:String>
+    <sys:String x:Key="ShowDesktopNotifications">Show Desktop Notifications</sys:String>
+    <sys:String x:Key="NotifyWhenOffline">Notify When Offline</sys:String>
+    <sys:String x:Key="DisplayLanguage">Display Language</sys:String>
+    <sys:String x:Key="SaveChanges">💾 Save Changes</sys:String>
+    <sys:String x:Key="DataManagement">💾 Data Management</sys:String>
+    <sys:String x:Key="ManageYourData">Manage your personal data and chat history.</sys:String>
+    <sys:String x:Key="Warning">⚠️ Warning</sys:String>
+    <sys:String x:Key="DeleteDataWarning">Data deletion is irreversible. Please consider carefully before proceeding.</sys:String>
+    <sys:String x:Key="ExportData">📤 Export Data</sys:String>
+    <sys:String x:Key="DeleteAllData">🗑️ Delete All Data</sys:String>
+    <sys:String x:Key="SelectLanguage">Select the display language for the application:</sys:String>
+    <sys:String x:Key="SupportHelp">❓ Support Help</sys:String>
+    <sys:String x:Key="NeedHelp">Need help? We are always ready to assist you!</sys:String>
+    <sys:String x:Key="EmailSupport">📧 Email Support</sys:String>
+    <sys:String x:Key="Hotline">📞 Hotline</sys:String>
+    <sys:String x:Key="SendFeedback">📝 Send Feedback</sys:String>
+    <sys:String x:Key="UserGuide">📋 User Guide</sys:String>
+    <sys:String x:Key="Apply">✅ Apply</sys:String>
+    
+    <!--EditProfile-->
+    <sys:String x:Key="EditProfile">Edit Profile</sys:String>
+    <sys:String x:Key="EditProfileDescription">Update your personal information</sys:String>
+    <sys:String x:Key="Name">Full Name</sys:String>
+    <sys:String x:Key="Phone">Phone Number</sys:String>
+    <sys:String x:Key="DateOfBirth">Date of Birth</sys:String>
+    <sys:String x:Key="Bio">Bio</sys:String>
+    <sys:String x:Key="Location">Location</sys:String>
+    <sys:String x:Key="ChangeAvatar">Change Avatar</sys:String>
+    <sys:String x:Key="Reset">Reset</sys:String>
+    <sys:String x:Key="Cancel">Cancel</sys:String>
+    <sys:String x:Key="ProfileUpdatedMessage">Profile updated successfully!</sys:String>
+
+    <!--FeedBack-->
+    <sys:String x:Key="FeedbackFormTitle">Send Feedback</sys:String>
+    <sys:String x:Key="FeedbackNameLabel">Name</sys:String>
+    <sys:String x:Key="FeedbackEmailLabel">Email</sys:String>
+    <sys:String x:Key="FeedbackMessageLabel">Feedback Message</sys:String>
+    <sys:String x:Key="SendButton">Send</sys:String>
+    <sys:String x:Key="CancelButton">Cancel</sys:String>
+    <sys:String x:Key="FeedbackEmptyMessage">Please enter a feedback message.</sys:String>
+    <sys:String x:Key="FeedbackSentMessage">Feedback sent successfully!</sys:String>
+    <sys:String x:Key="FeedbackErrorMessage">Error sending feedback</sys:String>
+    <sys:String x:Key="FeedbackEmailSubject">User Feedback</sys:String>
+    <sys:String x:Key="Greetingg">We welcome your feedback!</sys:String>
+
+    <sys:String x:Key="UserGuideContent" xml:space="preserve">
+        Welcome to the User Guide for our application!
+            ### Getting Started
+            1. **Login/Sign Up**: Use the login window to sign in with your credentials or create a new account.
+            2. **Navigating the App**: The main interface includes a settings menu where you can customize your experience.
+
+            ### Settings
+            - **Account Info**: View and edit your profile details, such as name and email.
+            - **Theme**: Switch between Light and Dark themes for a comfortable viewing experience.
+            - **Notifications**: Enable or disable notifications, including desktop notifications and offline alerts.
+            - **Language**: Choose your preferred language (e.g., English, Vietnamese).
+            - **Feedback**: Send feedback to help us improve the application.
+            - **Data Management**: Export or delete your data as needed.
+
+            ### Editing Your Profile
+            1. Go to Settings > Account Info.
+            2. Click "Edit Profile" to update your name, email, or avatar.
+            3. Save changes to update your account information.
+
+            ### Sending Feedback
+            1. Navigate to Settings > Support.
+            2. Click "Send Feedback" to open the feedback form.
+            3. Enter your message and submit to send it to our team.
+
+            ### Logging Out
+            1. In the Settings menu, click "Logout" to sign out of your account.
+            2. You will be redirected to the login screen.
+
+            For further assistance, contact our support team via the Support section.
+    </sys:String>
 </ResourceDictionary>
