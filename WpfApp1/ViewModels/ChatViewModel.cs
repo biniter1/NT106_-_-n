@@ -173,22 +173,6 @@ namespace WpfApp1.ViewModels
                             msg.Id = item.Key;
                             msg.IsMine = msg.SenderId == SharedData.Instance.userdata.Email;
                             msg.Alignment = msg.IsMine ? "Right" : "Left";
-                            // --- Bổ sung nhận diện ảnh ---
-                            if (!string.IsNullOrEmpty(msg.ImageUrl))
-                            {
-                                msg.IsImage = true;
-                            }
-                            else if (!string.IsNullOrEmpty(msg.Content) && IsImageFile(System.IO.Path.GetExtension(msg.Content)))
-                            {
-                                msg.IsImage = true;
-                                msg.ImageUrl = msg.Content;
-                            }
-                            else
-                            {
-                                msg.IsImage = false;
-                                msg.ImageUrl = null;
-                            }
-                            // --- Kết thúc bổ sung ---
                             return msg;
                         })
                         .OrderBy(m => m.Timestamp)
@@ -217,33 +201,6 @@ namespace WpfApp1.ViewModels
                             message.Id = messageEvent.Key;
                             message.IsMine = message.SenderId == SharedData.Instance.userdata.Email;
                             message.Alignment = message.IsMine ? "Right" : "Left";
-
-                            // --- Bổ sung nhận diện ảnh và điều chỉnh URL (cho tin nhắn mới/cập nhật) ---
-                            if (!string.IsNullOrEmpty(message.ImageUrl))
-                            {
-                                message.IsImage = true;
-                            }
-                            else if (!string.IsNullOrEmpty(message.Content) && IsImageFile(System.IO.Path.GetExtension(message.Content)))
-                            {
-                                message.IsImage = true;
-                                message.ImageUrl = message.Content;
-                            }
-                            else
-                            {
-                                message.IsImage = false;
-                                message.ImageUrl = null;
-                            }
-
-                            if (message.IsImage && !string.IsNullOrEmpty(message.ImageUrl))
-                            {
-                                message.ImageUrl = EnsureFirebaseMediaUrl(message.ImageUrl);
-                            }
-                            else if (message.IsImage) // Nếu là ảnh nhưng ImageUrl rỗng/không hợp lệ sau các bước trên
-                            {
-                                message.IsImage = false; // Coi như không phải ảnh nếu không có URL hợp lệ
-                                message.ImageUrl = null;
-                            }
-                            // --- Kết thúc bổ sung ---
 
                             Application.Current.Dispatcher.Invoke(() =>
                             {
@@ -315,26 +272,26 @@ namespace WpfApp1.ViewModels
                     foreach (var messageItem in messagesQuery)
                     {
                         var message = messageItem.Object;
-                        
+
                         // Look for files in the messages - either images or files with URLs
-                        if ((message.IsImage && !string.IsNullOrEmpty(message.ImageUrl)) || 
+                        if ((message.IsImage && !string.IsNullOrEmpty(message.ImageUrl)) ||
                             (!string.IsNullOrEmpty(message.FileUrl)))
                         {
                             string fileUrl = message.IsImage ? message.ImageUrl : message.FileUrl;
                             if (string.IsNullOrEmpty(fileUrl)) continue;
-                            
+
                             string fileName = message.Content;
                             if (message.IsImage && string.IsNullOrEmpty(fileName))
                                 fileName = $"Image_{DateTime.Now.ToString("yyyyMMddHHmmss")}.jpg";
-                                
+
                             string extension = Path.GetExtension(fileName);
                             if (string.IsNullOrEmpty(extension) && message.IsImage)
                                 extension = ".jpg";
-                                
+
                             var fileItem = new FileItem
                             {
-                                IconPathOrType = string.IsNullOrEmpty(extension) ? 
-                                                 (message.IsImage ? "jpg" : "txt") : 
+                                IconPathOrType = string.IsNullOrEmpty(extension) ?
+                                                 (message.IsImage ? "jpg" : "txt") :
                                                  extension.TrimStart('.'),
                                 FileName = fileName,
                                 FileInfo = $"{(message.IsImage ? "Image" : "File")} • {message.Timestamp:dd/MM/yyyy}",
@@ -418,10 +375,10 @@ namespace WpfApp1.ViewModels
                     {
                         // Generate unique filename with timestamp to avoid conflicts
                         string uniqueFileName = $"{DateTime.Now:yyyyMMddHHmmssfff}_{fileName}";
-                        
+
                         // Upload file to Firebase Storage
                         string downloadUrl = await FirebaseStorageHelper.UploadFileAsync(selectedFilePath, uniqueFileName);
-                        
+
                         // More reliable image detection
                         bool isImage = IsImageFile(fileExtension);
                         Debug.WriteLine($"File detected as {(isImage ? "image" : "non-image")} based on extension: {fileExtension}");
@@ -445,7 +402,7 @@ namespace WpfApp1.ViewModels
                             .PostAsync(newMessage);
 
                         newMessage.Id = result.Key;
-                        
+
                         // Add message to the UI
                         Application.Current.Dispatcher.Invoke(() =>
                         {
@@ -486,9 +443,9 @@ namespace WpfApp1.ViewModels
         // Updated to handle more image extensions and be more resilient
         private bool IsImageFile(string extension)
         {
-            if (string.IsNullOrEmpty(extension)) 
+            if (string.IsNullOrEmpty(extension))
                 return false;
-                
+
             extension = extension.ToLower().Trim();
             string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp" };
             return Array.IndexOf(imageExtensions, extension) >= 0;
@@ -531,21 +488,13 @@ namespace WpfApp1.ViewModels
                 {
                     var contact = contactDoc.ConvertTo<Contact>();
                     contact.IsLoadingAvatar = true;
-
-                    // Nếu contact đã có AvatarUrl (từ Firestore) thì dùng luôn, không lấy từ Firebase Storage nữa
-                    if (!string.IsNullOrEmpty(contact.AvatarUrl) && contact.AvatarUrl != "/Assets/DefaultAvatar.png")
+                    contact.AvatarUrl = await FirebaseStorageHelper.GetAvatarUrlAsync(contact.Email);
+                    if (string.IsNullOrEmpty(contact.AvatarUrl))
                     {
-                        // Đã có avatar, không cần lấy lại
+                        contact.AvatarUrl = "/Assets/DefaultAvatar.png"; // Use resource path instead of relative path
                     }
-                    else
-                    {
-                        // Nếu không có AvatarUrl, có thể bỏ qua hoặc lấy mặc định, KHÔNG gọi GetAvatarUrlAsync
-                        contact.AvatarUrl = "/Assets/DefaultAvatar.png";
-                    }
-
                     contact.IsLoadingAvatar = false;
                     contacts.Add(contact);
-
                 }
 
                 Debug.WriteLine($"Loaded {contacts.Count} contacts for user {email}");
