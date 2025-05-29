@@ -273,30 +273,43 @@ namespace WpfApp1.ViewModels
                     {
                         var message = messageItem.Object;
 
-                        // Look for files in the messages - either images or files with URLs
+                        // Look for files in the messages - either images, videos, or files with URLs
                         if ((message.IsImage && !string.IsNullOrEmpty(message.ImageUrl)) ||
+                            (message.IsVideo && !string.IsNullOrEmpty(message.VideoUrl)) ||
                             (!string.IsNullOrEmpty(message.FileUrl)))
                         {
-                            string fileUrl = message.IsImage ? message.ImageUrl : message.FileUrl;
+                            string fileUrl = message.IsImage ? message.ImageUrl : 
+                                            (message.IsVideo ? message.VideoUrl : message.FileUrl);
                             if (string.IsNullOrEmpty(fileUrl)) continue;
 
                             string fileName = message.Content;
                             if (message.IsImage && string.IsNullOrEmpty(fileName))
                                 fileName = $"Image_{DateTime.Now.ToString("yyyyMMddHHmmss")}.jpg";
+                            else if (message.IsVideo && string.IsNullOrEmpty(fileName))
+                                fileName = $"Video_{DateTime.Now.ToString("yyyyMMddHHmmss")}.mp4";
 
                             string extension = Path.GetExtension(fileName);
-                            if (string.IsNullOrEmpty(extension) && message.IsImage)
-                                extension = ".jpg";
+                            if (string.IsNullOrEmpty(extension))
+                            {
+                                if (message.IsImage)
+                                    extension = ".jpg";
+                                else if (message.IsVideo)
+                                    extension = ".mp4";
+                            }
+
+                            bool isVideo = message.IsVideo || IsVideoFile(extension);
 
                             var fileItem = new FileItem
                             {
                                 IconPathOrType = string.IsNullOrEmpty(extension) ?
-                                                 (message.IsImage ? "jpg" : "txt") :
-                                                 extension.TrimStart('.'),
+                                                (message.IsImage ? "jpg" : (isVideo ? "mp4" : "txt")) :
+                                                extension.TrimStart('.'),
                                 FileName = fileName,
-                                FileInfo = $"{(message.IsImage ? "Image" : "File")} • {message.Timestamp:dd/MM/yyyy}",
+                                FileInfo = $"{(message.IsImage ? "Image" : (isVideo ? "Video" : "File"))} • {message.Timestamp:dd/MM/yyyy}",
                                 FilePathOrUrl = fileUrl,
-                                DownloadUrl = fileUrl
+                                DownloadUrl = fileUrl,
+                                FileExtension = extension,
+                                IsVideo = isVideo
                             };
 
                             Application.Current.Dispatcher.Invoke(() =>
@@ -356,8 +369,7 @@ namespace WpfApp1.ViewModels
             var openFileDialog = new OpenFileDialog
             {
                 Title = "Chọn tệp để gửi",
-                // Don't pre-filter file types - let users choose any file
-                Filter = "Tất cả tệp|*.*",
+                Filter = "Tất cả tệp|*.*|Hình ảnh|*.jpg;*.jpeg;*.png;*.gif;*.bmp|Video|*.mp4;*.avi;*.mov;*.wmv;*.mkv",
                 Multiselect = false
             };
 
@@ -379,20 +391,24 @@ namespace WpfApp1.ViewModels
                         // Upload file to Firebase Storage
                         string downloadUrl = await FirebaseStorageHelper.UploadFileAsync(selectedFilePath, uniqueFileName);
 
-                        // More reliable image detection
+                        // Detect file type
                         bool isImage = IsImageFile(fileExtension);
-                        Debug.WriteLine($"File detected as {(isImage ? "image" : "non-image")} based on extension: {fileExtension}");
+                        bool isVideo = IsVideoFile(fileExtension);
+                        
+                        Debug.WriteLine($"File detected: {(isImage ? "image" : (isVideo ? "video" : "regular file"))} based on extension: {fileExtension}");
 
                         // Create message object with consistent file information
                         var newMessage = new Message
                         {
                             SenderId = SharedData.Instance.userdata.Email,
-                            Content = fileName, // Always store the filename for easy reference
+                            Content = fileName,
                             Timestamp = DateTime.UtcNow,
                             IsMine = true,
                             IsImage = isImage,
-                            ImageUrl = isImage ? downloadUrl : null, // For images
-                            FileUrl = downloadUrl // Store URL for all files for consistency
+                            IsVideo = isVideo, // Add this property to Message class
+                            ImageUrl = isImage ? downloadUrl : null,
+                            VideoUrl = isVideo ? downloadUrl : null, // Add this property to Message class
+                            FileUrl = (!isImage && !isVideo) ? downloadUrl : null
                         };
 
                         // Send the message
@@ -409,14 +425,16 @@ namespace WpfApp1.ViewModels
                             Messages.Add(newMessage);
                         });
 
-                        // Create FileItem for sidebar display (for ALL file types)
+                        // Create FileItem for sidebar display
                         var fileItem = new FileItem
                         {
                             IconPathOrType = string.IsNullOrEmpty(fileExtension) ? "txt" : fileExtension.TrimStart('.'),
                             FileName = fileName,
-                            FileInfo = $"{FormatFileSize(new FileInfo(selectedFilePath).Length)} • {DateTime.Now:dd/MM/yyyy}",
+                            FileInfo = $"{(isImage ? "Image" : (isVideo ? "Video" : "File"))} • {FormatFileSize(new FileInfo(selectedFilePath).Length)} • {DateTime.Now:dd/MM/yyyy}",
                             FilePathOrUrl = downloadUrl,
-                            DownloadUrl = downloadUrl
+                            DownloadUrl = downloadUrl,
+                            FileExtension = fileExtension,
+                            IsVideo = isVideo // Add this property to FileItem class
                         };
 
                         Application.Current.Dispatcher.Invoke(() =>
@@ -425,7 +443,7 @@ namespace WpfApp1.ViewModels
                         });
 
                         Debug.WriteLine($"File uploaded successfully: {fileName} with URL: {downloadUrl}");
-                        Debug.WriteLine($"File type: {fileItem.IconPathOrType}, IsImage: {isImage}");
+                        Debug.WriteLine($"File type: {fileItem.IconPathOrType}, IsImage: {isImage}, IsVideo: {isVideo}");
                     }
                     finally
                     {
@@ -449,6 +467,17 @@ namespace WpfApp1.ViewModels
             extension = extension.ToLower().Trim();
             string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp" };
             return Array.IndexOf(imageExtensions, extension) >= 0;
+        }
+
+        // Add this method to detect video files
+        private bool IsVideoFile(string extension)
+        {
+            if (string.IsNullOrEmpty(extension))
+                return false;
+
+            extension = extension.ToLower().Trim();
+            string[] videoExtensions = { ".mp4", ".avi", ".mov", ".wmv", ".mkv", ".flv", ".webm", ".m4v", ".mpg", ".mpeg", ".3gp" };
+            return Array.IndexOf(videoExtensions, extension) >= 0;
         }
 
         private string FormatFileSize(long byteCount)
@@ -800,13 +829,37 @@ namespace WpfApp1.ViewModels
 
             try
             {
+                string fileName = fileItem.FileName;
+                
+                // Handle special cases for images and videos
+                if (fileItem.IsVideo || IsVideoFile(fileItem.FileExtension))
+                {
+                    if (string.IsNullOrEmpty(Path.GetExtension(fileName)))
+                    {
+                        fileName = Path.ChangeExtension(fileName, fileItem.FileExtension ?? ".mp4");
+                    }
+                }
+                else if (IsImageFile(fileItem.FileExtension))
+                {
+                    if (string.IsNullOrEmpty(Path.GetExtension(fileName)))
+                    {
+                        fileName = Path.ChangeExtension(fileName, fileItem.FileExtension ?? ".jpg");
+                    }
+                }
+                // Ensure file has correct extension for all file types
+                else if (!string.IsNullOrEmpty(fileItem.FileExtension) && 
+                        !fileName.EndsWith(fileItem.FileExtension, StringComparison.OrdinalIgnoreCase))
+                {
+                    fileName = Path.ChangeExtension(fileName, fileItem.FileExtension.TrimStart('.'));
+                }
+                
                 bool success = await FirebaseStorageHelper.DownloadFileToLocationAsync(
                     fileItem.DownloadUrl,
-                    fileItem.FileName);
+                    fileName);
 
                 if (success)
                 {
-                    Debug.WriteLine($"File downloaded successfully: {fileItem.FileName}");
+                    Debug.WriteLine($"File downloaded successfully: {fileName}");
                 }
             }
             catch (Exception ex)
@@ -824,25 +877,65 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private async Task DownloadMessageFileAsync(Message message)
         {
-            if (message == null || string.IsNullOrEmpty(message.Content) && !message.IsImage)
+            if (message == null || (string.IsNullOrEmpty(message.Content) && !message.IsImage && !message.IsVideo))
             {
                 MessageBox.Show("Không có tệp tin để tải xuống.", "Thông báo",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            string url = message.IsImage ? message.ImageUrl : null;
-            string fileName = message.IsImage ?
-                $"image_{DateTime.Now:yyyyMMdd_HHmmss}{Path.GetExtension(message.ImageUrl) ?? ".jpg"}" :
-                message.Content;
+            string url = null;
+            string fileName = null;
+            string extension = null;
 
+            // Determine the URL based on message type
+            if (message.IsImage) 
+            {
+                url = message.ImageUrl;
+                // Try to get extension from content first, then fallback to default
+                extension = Path.GetExtension(message.Content);
+                if (string.IsNullOrEmpty(extension)) extension = ".jpg";
+                fileName = $"image_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
+            } 
+            else if (message.IsVideo) 
+            {
+                url = message.VideoUrl;
+                // Try to get extension from content first, then fallback to default
+                extension = Path.GetExtension(message.Content);
+                if (string.IsNullOrEmpty(extension)) extension = ".mp4";
+                fileName = $"video_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
+            } 
+            else 
+            {
+                // For regular files
+                url = message.FileUrl;
+                fileName = message.Content;
+                
+                // Make sure the filename has an extension
+                extension = Path.GetExtension(fileName);
+                if (string.IsNullOrEmpty(extension))
+                {
+                    // Try to determine extension from Files collection
+                    var fileItem = Files.FirstOrDefault(f => f.FileName == message.Content);
+                    if (fileItem != null && !string.IsNullOrEmpty(fileItem.FileExtension))
+                    {
+                        extension = fileItem.FileExtension;
+                        fileName = Path.ChangeExtension(fileName, extension.TrimStart('.'));
+                    }
+                }
+            }
+
+            // If still no URL found, look in the Files collection
             if (string.IsNullOrEmpty(url))
             {
-                // For non-image files, try to find corresponding FileItem in Files collection
                 var fileItem = Files.FirstOrDefault(f => f.FileName == message.Content);
                 if (fileItem != null && !string.IsNullOrEmpty(fileItem.DownloadUrl))
                 {
                     url = fileItem.DownloadUrl;
+                    if (!string.IsNullOrEmpty(fileItem.FileExtension))
+                    {
+                        extension = fileItem.FileExtension;
+                    }
                 }
             }
 
@@ -851,6 +944,12 @@ namespace WpfApp1.ViewModels
                 MessageBox.Show("Không tìm thấy đường dẫn tải xuống cho tệp này.", "Thông báo",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
+            }
+
+            // Ensure file has extension
+            if (!string.IsNullOrEmpty(extension) && !fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+            {
+                fileName = Path.ChangeExtension(fileName, extension.TrimStart('.'));
             }
 
             Mouse.OverrideCursor = Cursors.Wait;
@@ -873,6 +972,104 @@ namespace WpfApp1.ViewModels
             finally
             {
                 Mouse.OverrideCursor = null;
+            }
+        }
+
+        [RelayCommand]
+        private void ViewVideo(string videoUrl)
+        {
+            if (string.IsNullOrEmpty(videoUrl))
+            {
+                Debug.WriteLine("Empty video URL provided");
+                return;
+            }
+
+            try
+            {
+                // Create a temporary file to play the video
+                string tempPath = Path.Combine(
+                    Path.GetTempPath(),
+                    $"TempVideo_{DateTime.Now:yyyyMMddHHmmssfff}.mp4");
+
+                Mouse.OverrideCursor = Cursors.Wait;
+                
+                try
+                {
+                    // Start downloading the file in the background
+                    Task.Run(async () => 
+                    {
+                        try 
+                        {
+                            byte[] videoData = await FirebaseStorageHelper.DownloadFileAsync(videoUrl);
+                            await File.WriteAllBytesAsync(tempPath, videoData);
+                            
+                            // Execute on UI thread
+                            Application.Current.Dispatcher.Invoke(() => 
+                            {
+                                // Open with default video player
+                                Process.Start(new ProcessStartInfo
+                                {
+                                    FileName = tempPath,
+                                    UseShellExecute = true
+                                });
+                                
+                                // Log video view
+                                LogViewedVideo(videoUrl);
+                                
+                                Mouse.OverrideCursor = null;
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            Application.Current.Dispatcher.Invoke(() => 
+                            {
+                                Debug.WriteLine($"Error playing video: {ex.Message}");
+                                MessageBox.Show($"Không thể phát video: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                                Mouse.OverrideCursor = null;
+                            });
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Mouse.OverrideCursor = null;
+                    Debug.WriteLine($"Error setting up video playback: {ex.Message}");
+                    MessageBox.Show($"Không thể chuẩn bị phát video: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Mouse.OverrideCursor = null;
+                Debug.WriteLine($"Error preparing video playback: {ex.Message}");
+                MessageBox.Show($"Không thể chuẩn bị phát video: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void LogViewedVideo(string videoUrl)
+        {
+            try
+            {
+                // Create log entry
+                string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - VIDEO: {videoUrl}";
+
+                // Add to in-memory history
+                _viewedImageHistory.Add(logEntry); // We can reuse the same list
+
+                // Ensure directory exists
+                string directory = Path.GetDirectoryName(_imageHistoryFilePath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                // Append to file
+                File.AppendAllText(_imageHistoryFilePath, logEntry + Environment.NewLine);
+
+                Debug.WriteLine($"Video view logged: {logEntry}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error logging viewed video: {ex.Message}");
             }
         }
     }
