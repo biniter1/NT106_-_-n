@@ -17,6 +17,8 @@ using System.Reactive.Linq;
 using Microsoft.Win32;
 using System.IO;
 using WpfApp1; // Ensure FirebaseStorageHelper namespace is included
+using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 
 namespace WpfApp1.ViewModels
 {
@@ -39,6 +41,10 @@ namespace WpfApp1.ViewModels
         public User userdata;
         private List<IDisposable> allMessageSubscriptions = new List<IDisposable>();
         private Dictionary<string, IDisposable> _contactPresenceListeners = new Dictionary<string, IDisposable>();
+        private List<string> _viewedImageHistory = new List<string>();
+        private string _imageHistoryFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "WpfApp1", "ImageHistory.txt");
 
         partial void OnSelectedContactChanged(Contact value)
         {
@@ -75,7 +81,7 @@ namespace WpfApp1.ViewModels
             SelectedContact = null;
             NewMessageText = string.Empty;
 
-            firebaseClient = new FirebaseClient("https://fir-5b855-default-rtdb.firebaseio.com");
+            firebaseClient = new FirebaseClient("https://chatapp-177-default-rtdb.asia-southeast1.firebasedatabase.app/");
 
             userdata = SharedData.Instance.userdata;
 
@@ -289,14 +295,69 @@ namespace WpfApp1.ViewModels
             }
         }
 
-        private void LoadFilesForContact(Contact contact)
+        private async void LoadFilesForContact(Contact contact)
         {
             Files.Clear();
 
-            if (contact == null) return;
+            if (contact == null || string.IsNullOrEmpty(contact.chatID)) return;
 
-            // TODO: Implement logic to load files from Firebase Storage or Firestore
-            // Example: Fetch files associated with the contact's chatID
+            try
+            {
+                // Fetch messages with files
+                var messagesQuery = await firebaseClient
+                    .Child("messages")
+                    .Child(contact.chatID)
+                    .OrderByKey()
+                    .OnceAsync<Message>();
+
+                if (messagesQuery != null)
+                {
+                    foreach (var messageItem in messagesQuery)
+                    {
+                        var message = messageItem.Object;
+                        
+                        // Look for files in the messages - either images or files with URLs
+                        if ((message.IsImage && !string.IsNullOrEmpty(message.ImageUrl)) || 
+                            (!string.IsNullOrEmpty(message.FileUrl)))
+                        {
+                            string fileUrl = message.IsImage ? message.ImageUrl : message.FileUrl;
+                            if (string.IsNullOrEmpty(fileUrl)) continue;
+                            
+                            string fileName = message.Content;
+                            if (message.IsImage && string.IsNullOrEmpty(fileName))
+                                fileName = $"Image_{DateTime.Now.ToString("yyyyMMddHHmmss")}.jpg";
+                                
+                            string extension = Path.GetExtension(fileName);
+                            if (string.IsNullOrEmpty(extension) && message.IsImage)
+                                extension = ".jpg";
+                                
+                            var fileItem = new FileItem
+                            {
+                                IconPathOrType = string.IsNullOrEmpty(extension) ? 
+                                                 (message.IsImage ? "jpg" : "txt") : 
+                                                 extension.TrimStart('.'),
+                                FileName = fileName,
+                                FileInfo = $"{(message.IsImage ? "Image" : "File")} • {message.Timestamp:dd/MM/yyyy}",
+                                FilePathOrUrl = fileUrl,
+                                DownloadUrl = fileUrl
+                            };
+
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                // Avoid duplicates
+                                if (!Files.Any(f => f.DownloadUrl == fileUrl))
+                                    Files.Add(fileItem);
+                            });
+                        }
+                    }
+
+                    Debug.WriteLine($"Loaded {Files.Count} files for contact {contact.Name}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading files for sidebar: {ex.Message}");
+            }
         }
 
         [RelayCommand(CanExecute = nameof(CanSendMessage))]
@@ -338,7 +399,8 @@ namespace WpfApp1.ViewModels
             var openFileDialog = new OpenFileDialog
             {
                 Title = "Chọn tệp để gửi",
-                Filter = "Tất cả tệp|*.*|Hình ảnh|*.jpg;*.jpeg;*.png;*.gif|Tài liệu|*.pdf;*.docx;*.doc;*.xlsx;*.xls;*.ppt;*.pptx",
+                // Don't pre-filter file types - let users choose any file
+                Filter = "Tất cả tệp|*.*",
                 Multiselect = false
             };
 
@@ -354,51 +416,59 @@ namespace WpfApp1.ViewModels
 
                     try
                     {
-                        string downloadUrl = await FirebaseStorageHelper.UploadFileAsync(selectedFilePath, fileName);
-
+                        // Generate unique filename with timestamp to avoid conflicts
+                        string uniqueFileName = $"{DateTime.Now:yyyyMMddHHmmssfff}_{fileName}";
+                        
+                        // Upload file to Firebase Storage
+                        string downloadUrl = await FirebaseStorageHelper.UploadFileAsync(selectedFilePath, uniqueFileName);
+                        
+                        // More reliable image detection
                         bool isImage = IsImageFile(fileExtension);
+                        Debug.WriteLine($"File detected as {(isImage ? "image" : "non-image")} based on extension: {fileExtension}");
 
+                        // Create message object with consistent file information
                         var newMessage = new Message
                         {
                             SenderId = SharedData.Instance.userdata.Email,
-                            Content = isImage ? string.Empty : fileName,
+                            Content = fileName, // Always store the filename for easy reference
                             Timestamp = DateTime.UtcNow,
                             IsMine = true,
                             IsImage = isImage,
-                            ImageUrl = isImage ? downloadUrl : null,
-                            Alignment = "Right"
+                            ImageUrl = isImage ? downloadUrl : null, // For images
+                            FileUrl = downloadUrl // Store URL for all files for consistency
                         };
 
+                        // Send the message
                         var result = await firebaseClient
                             .Child("messages")
                             .Child(SelectedContact.chatID)
                             .PostAsync(newMessage);
 
                         newMessage.Id = result.Key;
-
+                        
+                        // Add message to the UI
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             Messages.Add(newMessage);
                         });
 
-                        if (!isImage)
+                        // Create FileItem for sidebar display (for ALL file types)
+                        var fileItem = new FileItem
                         {
-                            var fileItem = new FileItem
-                            {
-                                IconPathOrType = fileExtension.TrimStart('.'),
-                                FileName = fileName,
-                                FileInfo = $"{FormatFileSize(new FileInfo(selectedFilePath).Length)} • {DateTime.Now:dd/MM/yyyy}",
-                                FilePathOrUrl = downloadUrl,
-                                DownloadUrl = downloadUrl
-                            };
+                            IconPathOrType = string.IsNullOrEmpty(fileExtension) ? "txt" : fileExtension.TrimStart('.'),
+                            FileName = fileName,
+                            FileInfo = $"{FormatFileSize(new FileInfo(selectedFilePath).Length)} • {DateTime.Now:dd/MM/yyyy}",
+                            FilePathOrUrl = downloadUrl,
+                            DownloadUrl = downloadUrl
+                        };
 
-                            Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                Files.Add(fileItem);
-                            });
-                        }
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            Files.Add(fileItem);
+                        });
 
-                        Debug.WriteLine($"File uploaded successfully: {fileName}");
+                        Debug.WriteLine($"File uploaded successfully: {fileName} with URL: {downloadUrl}");
+                        Debug.WriteLine($"File type: {fileItem.IconPathOrType}, IsImage: {isImage}");
                     }
                     finally
                     {
@@ -413,13 +483,15 @@ namespace WpfApp1.ViewModels
             }
         }
 
+        // Updated to handle more image extensions and be more resilient
         private bool IsImageFile(string extension)
         {
-            if (string.IsNullOrEmpty(extension))
+            if (string.IsNullOrEmpty(extension)) 
                 return false;
-
-            string ext = extension.ToLowerInvariant();
-            return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".bmp";
+                
+            extension = extension.ToLower().Trim();
+            string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp" };
+            return Array.IndexOf(imageExtensions, extension) >= 0;
         }
 
         private string FormatFileSize(long byteCount)
@@ -681,49 +753,178 @@ namespace WpfApp1.ViewModels
 
             Debug.WriteLine("ChatViewModel cleanup complete.");
         }
-        public string EnsureFirebaseMediaUrl(string url)
-{
-    if (string.IsNullOrEmpty(url))
-        return url;
 
-    // Kiểm tra xem có phải là URL Firebase Storage không
-    if (url.StartsWith("https://firebasestorage.googleapis.com/v0/b/"))
-    {
-        // Kiểm tra xem 'alt=media' đã tồn tại chưa
-        if (url.Contains("alt=media"))
-        {
-            return url; // Đã có, không cần làm gì
-        }
-
-        // Kiểm tra xem URL đã có tham số truy vấn nào chưa (dấu '?')
-        if (url.Contains("?"))
-        {
-            // Đã có tham số khác, nối thêm bằng dấu '&'
-            return url + "&alt=media";
-        }
-        else
-        {
-            // Chưa có tham số nào, thêm bằng dấu '?'
-            return url + "?alt=media";
-        }
-    }
-    return url; // Không phải URL Firebase Storage hoặc không cần sửa đổi
-}
+        // Add this method after the SelectFileAsync method
         [RelayCommand]
-        private void InsertEmoji(string emoji)
+        private void ViewFullImage(string imageUrl)
         {
-            // Thêm emoji vào vị trí con trỏ hoặc cuối chuỗi
-            if (string.IsNullOrEmpty(NewMessageText))
-                NewMessageText = emoji;
-            else
-                NewMessageText += emoji;
-        }
-        [RelayCommand]
-        public void ShowEmojiPicker()
-        {
-            // Thực hiện mở EmojiPicker (ví dụ: đặt biến IsEmojiPickerOpen = true)
-            // Hoặc raise event để View mở popup
+            if (string.IsNullOrEmpty(imageUrl))
+            {
+                Debug.WriteLine("Empty image URL provided");
+                return;
+            }
+
+            try
+            {
+                // Create image viewer window
+                var viewer = new Window
+                {
+                    Title = "Image Viewer",
+                    Width = 800,
+                    Height = 600,
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen
+                };
+
+                // Create a Grid to center the image
+                var grid = new Grid();
+
+                // Create a Viewbox to scale the image
+                var viewbox = new System.Windows.Controls.Viewbox
+                {
+                    Stretch = Stretch.Uniform
+                };
+
+                // Create the Image element
+                var image = new System.Windows.Controls.Image
+                {
+                    Source = new BitmapImage(new Uri(imageUrl)),
+                    Stretch = Stretch.Uniform
+                };
+
+                // Build the visual tree
+                viewbox.Child = image;
+                grid.Children.Add(viewbox);
+                viewer.Content = grid;
+
+                // Show the viewer
+                viewer.Show();
+
+                // Log the viewed image
+                LogViewedImage(imageUrl);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error opening image viewer: {ex.Message}");
+                MessageBox.Show($"Không thể mở ảnh: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
+        private void LogViewedImage(string imageUrl)
+        {
+            try
+            {
+                // Create log entry
+                string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {imageUrl}";
+
+                // Add to in-memory history
+                _viewedImageHistory.Add(logEntry);
+
+                // Ensure directory exists
+                string directory = Path.GetDirectoryName(_imageHistoryFilePath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                // Append to file
+                File.AppendAllText(_imageHistoryFilePath, logEntry + Environment.NewLine);
+
+                Debug.WriteLine($"Image view logged: {logEntry}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error logging viewed image: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private async Task DownloadFileAsync(FileItem fileItem)
+        {
+            if (fileItem == null || string.IsNullOrEmpty(fileItem.DownloadUrl))
+            {
+                MessageBox.Show("Không có liên kết tải xuống cho tệp này.", "Thông báo",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            Mouse.OverrideCursor = Cursors.Wait;
+
+            try
+            {
+                bool success = await FirebaseStorageHelper.DownloadFileToLocationAsync(
+                    fileItem.DownloadUrl,
+                    fileItem.FileName);
+
+                if (success)
+                {
+                    Debug.WriteLine($"File downloaded successfully: {fileItem.FileName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error downloading file: {ex.Message}");
+                MessageBox.Show($"Không thể tải xuống tệp tin: {ex.Message}", "Lỗi",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        [RelayCommand]
+        private async Task DownloadMessageFileAsync(Message message)
+        {
+            if (message == null || string.IsNullOrEmpty(message.Content) && !message.IsImage)
+            {
+                MessageBox.Show("Không có tệp tin để tải xuống.", "Thông báo",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            string url = message.IsImage ? message.ImageUrl : null;
+            string fileName = message.IsImage ?
+                $"image_{DateTime.Now:yyyyMMdd_HHmmss}{Path.GetExtension(message.ImageUrl) ?? ".jpg"}" :
+                message.Content;
+
+            if (string.IsNullOrEmpty(url))
+            {
+                // For non-image files, try to find corresponding FileItem in Files collection
+                var fileItem = Files.FirstOrDefault(f => f.FileName == message.Content);
+                if (fileItem != null && !string.IsNullOrEmpty(fileItem.DownloadUrl))
+                {
+                    url = fileItem.DownloadUrl;
+                }
+            }
+
+            if (string.IsNullOrEmpty(url))
+            {
+                MessageBox.Show("Không tìm thấy đường dẫn tải xuống cho tệp này.", "Thông báo",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            Mouse.OverrideCursor = Cursors.Wait;
+
+            try
+            {
+                bool success = await FirebaseStorageHelper.DownloadFileToLocationAsync(url, fileName);
+
+                if (success)
+                {
+                    Debug.WriteLine($"File downloaded successfully: {fileName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error downloading file: {ex.Message}");
+                MessageBox.Show($"Không thể tải xuống tệp tin: {ex.Message}", "Lỗi",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
     }
 }

@@ -22,6 +22,8 @@ namespace WpfApp1.Models
         public bool IsImage { get; set; } // Thêm thuộc tính này
         public string ImageUrl { get; set; }
 
+        public string FileUrl { get; set; } 
+
         public Message()
         {
             // Gán mặc định
