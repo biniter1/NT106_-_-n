@@ -75,7 +75,7 @@ namespace WpfApp1.ViewModels
             SelectedContact = null;
             NewMessageText = string.Empty;
 
-            firebaseClient = new FirebaseClient("https://fir-5b855-default-rtdb.firebaseio.com");
+            firebaseClient = new FirebaseClient("https://chatapp-177-default-rtdb.asia-southeast1.firebasedatabase.app/");
 
             userdata = SharedData.Instance.userdata;
 
