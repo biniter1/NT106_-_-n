@@ -13,16 +13,26 @@ namespace WpfApp1.ViewModels
     {
         // Thuộc tính quan trọng: Giữ ViewModel của View đang hiển thị trong ContentControl
         [ObservableProperty]
-        private ObservableObject _currentViewModel; // Kiểu là ObservableObject hoặc lớp cơ sở chung khác
-        private ChatViewModel _chatViewModel = new ChatViewModel();
-        private readonly FirebaseClient _firebaseClient = new FirebaseClient("https://chatapp-177-default-rtdb.asia-southeast1.firebasedatabase.app/");
+        private ObservableObject _currentViewModel;
 
-        // Constructor
-        public MainViewModel()
+        private readonly FirebaseClient _firebaseClient;
+        private ChatViewModel _chatViewModel;
+
+        public ChatViewModel ChatVm { get; private set; }
+        public SettingsViewModel SettingsVm { get; private set; }
+
+        public MainViewModel(FirebaseClient firebaseClient)
         {
+            // Gán FirebaseClient được truyền vào
+            _firebaseClient = firebaseClient;
+
             // Khởi tạo View/ViewModel mặc định khi ứng dụng bắt đầu
             // Ví dụ: Hiển thị ChatView làm mặc định
-            CurrentViewModel = new ChatViewModel();
+            ChatVm = new ChatViewModel(_firebaseClient); // ChatViewModel giờ nhận FirebaseClient
+            _chatViewModel = ChatVm; // Gán reference để dùng trong các method khác
+
+            SettingsVm = new SettingsViewModel(ChatVm, _firebaseClient);
+            CurrentViewModel = ChatVm; // Sử dụng ChatVm đã tạo thay vì tạo mới
         }
 
         // --- Commands để thay đổi CurrentViewModel (hiển thị trong ContentControl) ---
@@ -30,18 +40,15 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void ShowChat()
         {
-            // Kiểm tra để tránh tạo lại nếu đang hiển thị rồi (tùy chọn)
-            if (CurrentViewModel is not ChatViewModel)
-            {
-                CurrentViewModel = new ChatViewModel();
-            }
+            // Sử dụng lại ChatVm đã tạo thay vì tạo mới
+            CurrentViewModel = ChatVm;
         }
 
         [RelayCommand]
         private void ShowFriendList()
         {
             // Kiểm tra để tránh tạo lại nếu đang hiển thị rồi 
-           if (CurrentViewModel is not FriendListViewModel)
+            if (CurrentViewModel is not FriendListViewModel)
             {
                 CurrentViewModel = new FriendListViewModel();
             }
@@ -58,7 +65,7 @@ namespace WpfApp1.ViewModels
                 addFriendWin.Owner = Application.Current.MainWindow;
             }
             addFriendWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            addFriendWin.Show();    
+            addFriendWin.Show();
         }
 
         // --- Commands để mở cửa sổ Popup ---
@@ -66,10 +73,6 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void ShowProfilePopup()
         {
-            // Tạo và hiển thị cửa sổ Profile (giả sử tên là ProfileWindow)
-            // ProfileWindow profileWin = new ProfileWindow();
-            // profileWin.Owner = Application.Current.MainWindow; // Gán Owner nếu cần
-            // profileWin.Show();
             MessageBox.Show("ProfileWindow chưa được tạo!"); // Thông báo tạm thời
         }
 
@@ -89,20 +92,19 @@ namespace WpfApp1.ViewModels
             settingsWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             settingsWin.Show();
         }
+
         [RelayCommand]
         private void ShowSettings()
         {
-            if (CurrentViewModel is not SettingsViewModel)
-            {
-                CurrentViewModel = new SettingsViewModel(_chatViewModel, _firebaseClient);
-            }
+            // Sử dụng lại SettingsVm đã tạo thay vì tạo mới
+            CurrentViewModel = SettingsVm;
         }
 
         public void Cleanup()
         {
             System.Diagnostics.Debug.WriteLine("MainViewModel: Starting Cleanup...");
 
-            _chatViewModel.Cleanup();
+            _chatViewModel?.Cleanup();
 
             System.Diagnostics.Debug.WriteLine("MainViewModel: Cleanup of cached child ViewModels complete.");
         }

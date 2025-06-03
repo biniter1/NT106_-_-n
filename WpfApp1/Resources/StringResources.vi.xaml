@@ -219,4 +219,10 @@
 
         Để được hỗ trợ thêm, liên hệ với đội ngũ hỗ trợ của chúng tôi qua phần Hỗ Trợ.
     </sys:String>
+    <sys:String x:Key="Notification_NewImage">Đã gửi ảnh mới</sys:String>
+    <sys:String x:Key="Notification_NewVideo">Đã gửi video mới</sys:String>
+    <sys:String x:Key="Notification_NewFile">Đã gửi tệp mới</sys:String>
+    <sys:String x:Key="Notification_NewMessageFrom">Tin nhắn mới từ</sys:String>
+    <sys:String x:Key="Notification_UnreadMessages">Bạn có {0} tin nhắn chưa đọc.</sys:String>
+    <sys:String x:Key="NewMessageArrived">Tin nhắn mới đến</sys:String>
 </ResourceDictionary>

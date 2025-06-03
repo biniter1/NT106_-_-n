@@ -335,13 +335,6 @@
                     </StackPanel>
                 </Button>
 
-                <Button Style="{StaticResource ModernMenuButtonStyle}" Command="{Binding ShowSettingsCommand}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="🎨" Style="{StaticResource MenuIconStyle}"/>
-                        <TextBlock Text="{DynamicResource Appearance}" Style="{StaticResource MenuItemTextStyle}"/>
-                    </StackPanel>
-                </Button>
-
                 <Button Style="{StaticResource ModernMenuButtonStyle}" Command="{Binding ShowDataCommand}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="💾" Style="{StaticResource MenuIconStyle}"/>

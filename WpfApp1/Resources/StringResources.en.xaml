@@ -214,4 +214,10 @@
 
             For further assistance, contact our support team via the Support section.
     </sys:String>
+    <sys:String x:Key="Notification_NewImage">Sent a new image</sys:String>
+    <sys:String x:Key="Notification_NewVideo">Sent a new video</sys:String>
+    <sys:String x:Key="Notification_NewFile">Sent a new file</sys:String>
+    <sys:String x:Key="Notification_NewMessageFrom">New message from</sys:String>
+    <sys:String x:Key="Notification_UnreadMessages">You have {0} unread messages.</sys:String>
+    <sys:String x:Key="NewMessageArrived">New message arrived</sys:String>
 </ResourceDictionary>

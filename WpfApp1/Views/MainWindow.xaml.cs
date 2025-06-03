@@ -1,6 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Media;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,10 +12,14 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Linq; // Thêm using này
 using WpfApp1.Models;
 using WpfApp1.ViewModels;
 using WpfApp1.Views;
-
+using ToastNotifications.Messages;
+using ToastNotifications;
+using ToastNotifications.Lifetime;
+using ToastNotifications.Core;
 namespace WpfApp1
 {
     /// <summary>
@@ -23,31 +28,30 @@ namespace WpfApp1
     public partial class MainWindow : Window
     {
         string CurrentEmail;
+        private System.Timers.Timer _notificationTimer; // Lưu trữ timer để có thể dispose
 
         public MainWindow(string email)
         {
             InitializeComponent();
             CurrentEmail = email;
-            Loaded += MainWindow_Loaded; // Use Loaded event to ensure UI is ready
+            Loaded += MainWindow_Loaded;
             this.Closing += MainWindow_Closing;
             LocalizationManager.LanguageChanged += OnLanguageChanged;
         }
+
         private void OnLanguageChanged(object sender, EventArgs e)
         {
-            // Force the UI to refresh bindings
             InvalidateVisual();
-            // Optionally, update specific bindings
             UpdateBindings();
         }
+
         private void UpdateBindings()
         {
-            // Update bindings for controls that use localized strings
             foreach (var element in LogicalTreeHelper.GetChildren(this))
             {
                 if (element is FrameworkElement fe)
                 {
                     fe.GetBindingExpression(FrameworkElement.DataContextProperty)?.UpdateTarget();
-                    // Update other bindings as needed
                 }
             }
         }
@@ -56,15 +60,26 @@ namespace WpfApp1
         {
             await LoadDataCurrentUser(CurrentEmail);
 
-            // Initialize ChatViewModel after user data is loaded
-            var chatView = new ChatView
+            if (App.AppFirebaseClient == null)
             {
-                DataContext = new ChatViewModel()
-            };
-            //chatGrid.Children.Add(chatView); // Replace "chatGrid" with the actual Grid name in XAML
+                MessageBox.Show("Lỗi khởi tạo Firebase: FirebaseClient chưa được thiết lập. Vui lòng đăng nhập lại.",
+                    "Lỗi Firebase", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.Current.Shutdown();
+                return;
+            }
 
-            var mainViewModel = new MainViewModel();
+            var mainViewModel = new MainViewModel(App.AppFirebaseClient);
             this.DataContext = mainViewModel;
+
+            if (mainViewModel.ChatVm != null)
+            {
+                mainViewModel.ChatVm.OnNewMessageNotificationRequested += HandleNewMessageNotification;
+                Debug.WriteLine("Đã đăng ký sự kiện OnNewMessageNotificationRequested từ ChatViewModel.");
+            }
+            else
+            {
+                Debug.WriteLine("ChatViewModel (ChatVm) trong MainViewModel là null. Không thể đăng ký thông báo.");
+            }
         }
 
         public async Task LoadDataCurrentUser(string email)
@@ -72,22 +87,33 @@ namespace WpfApp1
             var db = FirestoreHelper.database;
             if (db == null)
             {
-                MessageBox.Show("Firestore database is not initialized!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Firestore database is not initialized!", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            var doc = db.Collection("users").Document(email);
-            var snap = await doc.GetSnapshotAsync();
-            if (snap.Exists)
+            try
             {
-                var user = snap.ConvertTo<User>();
-                SharedData.Instance.userdata = user; // Assign the entire user object
-                Debug.WriteLine($"Loaded user data for: {user.Email}");
+                var doc = db.Collection("users").Document(email);
+                var snap = await doc.GetSnapshotAsync();
+                if (snap.Exists)
+                {
+                    var user = snap.ConvertTo<User>();
+                    SharedData.Instance.userdata = user;
+                    Debug.WriteLine($"Loaded user data for: {user.Email}");
+                }
+                else
+                {
+                    Debug.WriteLine($"User document not found for email: {email}");
+                    MessageBox.Show($"User not found for email: {email}", "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Debug.WriteLine($"User document not found for email: {email}");
-                MessageBox.Show($"User not found for email: {email}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Debug.WriteLine($"Error loading user data: {ex.Message}");
+                MessageBox.Show($"Error loading user data: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -97,67 +123,211 @@ namespace WpfApp1
             addFriendWin.Owner = this;
             addFriendWin.Show();
         }
+
+        // Method đơn giản cho notification cơ bản
         public void ShowNotification(string message)
         {
-            NotificationText.Text = message;
-            MessageNotificationPopup.IsOpen = true;
-
-            // Tạo và cấu hình Timer
-            System.Timers.Timer timer = new System.Timers.Timer(3000); // 3000ms = 3 giây
-            timer.AutoReset = false; // Chỉ chạy một lần
-
-            // Gán sự kiện Elapsed
-            timer.Elapsed += (s, e) =>
-            {
-                Dispatcher.Invoke(() =>
-                {
-                    MessageNotificationPopup.IsOpen = false;
-                });
-                timer.Dispose(); // Giải phóng tài nguyên
-            };
-
-            timer.Start();
+            ShowNotificationWithChatId(message, null);
         }
-        private void NotificationText_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            // Tìm liên hệ từ nội dung thông báo
-            string notificationText = NotificationText.Text;
-            string contactName = notificationText.Split(':')[0].Replace("Tin nhắn mới từ ", "").Trim();
 
-            // Tìm ViewModel hiện tại
-            if (DataContext is MainViewModel mainViewModel && mainViewModel.CurrentViewModel is ChatViewModel chatViewModel)
+        // Method chính cho notification với chatID
+        public void ShowNotificationWithChatId(string message, string chatID)
+        {
+            try
             {
-                // Tìm liên hệ trong danh sách Contacts
-                var contact = chatViewModel.Contacts.FirstOrDefault(c => c.Name == contactName);
-                if (contact != null)
+                NotificationText.Text = message;
+                if (!string.IsNullOrEmpty(chatID))
                 {
-                    chatViewModel.SelectedContact = contact; // Chuyển đến cuộc trò chuyện
+                    NotificationText.Tag = chatID;
+                }
+                MessageNotificationPopup.IsOpen = true;
+
+                // Dispose timer cũ nếu có
+                _notificationTimer?.Dispose();
+
+                // Tạo timer mới
+                _notificationTimer = new System.Timers.Timer(3000);
+                _notificationTimer.AutoReset = false;
+                _notificationTimer.Elapsed += (s, e) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        MessageNotificationPopup.IsOpen = false;
+                    });
+                    _notificationTimer?.Dispose();
+                    _notificationTimer = null;
+                };
+                _notificationTimer.Start();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error showing notification: {ex.Message}");
+            }
+        }
+
+        private string GetLocalizedString(string key)
+        {
+            try
+            {
+                if (Application.Current.Resources["LocalizationDictionary"] is ResourceDictionary localizationDict)
+                {
+                    return localizationDict.Contains(key) ? localizationDict[key].ToString() : key;
                 }
             }
-
-            MessageNotificationPopup.IsOpen = false; // Đóng Popup
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting localized string: {ex.Message}");
+            }
+            return key;
         }
 
-        // Sự kiện đóng Popup
+        private void HandleNewMessageNotification(string senderName, string messageContent, string chatID)
+        {
+            try
+            {
+                PlayNotificationSound();
+
+                bool enableNotifications = true;
+                bool showDesktopNotifications = true;
+
+                if (this.DataContext is MainViewModel mainVm && mainVm.SettingsVm != null)
+                {
+                    enableNotifications = mainVm.SettingsVm.EnableNotifications;
+                    showDesktopNotifications = mainVm.SettingsVm.ShowDesktopNotifications;
+                }
+
+                if (!enableNotifications)
+                {
+                    Debug.WriteLine("Thông báo đã bị tắt trong cài đặt. Bỏ qua hiển thị.");
+                    return;
+                }
+
+                string notificationTitle = GetLocalizedString("NewMessageArrived");
+                string fullNotificationMessage = $"{GetLocalizedString("Notification_NewMessageFrom")} {senderName}: {messageContent}";
+
+                // Kiểm tra xem có cần hiển thị notification không
+                var mainViewModel = this.DataContext as MainViewModel;
+                ChatViewModel currentChatViewModel = mainViewModel?.ChatVm;
+                bool isCurrentChatSelected = !string.IsNullOrEmpty(chatID) &&
+                    currentChatViewModel?.SelectedContact?.chatID == chatID;
+
+                if (!this.IsActive || (!isCurrentChatSelected && this.IsActive))
+                {
+                    ShowNotificationWithChatId(fullNotificationMessage, chatID);
+                }
+
+                if (showDesktopNotifications)
+                {
+                    ShowDesktopNotification(notificationTitle, fullNotificationMessage, chatID);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error handling new message notification: {ex.Message}");
+            }
+        }
+
+        private void ShowDesktopNotification(string title, string message, string chatID)
+        {
+            try
+            {
+                if (App.AppNotifier != null)
+                {
+                    // Create  if needed
+                    var options = new MessageOptions
+                    {
+                      
+                    };
+
+                    App.AppNotifier.ShowInformation(message, options);
+                }
+                else
+                {
+                    Debug.WriteLine("AppNotifier is null. Không thể hiển thị desktop notification.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error showing desktop notification: {ex.Message}");
+            }
+        }
+
+        private void PlayNotificationSound()
+        {
+            try
+            {
+                SystemSounds.Beep.Play();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Lỗi khi phát âm thanh thông báo: {ex.Message}");
+            }
+        }
+
+        private void NotificationText_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            try
+            {
+                string chatIDToSwitch = (sender as TextBlock)?.Tag?.ToString();
+
+                if (!string.IsNullOrEmpty(chatIDToSwitch))
+                {
+                    if (DataContext is MainViewModel mainViewModel && mainViewModel.ChatVm is ChatViewModel chatViewModel)
+                    {
+                        var contactToSwitch = chatViewModel.Contacts?.FirstOrDefault(c => c.chatID == chatIDToSwitch);
+                        if (contactToSwitch != null)
+                        {
+                            chatViewModel.SelectedContact = contactToSwitch;
+                            mainViewModel.CurrentViewModel = chatViewModel;
+                            Debug.WriteLine($"Đã chuyển đến cuộc trò chuyện với: {contactToSwitch.Name}");
+                        }
+                    }
+                }
+
+                MessageNotificationPopup.IsOpen = false;
+
+                if (this.WindowState == WindowState.Minimized)
+                {
+                    this.WindowState = WindowState.Normal;
+                }
+                this.Activate();
+                this.Topmost = true;
+                this.Topmost = false;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error handling notification click: {ex.Message}");
+                MessageNotificationPopup.IsOpen = false;
+            }
+        }
+
         private void CloseNotification_Click(object sender, RoutedEventArgs e)
         {
             MessageNotificationPopup.IsOpen = false;
         }
 
-        // Sự kiện closing
         private void MainWindow_Closing(object sender, CancelEventArgs e)
         {
-            // Lấy MainViewModel từ DataContext của MainWindow
-            if (this.DataContext is MainViewModel mainVM)
+            try
             {
-                System.Diagnostics.Debug.WriteLine("MainWindow_Closing: Calling MainViewModel.Cleanup().");
-                mainVM.Cleanup(); // Gọi Cleanup của MainViewModel
+                // Dispose timer khi đóng window
+                _notificationTimer?.Dispose();
+                _notificationTimer = null;
+
+                if (this.DataContext is MainViewModel mainVM)
+                {
+                    System.Diagnostics.Debug.WriteLine("MainWindow_Closing: Calling MainViewModel.Cleanup().");
+                    mainVM.Cleanup();
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("MainWindow_Closing: MainViewModel not found in DataContext. Cleanup might be incomplete.");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("MainWindow_Closing: MainViewModel not found in DataContext. Cleanup might be incomplete.");
+                Debug.WriteLine($"Error during window closing: {ex.Message}");
             }
         }
     }
-
 }

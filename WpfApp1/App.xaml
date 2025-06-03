@@ -6,6 +6,7 @@
              StartupUri="LoginlSignUp/fLogin.xaml">
     <Application.Resources>
         <ResourceDictionary>
+            <BitmapImage x:Key="InformationIcon" UriSource="/Assets/Icons/information.png"/>
             <!-- Brushes and CornerRadius -->
             <SolidColorBrush x:Key="PrimaryBrush" Color="#6c63ff"/>
             <SolidColorBrush x:Key="LightGrayBrush" Color="#f0f0f0"/>
@@ -66,7 +67,30 @@
                     </Setter.Value>
                 </Setter>
             </Style>
-
+            <Style x:Key="CloseButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="30" />
+                <Setter Property="Height" Value="30" />
+                <Setter Property="Background" Value="Red" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Content" Value="X" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="3">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#CC0000" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
             <!-- ScrollBar Style -->
             <Style TargetType="{x:Type ScrollBar}">
                 <Setter Property="Width" Value="4"/>

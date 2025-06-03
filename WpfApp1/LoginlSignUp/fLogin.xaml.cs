@@ -248,6 +248,7 @@ namespace WpfApp1.LoginlSignUp
 
                 this.Hide();
                 SuccessPopup successPopup = new SuccessPopup();
+                App.UpdateFirebaseClientAuth(idToken);
                 successPopup.Closed += (s, args) =>
                 {
                     MainWindow main = new MainWindow(email);
