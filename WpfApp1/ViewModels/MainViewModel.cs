@@ -15,7 +15,8 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private ObservableObject _currentViewModel; // Kiểu là ObservableObject hoặc lớp cơ sở chung khác
         private ChatViewModel _chatViewModel = new ChatViewModel();
-        private readonly FirebaseClient _firebaseClient;
+        private readonly FirebaseClient _firebaseClient = new FirebaseClient("https://chatapp-177-default-rtdb.asia-southeast1.firebasedatabase.app/");
+
         // Constructor
         public MainViewModel()
         {

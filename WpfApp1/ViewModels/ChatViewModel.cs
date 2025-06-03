@@ -574,7 +574,7 @@ namespace WpfApp1.ViewModels
         private string EscapeEmail(string email)
         {
             if (string.IsNullOrEmpty(email)) return string.Empty;
-            return email.Replace('.', ',')
+            return email.Replace('.', '_')
                         .Replace('#', '_')
                         .Replace('$', '_')
                         .Replace('[', '_')
@@ -612,7 +612,7 @@ namespace WpfApp1.ViewModels
             }
         }
 
-        private void StartListeningToContactsPresence()
+        private async void StartListeningToContactsPresence()
         {
             if (Contacts == null || !Contacts.Any())
             {
@@ -638,7 +638,36 @@ namespace WpfApp1.ViewModels
                 string contactEmailCanLangNghe = contact.Email;
                 string escapedContactEmail = EscapeEmail(contactEmailCanLangNghe);
 
-                Debug.WriteLine($"Setting up listener for: {contactEmailCanLangNghe} (escaped: {escapedContactEmail}) at /user_status/{escapedContactEmail}");
+                Debug.WriteLine($"Checking and initializing status for: {contactEmailCanLangNghe} (escaped: {escapedContactEmail})");
+
+                try
+                {
+                    // Check if data exists
+                    var existingStatus = await firebaseClient
+                        .Child("user_status")
+                        .Child(escapedContactEmail)
+                        .OnceSingleAsync<UserStatusData>();
+
+                    if (existingStatus == null)
+                    {
+                        Debug.WriteLine($"No status found for {escapedContactEmail}. Initializing default status...");
+                        var defaultStatus = new UserStatusData
+                        {
+                            isOnline = false,
+                            last_active = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                        };
+
+                        await firebaseClient
+                            .Child("user_status")
+                            .Child(escapedContactEmail)
+                            .PutAsync(defaultStatus);
+                    }
+                }
+                catch (Exception initEx)
+                {
+                    Debug.WriteLine($"Error initializing status for {escapedContactEmail}: {initEx.Message}");
+                    continue; // Skip subscribing if init fails
+                }
 
                 try
                 {
@@ -681,8 +710,6 @@ namespace WpfApp1.ViewModels
                                     if (localContactToUpdate != null)
                                     {
                                         localContactToUpdate.IsOnline = localStatus.isOnline;
-                                        // Uncomment if you want to update last_active
-                                        // localContactToUpdate.last_active = localStatus.last_active;
                                     }
                                 });
                             }
