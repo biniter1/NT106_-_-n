@@ -117,6 +117,18 @@ namespace WpfApp1.ViewModels
             CurrentViewModel = SettingsVm;
         }
 
+        [RelayCommand]
+        private void ShowCreateGroupPopup()
+        {
+            var createGroupWindow = new Views.CreateGroupWindow
+            {
+                Owner = Application.Current.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            
+            createGroupWindow.ShowDialog();
+        }
+
         public void Cleanup()
         {
             System.Diagnostics.Debug.WriteLine("MainViewModel: Starting Cleanup...");
