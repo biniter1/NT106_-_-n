@@ -9,33 +9,26 @@ namespace WpfApp1.Models
 {
     public static class FirebaseStorageHelper
     {
-        private static readonly string Bucket = "chatapp-177.firebasestorage.app";
-        private static readonly FirebaseStorage storage = new FirebaseStorage(Bucket);
+        private static readonly FirebaseStorage storage = new FirebaseStorage("chatapp-177.firebasestorage.app");
 
         public static async Task<string> UploadFileAsync(string localFilePath, string fileName)
         {
-            try
+            using var stream = File.OpenRead(localFilePath);
+
+            var task = storage
+                .Child("files")
+                .Child(fileName)
+                .PutAsync(stream);
+
+            // Optional: theo dõi tiến trình
+            task.Progress.ProgressChanged += (s, e) =>
             {
-                // Generate a unique path to avoid naming collisions
-                string timestamp = DateTime.Now.ToString("yyyyMMddHHmmssfff");
-                string uniqueFileName = $"{timestamp}_{fileName}";
-                string storagePath = $"files/{uniqueFileName}";
+                Console.WriteLine($"Progress: {e.Percentage} %");
+            };
 
-                using var stream = File.OpenRead(localFilePath);
-
-                // Upload the file and get a download URL
-                string downloadUrl = await storage
-                    .Child(storagePath)
-                    .PutAsync(stream);
-
-                System.Diagnostics.Debug.WriteLine($"File uploaded to: {storagePath}, URL: {downloadUrl}");
-                return downloadUrl;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error uploading file: {ex.Message}");
-                throw;
-            }
+            // Lấy URL file đã upload
+            var downloadUrl = await task;
+            return downloadUrl;
         }
 
         public static async Task<byte[]> DownloadFileAsync(string url)
