@@ -20,7 +20,7 @@
             <SolidColorBrush x:Key="ItemSelectedBackgroundBrush" Color="#FBEFF5"/>
             <SolidColorBrush x:Key="AvatarPlaceholderBackground" Color="#FFB74D"/>
             <CornerRadius x:Key="DefaultCornerRadius">10</CornerRadius>
-
+            <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F5F5"/>
             <!-- Converters -->
             <converters:MessageBackgroundConverter x:Key="MessageBackgroundConverter" />
             <converters:MessageAlignmentConverter x:Key="MessageAlignmentConverter" />
@@ -34,6 +34,7 @@
             <converters:StringToBooleanConverter x:Key="StringToBooleanConverter"/>
             <converters:LanguageConverter x:Key="LanguageConverter"/>
             <converters:AvatarUrlConverter x:Key="AvatarUrlConverter"/>
+            <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
             <!-- Thêm converter này -->
 
             <!-- ScrollBar Brushes -->

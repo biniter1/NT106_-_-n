@@ -2,6 +2,8 @@
 using CommunityToolkit.Mvvm.Input;
 using Firebase.Database;
 using System.Windows; // Cần cho Application.Current.MainWindow nếu dùng làm Owner popup
+using WpfApp1.Models;
+
 
 // Thêm using cho các ViewModel khác và các View (Window) bạn sẽ mở popup
 using WpfApp1.ViewModels; // Chứa ChatViewModel, AddFriendViewModel, FriendListViewModel...
@@ -20,6 +22,7 @@ namespace WpfApp1.ViewModels
 
         public ChatViewModel ChatVm { get; private set; }
         public SettingsViewModel SettingsVm { get; private set; }
+        public MatchingChatViewModel MatchingChatVm { get; }
 
         public MainViewModel(FirebaseClient firebaseClient)
         {
@@ -30,6 +33,9 @@ namespace WpfApp1.ViewModels
             // Ví dụ: Hiển thị ChatView làm mặc định
             ChatVm = new ChatViewModel(_firebaseClient); // ChatViewModel giờ nhận FirebaseClient
             _chatViewModel = ChatVm; // Gán reference để dùng trong các method khác
+            string currentEmail=SharedData.Instance.userdata.Email;
+            MatchingChatVm = new MatchingChatViewModel(_firebaseClient, currentEmail);
+            MatchingChatVm.MatchFound += OnMatchFound;
 
             SettingsVm = new SettingsViewModel(ChatVm, _firebaseClient);
             CurrentViewModel = ChatVm; // Sử dụng ChatVm đã tạo thay vì tạo mới
@@ -69,11 +75,22 @@ namespace WpfApp1.ViewModels
         }
 
         // --- Commands để mở cửa sổ Popup ---
+        private void OnMatchFound(string roomId, string opponentId)
+        {
+            // Được gọi từ MatchingChatViewModel
+            MessageBox.Show($"Đã ghép cặp thành công với {opponentId}! Vào phòng chat: {roomId}");
+
+            // Yêu cầu ChatViewModel tải phòng chat mới
+            // ChatVm.LoadRoom(roomId); // Giả sử ChatVm có phương thức này
+
+            // Tự động chuyển về màn hình chat
+            CurrentViewModel = ChatVm;
+        }
 
         [RelayCommand]
-        private void ShowProfilePopup()
+        private void ShowChatMatching()
         {
-            MessageBox.Show("ProfileWindow chưa được tạo!"); // Thông báo tạm thời
+            CurrentViewModel = MatchingChatVm;
         }
 
         [RelayCommand]
