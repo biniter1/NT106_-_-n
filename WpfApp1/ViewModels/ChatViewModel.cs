@@ -17,6 +17,12 @@ using System.Reactive.Linq;
 using Microsoft.Win32;
 using System.IO;
 using WpfApp1; // Ensure FirebaseStorageHelper namespace is included
+using System.Windows.Controls;
+using System.Windows.Media.Imaging;
+using System.Linq;
+using ToastNotifications.Messages;
+using System.Collections.Generic; // Added for List<IDisposable> and Dictionary<string, IDisposable>
+using System.Threading.Tasks; // Added for Task
 
 namespace WpfApp1.ViewModels
 {
@@ -25,6 +31,8 @@ namespace WpfApp1.ViewModels
         public ObservableCollection<Message> Messages { get; set; }
         public ObservableCollection<Contact> Contacts { get; set; }
         public ObservableCollection<FileItem> Files { get; set; }
+
+        public event Action<string, string, string> OnNewMessageNotificationRequested;
 
         [ObservableProperty]
         private string _newMessageText;
@@ -37,8 +45,13 @@ namespace WpfApp1.ViewModels
         private Contact _selectedContact;
 
         public User userdata;
+
         private List<IDisposable> allMessageSubscriptions = new List<IDisposable>();
         private Dictionary<string, IDisposable> _contactPresenceListeners = new Dictionary<string, IDisposable>();
+        private List<string> _viewedImageHistory = new List<string>();
+        private string _imageHistoryFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "WpfApp1", "ImageHistory.txt");
 
         partial void OnSelectedContactChanged(Contact value)
         {
@@ -66,7 +79,7 @@ namespace WpfApp1.ViewModels
             SendMessageCommand.NotifyCanExecuteChanged();
         }
 
-        public ChatViewModel()
+        public ChatViewModel(FirebaseClient fbClient)
         {
             Messages = new ObservableCollection<Message>();
             Contacts = new ObservableCollection<Contact>();
@@ -75,8 +88,9 @@ namespace WpfApp1.ViewModels
             SelectedContact = null;
             NewMessageText = string.Empty;
 
-            firebaseClient = new FirebaseClient("https://fir-5b855-default-rtdb.firebaseio.com");
+            firebaseClient = fbClient; // GÁN FIREBASECLIENT ĐƯỢC TRUYỀN TỪ BÊN NGOÀI
 
+            // Đảm bảo SharedData.Instance.userdata đã có dữ liệu trước khi ChatViewModel được tạo
             userdata = SharedData.Instance.userdata;
 
             if (userdata != null && !string.IsNullOrEmpty(userdata.Email))
@@ -85,13 +99,14 @@ namespace WpfApp1.ViewModels
             }
             else
             {
-                Debug.WriteLine("ChatViewModel Constructor: Userdata not available yet for initial online status set.");
+                Debug.WriteLine("ChatViewModel Constructor: Userdata not available yet. Initial online status set skipped. This might be a problem if login state is crucial.");
             }
 
             EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
 
             LoadInitialData();
         }
+
         [RelayCommand]
         private async void OnAvatarUpdated(string newAvatarUrl)
         {
@@ -151,25 +166,36 @@ namespace WpfApp1.ViewModels
 
             try
             {
+                // ĐẢM BẢO firebaseClient KHÔNG NULL TRƯỚC KHI THỰC HIỆN CÁC TRUY VẤN
+                if (firebaseClient == null)
+                {
+                    Debug.WriteLine("FirebaseClient is null in LoadMessagesForContact. Cannot load messages.");
+                    MessageBox.Show("Lỗi: Không thể kết nối đến máy chủ chat. Vui lòng thử lại.", "Lỗi kết nối", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // SỬA ORDERBYKEY() THÀNH ORDERBY("TIMESTAMP") NẾU BẠN MUỐN SẮP XẾP THEO THỜI GIAN
+                // (Đảm bảo đã thêm .indexOn "Timestamp" vào Firebase Rules)
                 var messagesQuery = await firebaseClient
                     .Child("messages")
                     .Child(roomId)
-                    .OrderByKey()
+                    .OrderBy("Timestamp") // SỬA TẠI ĐÂY (hoặc giữ OrderByKey nếu bạn không cần sắp xếp theo thời gian)
                     .LimitToLast(100)
                     .OnceAsync<Message>();
 
                 if (messagesQuery != null)
                 {
                     var oldMessages = messagesQuery
+                        .Where(item => item.Object != null) // LỌC BỎ CÁC OBJECT NULL
                         .Select(item =>
                         {
                             var msg = item.Object;
                             msg.Id = item.Key;
-                            msg.IsMine = msg.SenderId == SharedData.Instance.userdata.Email;
+                            msg.IsMine = msg.SenderId == SharedData.Instance.userdata?.Email; // Sử dụng null-conditional
                             msg.Alignment = msg.IsMine ? "Right" : "Left";
                             return msg;
                         })
-                        .OrderBy(m => m.Timestamp)
+                        .OrderBy(m => m.Timestamp) // Sắp xếp lại để đảm bảo thứ tự
                         .ToList();
 
                     Debug.WriteLine($"Đã tải {oldMessages.Count} tin nhắn cũ");
@@ -183,58 +209,110 @@ namespace WpfApp1.ViewModels
                     });
                 }
 
+                // Lắng nghe các tin nhắn mới (real-time updates)
                 messageSubscription = firebaseClient
-                    .Child("messages")
-                    .Child(roomId)
-                    .AsObservable<Message>()
-                    .Subscribe(messageEvent =>
-                    {
-                        if (messageEvent.EventType == FirebaseEventType.InsertOrUpdate && messageEvent.Object != null)
-                        {
-                            var message = messageEvent.Object;
-                            message.Id = messageEvent.Key;
-                            message.IsMine = message.SenderId == SharedData.Instance.userdata.Email;
-                            message.Alignment = message.IsMine ? "Right" : "Left";
+       .Child("messages")
+       .Child(roomId)
+       .AsObservable<Message>()
+       .Subscribe(messageEvent =>
+       {
+           // Luôn chạy trên UI thread để cập nhật ObservableCollection
+           Application.Current.Dispatcher.Invoke(() =>
+           {
+               if (messageEvent.EventType == FirebaseEventType.InsertOrUpdate && messageEvent.Object != null)
+               {
+                   var message = messageEvent.Object;
+                   message.Id = messageEvent.Key;
+                   message.IsMine = message.SenderId == SharedData.Instance.userdata?.Email;
+                   message.Alignment = message.IsMine ? "Right" : "Left";
 
-                            Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                int existingIndex = Messages.IndexOf(Messages.FirstOrDefault(m => m.Id == message.Id));
-                                if (existingIndex >= 0)
-                                {
-                                    Messages[existingIndex] = message;
-                                    Debug.WriteLine($"Đã cập nhật tin nhắn: {message.Id}");
-                                }
-                                else if (!message.IsMine)
-                                {
-                                    int insertIndex = Messages.ToList().FindIndex(m => m.Timestamp > message.Timestamp) + 1;
-                                    if (insertIndex < 0) insertIndex = 0;
-                                    Messages.Insert(insertIndex, message);
-                                    Debug.WriteLine($"Đã thêm tin nhắn mới: {message.Id} tại vị trí {insertIndex}");
-                                    if (SelectedContact?.chatID != roomId)
-                                    {
-                                        string notificationMessage = $"Tin nhắn mới từ {SelectedContact?.Name ?? "Người gửi"}: {message.Content}";
-                                        var mainWindow = Application.Current.MainWindow as MainWindow;
-                                        mainWindow?.ShowNotification(notificationMessage);
-                                    }
-                                }
-                            });
-                        }
-                        else if (messageEvent.EventType == FirebaseEventType.Delete)
-                        {
-                            Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                var messageToRemove = Messages.FirstOrDefault(m => m.Id == messageEvent.Key);
-                                if (messageToRemove != null)
-                                {
-                                    Messages.Remove(messageToRemove);
-                                    Debug.WriteLine($"Đã xóa tin nhắn: {messageEvent.Key}");
-                                }
-                            });
-                        }
-                    }, ex =>
-                    {
-                        Debug.WriteLine($"Lỗi khi lắng nghe tin nhắn: {ex.Message}");
-                    });
+                   int existingIndex = Messages.IndexOf(Messages.FirstOrDefault(m => m.Id == message.Id));
+                   if (existingIndex >= 0)
+                   {
+                       Messages[existingIndex] = message;
+                       Debug.WriteLine($"Đã cập nhật tin nhắn: {message.Id}");
+                   }
+                   else // Đây là tin nhắn mới được thêm vào
+                   {
+                       // Thêm vào đúng vị trí theo Timestamp để duy trì thứ tự
+                       int insertIndex = Messages.ToList().FindIndex(m => m.Timestamp > message.Timestamp);
+                       if (insertIndex < 0) insertIndex = Messages.Count; // Thêm vào cuối nếu đây là tin mới nhất
+                       Messages.Insert(insertIndex, message);
+                       Debug.WriteLine($"Đã thêm tin nhắn mới: {message.Id} tại vị trí {insertIndex}");
+
+                       // --- BẮT ĐẦU LOGIC THÔNG BÁO TẠI ĐÂY ---
+                       if (!message.IsMine) // Chỉ thông báo tin nhắn không phải của mình gửi
+                       {
+                           // Kiểm tra xem cuộc trò chuyện hiện tại có đang được người dùng xem không
+                           bool isCurrentChatSelected = (SelectedContact?.chatID == roomId);
+                           // Kiểm tra xem cửa sổ ứng dụng có đang active (đang được tập trung) không
+                           bool isAppActive = Application.Current.MainWindow?.IsActive ?? false;
+
+                           // THÔNG BÁO NẾU:
+                           // 1. Cửa sổ ứng dụng không active (người dùng đang ở ứng dụng khác)
+                           // HOẶC
+                           // 2. Cửa sổ ứng dụng active nhưng KHÔNG phải cuộc trò chuyện này đang được chọn
+                           if (!isAppActive || (!isCurrentChatSelected && isAppActive))
+                           {
+                               string senderNameForNotification = "Người gửi";
+                               // Cố gắng tìm tên người gửi từ danh sách Contacts đã tải
+                               var senderContact = Contacts.FirstOrDefault(c => c.Email == message.SenderId);
+                               if (senderContact != null)
+                               {
+                                   senderNameForNotification = senderContact.Name;
+                               }
+                               else
+                               {
+                                   // Fallback: nếu không tìm thấy contact (có thể là người lạ gửi tin, hoặc contact chưa đồng bộ)
+                                   senderNameForNotification = message.SenderId;
+                                   if (senderNameForNotification.Contains("@")) // Loại bỏ phần domain của email
+                                   {
+                                       senderNameForNotification = senderNameForNotification.Split('@')[0];
+                                   }
+                               }
+
+                               string notificationContent = message.Content;
+                               // Tùy chỉnh nội dung thông báo cho các loại tin nhắn đặc biệt
+                               if (message.IsImage)
+                               {
+                                   notificationContent = GetLocalizedString("Notification_NewImage"); // Ví dụ: "Đã gửi ảnh mới"
+                               }
+                               else if (message.IsVideo)
+                               {
+                                   notificationContent = GetLocalizedString("Notification_NewVideo"); // Ví dụ: "Đã gửi video mới"
+                               }
+                               else if (!string.IsNullOrEmpty(message.FileUrl))
+                               {
+                                   // Nếu là file, hiển thị tên file hoặc thông báo chung
+                                   notificationContent = $"{GetLocalizedString("Notification_NewFile")} \"{message.Content}\""; // Ví dụ: "Đã gửi tệp mới 'tên_file.pdf'"
+                               }
+                               // else: notificationContent = message.Content (mặc định cho tin nhắn văn bản)
+
+                               // PHÁT SỰ KIỆN YÊU CẦU THÔNG BÁO LÊN MAINWINDOW
+                               OnNewMessageNotificationRequested?.Invoke(
+                                   senderNameForNotification,
+                                   notificationContent,
+                                   roomId // Truyền chatID để khi click vào thông báo có thể chuyển chat
+                               );
+                               Debug.WriteLine($"Yêu cầu thông báo: '{notificationContent}' từ '{senderNameForNotification}' trong chat '{roomId}'");
+                           }
+                       }
+                   }
+               }
+               else if (messageEvent.EventType == FirebaseEventType.Delete)
+               {
+                   var messageToRemove = Messages.FirstOrDefault(m => m.Id == messageEvent.Key);
+                   if (messageToRemove != null)
+                   {
+                       Messages.Remove(messageToRemove);
+                       Debug.WriteLine($"Đã xóa tin nhắn: {messageEvent.Key}");
+                   }
+               }
+           });
+       }, ex =>
+       {
+           Debug.WriteLine($"Lỗi khi lắng nghe tin nhắn: {ex.Message}");
+       });
 
                 allMessageSubscriptions.Add(messageSubscription);
                 LoadFilesForContact(contact);
@@ -246,14 +324,82 @@ namespace WpfApp1.ViewModels
             }
         }
 
-        private void LoadFilesForContact(Contact contact)
+        private async void LoadFilesForContact(Contact contact)
         {
             Files.Clear();
 
-            if (contact == null) return;
+            if (contact == null || string.IsNullOrEmpty(contact.chatID)) return;
 
-            // TODO: Implement logic to load files from Firebase Storage or Firestore
-            // Example: Fetch files associated with the contact's chatID
+            try
+            {
+                // Fetch messages with files
+                var messagesQuery = await firebaseClient
+                    .Child("messages")
+                    .Child(contact.chatID)
+                    .OrderByKey()
+                    .OnceAsync<Message>();
+
+                if (messagesQuery != null)
+                {
+                    foreach (var messageItem in messagesQuery)
+                    {
+                        var message = messageItem.Object;
+
+                        // Look for files in the messages - either images, videos, or files with URLs
+                        if ((message.IsImage && !string.IsNullOrEmpty(message.ImageUrl)) ||
+                            (message.IsVideo && !string.IsNullOrEmpty(message.VideoUrl)) ||
+                            (!string.IsNullOrEmpty(message.FileUrl)))
+                        {
+                            string fileUrl = message.IsImage ? message.ImageUrl :
+                                             (message.IsVideo ? message.VideoUrl : message.FileUrl);
+                            if (string.IsNullOrEmpty(fileUrl)) continue;
+
+                            string fileName = message.Content;
+                            if (message.IsImage && string.IsNullOrEmpty(fileName))
+                                fileName = $"Image_{DateTime.Now.ToString("yyyyMMddHHmmss")}.jpg";
+                            else if (message.IsVideo && string.IsNullOrEmpty(fileName))
+                                fileName = $"Video_{DateTime.Now.ToString("yyyyMMddHHmmss")}.mp4";
+
+                            string extension = Path.GetExtension(fileName);
+                            if (string.IsNullOrEmpty(extension))
+                            {
+                                if (message.IsImage)
+                                    extension = ".jpg";
+                                else if (message.IsVideo)
+                                    extension = ".mp4";
+                            }
+
+                            bool isVideo = message.IsVideo || IsVideoFile(extension);
+
+                            var fileItem = new FileItem
+                            {
+                                IconPathOrType = string.IsNullOrEmpty(extension) ?
+                                                 (message.IsImage ? "jpg" : (isVideo ? "mp4" : "txt")) :
+                                                 extension.TrimStart('.'),
+                                FileName = fileName,
+                                FileInfo = $"{(message.IsImage ? "Image" : (isVideo ? "Video" : "File"))} • {message.Timestamp:dd/MM/yyyy}",
+                                FilePathOrUrl = fileUrl,
+                                DownloadUrl = fileUrl,
+                                FileExtension = extension,
+                                IsVideo = isVideo
+                            };
+
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                // Avoid duplicates
+                                if (!Files.Any(f => f.DownloadUrl == fileUrl))
+                                    Files.Add(fileItem);
+                            });
+                        }
+                    }
+
+                    Debug.WriteLine($"Loaded {Files.Count} files for contact {contact.Name}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading files for sidebar: {ex.Message}");
+            }
         }
 
         [RelayCommand(CanExecute = nameof(CanSendMessage))]
@@ -273,7 +419,9 @@ namespace WpfApp1.ViewModels
                     .Child(contact.chatID)
                     .PostAsync(newMessage);
 
-                Messages.Add(newMessage);
+                // REMOVE THIS LINE:
+                // Messages.Add(newMessage); 
+                // The message will be added by the real-time listener
                 NewMessageText = string.Empty;
             }
         }
@@ -295,7 +443,7 @@ namespace WpfApp1.ViewModels
             var openFileDialog = new OpenFileDialog
             {
                 Title = "Chọn tệp để gửi",
-                Filter = "Tất cả tệp|*.*|Hình ảnh|*.jpg;*.jpeg;*.png;*.gif|Tài liệu|*.pdf;*.docx;*.doc;*.xlsx;*.xls;*.ppt;*.pptx",
+                Filter = "Tất cả tệp|*.*|Hình ảnh|*.jpg;*.jpeg;*.png;*.gif;*.bmp|Video|*.mp4;*.avi;*.mov;*.wmv;*.mkv",
                 Multiselect = false
             };
 
@@ -311,21 +459,33 @@ namespace WpfApp1.ViewModels
 
                     try
                     {
-                        string downloadUrl = await FirebaseStorageHelper.UploadFileAsync(selectedFilePath, fileName);
+                        // Generate unique filename with timestamp to avoid conflicts
+                        string uniqueFileName = $"{DateTime.Now:yyyyMMddHHmmssfff}_{fileName}";
 
+                        // Upload file to Firebase Storage
+                        string downloadUrl = await FirebaseStorageHelper.UploadFileAsync(selectedFilePath, uniqueFileName);
+
+                        // Detect file type
                         bool isImage = IsImageFile(fileExtension);
+                        bool isVideo = IsVideoFile(fileExtension);
 
+                        Debug.WriteLine($"File detected: {(isImage ? "image" : (isVideo ? "video" : "regular file"))} based on extension: {fileExtension}");
+
+                        // Create message object with consistent file information
                         var newMessage = new Message
                         {
                             SenderId = SharedData.Instance.userdata.Email,
-                            Content = isImage ? string.Empty : fileName,
+                            Content = fileName,
                             Timestamp = DateTime.UtcNow,
                             IsMine = true,
                             IsImage = isImage,
+                            IsVideo = isVideo, // Add this property to Message class
                             ImageUrl = isImage ? downloadUrl : null,
-                            Alignment = "Right"
+                            VideoUrl = isVideo ? downloadUrl : null, // Add this property to Message class
+                            FileUrl = (!isImage && !isVideo) ? downloadUrl : null
                         };
 
+                        // Send the message
                         var result = await firebaseClient
                             .Child("messages")
                             .Child(SelectedContact.chatID)
@@ -333,29 +493,30 @@ namespace WpfApp1.ViewModels
 
                         newMessage.Id = result.Key;
 
+                        //Application.Current.Dispatcher.Invoke(() =>
+                        //{
+                        //    Messages.Add(newMessage);
+                        //});
+
+                        // Create FileItem for sidebar display
+                        var fileItem = new FileItem
+                        {
+                            IconPathOrType = string.IsNullOrEmpty(fileExtension) ? "txt" : fileExtension.TrimStart('.'),
+                            FileName = fileName,
+                            FileInfo = $"{(isImage ? "Image" : (isVideo ? "Video" : "File"))} • {FormatFileSize(new FileInfo(selectedFilePath).Length)} • {DateTime.Now:dd/MM/yyyy}",
+                            FilePathOrUrl = downloadUrl,
+                            DownloadUrl = downloadUrl,
+                            FileExtension = fileExtension,
+                            IsVideo = isVideo // Add this property to FileItem class
+                        };
+
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            Messages.Add(newMessage);
+                            Files.Add(fileItem);
                         });
 
-                        if (!isImage)
-                        {
-                            var fileItem = new FileItem
-                            {
-                                IconPathOrType = fileExtension.TrimStart('.'),
-                                FileName = fileName,
-                                FileInfo = $"{FormatFileSize(new FileInfo(selectedFilePath).Length)} • {DateTime.Now:dd/MM/yyyy}",
-                                FilePathOrUrl = downloadUrl,
-                                DownloadUrl = downloadUrl
-                            };
-
-                            Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                Files.Add(fileItem);
-                            });
-                        }
-
-                        Debug.WriteLine($"File uploaded successfully: {fileName}");
+                        Debug.WriteLine($"File uploaded successfully: {fileName} with URL: {downloadUrl}");
+                        Debug.WriteLine($"File type: {fileItem.IconPathOrType}, IsImage: {isImage}, IsVideo: {isVideo}");
                     }
                     finally
                     {
@@ -370,10 +531,26 @@ namespace WpfApp1.ViewModels
             }
         }
 
+        // Updated to handle more image extensions and be more resilient
         private bool IsImageFile(string extension)
         {
-            string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
-            return Array.IndexOf(imageExtensions, extension.ToLower()) >= 0;
+            if (string.IsNullOrEmpty(extension))
+                return false;
+
+            extension = extension.ToLower().Trim();
+            string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp" };
+            return Array.IndexOf(imageExtensions, extension) >= 0;
+        }
+
+        // Add this method to detect video files
+        private bool IsVideoFile(string extension)
+        {
+            if (string.IsNullOrEmpty(extension))
+                return false;
+
+            extension = extension.ToLower().Trim();
+            string[] videoExtensions = { ".mp4", ".avi", ".mov", ".wmv", ".mkv", ".flv", ".webm", ".m4v", ".mpg", ".mpeg", ".3gp" };
+            return Array.IndexOf(videoExtensions, extension) >= 0;
         }
 
         private string FormatFileSize(long byteCount)
@@ -470,12 +647,12 @@ namespace WpfApp1.ViewModels
         private string EscapeEmail(string email)
         {
             if (string.IsNullOrEmpty(email)) return string.Empty;
-            return email.Replace('.', ',')
-                        .Replace('#', '_')
-                        .Replace('$', '_')
-                        .Replace('[', '_')
-                        .Replace(']', '_')
-                        .Replace('/', '_');
+            return email.Replace('.', '_')
+                         .Replace('#', '_')
+                         .Replace('$', '_')
+                         .Replace('[', '_')
+                         .Replace(']', '_')
+                         .Replace('/', '_');
         }
 
         private async void SetCurrentUserGlobalStatus(bool isOnline)
@@ -490,15 +667,15 @@ namespace WpfApp1.ViewModels
             var statusUpdate = new UserStatusData
             {
                 isOnline = isOnline,
-                last_active = new Dictionary<string, string> { { ".sv", "timestamp" } }
+                last_active = new Dictionary<string, object> { { ".sv", "timestamp" } } // Changed to object for Firebase timestamp
             };
 
             try
             {
                 await firebaseClient
-                      .Child("user_status")
-                      .Child(escapedUserEmail)
-                      .PutAsync(statusUpdate);
+                    .Child("user_status")
+                    .Child(escapedUserEmail)
+                    .PutAsync(statusUpdate);
 
                 Debug.WriteLine($"Current user global status set to: {(isOnline ? "Online" : "Offline")} at /user_status/{escapedUserEmail}");
             }
@@ -508,7 +685,7 @@ namespace WpfApp1.ViewModels
             }
         }
 
-        private void StartListeningToContactsPresence()
+        private async void StartListeningToContactsPresence()
         {
             if (Contacts == null || !Contacts.Any())
             {
@@ -534,7 +711,36 @@ namespace WpfApp1.ViewModels
                 string contactEmailCanLangNghe = contact.Email;
                 string escapedContactEmail = EscapeEmail(contactEmailCanLangNghe);
 
-                Debug.WriteLine($"Setting up listener for: {contactEmailCanLangNghe} (escaped: {escapedContactEmail}) at /user_status/{escapedContactEmail}");
+                Debug.WriteLine($"Checking and initializing status for: {contactEmailCanLangNghe} (escaped: {escapedContactEmail})");
+
+                try
+                {
+                    // Check if data exists
+                    var existingStatus = await firebaseClient
+                        .Child("user_status")
+                        .Child(escapedContactEmail)
+                        .OnceSingleAsync<UserStatusData>();
+
+                    if (existingStatus == null)
+                    {
+                        Debug.WriteLine($"No status found for {escapedContactEmail}. Initializing default status...");
+                        var defaultStatus = new UserStatusData
+                        {
+                            isOnline = false,
+                            last_active = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                        };
+
+                        await firebaseClient
+                            .Child("user_status")
+                            .Child(escapedContactEmail)
+                            .PutAsync(defaultStatus);
+                    }
+                }
+                catch (Exception initEx)
+                {
+                    Debug.WriteLine($"Error initializing status for {escapedContactEmail}: {initEx.Message}");
+                    continue; // Skip subscribing if init fails
+                }
 
                 try
                 {
@@ -577,8 +783,6 @@ namespace WpfApp1.ViewModels
                                     if (localContactToUpdate != null)
                                     {
                                         localContactToUpdate.IsOnline = localStatus.isOnline;
-                                        // Uncomment if you want to update last_active
-                                        // localContactToUpdate.last_active = localStatus.last_active;
                                     }
                                 });
                             }
@@ -626,6 +830,354 @@ namespace WpfApp1.ViewModels
             EditProfileViewModel.AvatarUpdated -= OnAvatarUpdated;
 
             Debug.WriteLine("ChatViewModel cleanup complete.");
+        }
+
+        // Add this method after the SelectFileAsync method
+        [RelayCommand]
+        private void ViewFullImage(string imageUrl)
+        {
+            if (string.IsNullOrEmpty(imageUrl))
+            {
+                Debug.WriteLine("Empty image URL provided");
+                return;
+            }
+
+            try
+            {
+                // Create image viewer window
+                var viewer = new Window
+                {
+                    Title = "Image Viewer",
+                    Width = 800,
+                    Height = 600,
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen
+                };
+
+                // Create a Grid to center the image
+                var grid = new Grid();
+
+                // Create a Viewbox to scale the image
+                var viewbox = new System.Windows.Controls.Viewbox
+                {
+                    Stretch = Stretch.Uniform
+                };
+
+                // Create the Image element
+                var image = new System.Windows.Controls.Image
+                {
+                    Source = new BitmapImage(new Uri(imageUrl)),
+                    Stretch = Stretch.Uniform
+                };
+
+                // Build the visual tree
+                viewbox.Child = image;
+                grid.Children.Add(viewbox);
+                viewer.Content = grid;
+
+                // Show the viewer
+                viewer.Show();
+
+                // Log the viewed image
+                LogViewedImage(imageUrl);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error opening image viewer: {ex.Message}");
+                MessageBox.Show($"Không thể mở ảnh: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void LogViewedImage(string imageUrl)
+        {
+            try
+            {
+                // Create log entry
+                string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {imageUrl}";
+
+                // Add to in-memory history
+                _viewedImageHistory.Add(logEntry);
+
+                // Ensure directory exists
+                string directory = Path.GetDirectoryName(_imageHistoryFilePath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                // Append to file
+                File.AppendAllText(_imageHistoryFilePath, logEntry + Environment.NewLine);
+
+                Debug.WriteLine($"Image view logged: {logEntry}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error logging viewed image: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private async Task DownloadFileAsync(FileItem fileItem)
+        {
+            if (fileItem == null || string.IsNullOrEmpty(fileItem.DownloadUrl))
+            {
+                MessageBox.Show("Không có liên kết tải xuống cho tệp này.", "Thông báo",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            Mouse.OverrideCursor = Cursors.Wait;
+
+            try
+            {
+                string fileName = fileItem.FileName;
+
+                // Handle special cases for images and videos
+                if (fileItem.IsVideo || IsVideoFile(fileItem.FileExtension))
+                {
+                    if (string.IsNullOrEmpty(Path.GetExtension(fileName)))
+                    {
+                        fileName = Path.ChangeExtension(fileName, fileItem.FileExtension ?? ".mp4");
+                    }
+                }
+                else if (IsImageFile(fileItem.FileExtension))
+                {
+                    if (string.IsNullOrEmpty(Path.GetExtension(fileName)))
+                    {
+                        fileName = Path.ChangeExtension(fileName, fileItem.FileExtension ?? ".jpg");
+                    }
+                }
+                // Ensure file has correct extension for all file types
+                else if (!string.IsNullOrEmpty(fileItem.FileExtension) &&
+                         !fileName.EndsWith(fileItem.FileExtension, StringComparison.OrdinalIgnoreCase))
+                {
+                    fileName = Path.ChangeExtension(fileName, fileItem.FileExtension.TrimStart('.'));
+                }
+
+                bool success = await FirebaseStorageHelper.DownloadFileToLocationAsync(
+                    fileItem.DownloadUrl,
+                    fileName);
+
+                if (success)
+                {
+                    Debug.WriteLine($"File downloaded successfully: {fileName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error downloading file: {ex.Message}");
+                MessageBox.Show($"Không thể tải xuống tệp tin: {ex.Message}", "Lỗi",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        [RelayCommand]
+        private async Task DownloadMessageFileAsync(Message message)
+        {
+            if (message == null || (string.IsNullOrEmpty(message.Content) && !message.IsImage && !message.IsVideo))
+            {
+                MessageBox.Show("Không có tệp tin để tải xuống.", "Thông báo",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            string url = null;
+            string fileName = null;
+            string extension = null;
+
+            // Determine the URL based on message type
+            if (message.IsImage)
+            {
+                url = message.ImageUrl;
+                // Try to get extension from content first, then fallback to default
+                extension = Path.GetExtension(message.Content);
+                if (string.IsNullOrEmpty(extension)) extension = ".jpg";
+                fileName = $"image_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
+            }
+            else if (message.IsVideo)
+            {
+                url = message.VideoUrl;
+                // Try to get extension from content first, then fallback to default
+                extension = Path.GetExtension(message.Content);
+                if (string.IsNullOrEmpty(extension)) extension = ".mp4";
+                fileName = $"video_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
+            }
+            else
+            {
+                // For regular files
+                url = message.FileUrl;
+                fileName = message.Content;
+
+                // Make sure the filename has an extension
+                extension = Path.GetExtension(fileName);
+                if (string.IsNullOrEmpty(extension))
+                {
+                    // Try to determine extension from Files collection
+                    var fileItem = Files.FirstOrDefault(f => f.FileName == message.Content);
+                    if (fileItem != null && !string.IsNullOrEmpty(fileItem.FileExtension))
+                    {
+                        extension = fileItem.FileExtension;
+                        fileName = Path.ChangeExtension(fileName, extension.TrimStart('.'));
+                    }
+                }
+            }
+
+            // If still no URL found, look in the Files collection
+            if (string.IsNullOrEmpty(url))
+            {
+                var fileItem = Files.FirstOrDefault(f => f.FileName == message.Content);
+                if (fileItem != null && !string.IsNullOrEmpty(fileItem.DownloadUrl))
+                {
+                    url = fileItem.DownloadUrl;
+                    if (!string.IsNullOrEmpty(fileItem.FileExtension))
+                    {
+                        extension = fileItem.FileExtension;
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(url))
+            {
+                MessageBox.Show("Không tìm thấy đường dẫn tải xuống cho tệp này.", "Thông báo",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Ensure file has extension
+            if (!string.IsNullOrEmpty(extension) && !fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+            {
+                fileName = Path.ChangeExtension(fileName, extension.TrimStart('.'));
+            }
+
+            Mouse.OverrideCursor = Cursors.Wait;
+
+            try
+            {
+                bool success = await FirebaseStorageHelper.DownloadFileToLocationAsync(url, fileName);
+
+                if (success)
+                {
+                    Debug.WriteLine($"File downloaded successfully: {fileName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error downloading file: {ex.Message}");
+                MessageBox.Show($"Không thể tải xuống tệp tin: {ex.Message}", "Lỗi",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        [RelayCommand]
+        private void ViewVideo(string videoUrl)
+        {
+            if (string.IsNullOrEmpty(videoUrl))
+            {
+                Debug.WriteLine("Empty video URL provided");
+                return;
+            }
+
+            try
+            {
+                // Create a temporary file to play the video
+                string tempPath = Path.Combine(
+                    Path.GetTempPath(),
+                    $"TempVideo_{DateTime.Now:yyyyMMddHHmmssfff}.mp4");
+
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                try
+                {
+                    // Start downloading the file in the background
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            byte[] videoData = await FirebaseStorageHelper.DownloadFileAsync(videoUrl);
+                            await File.WriteAllBytesAsync(tempPath, videoData);
+
+                            // Execute on UI thread
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                // Open with default video player
+                                Process.Start(new ProcessStartInfo
+                                {
+                                    FileName = tempPath,
+                                    UseShellExecute = true
+                                });
+
+                                // Log video view
+                                LogViewedVideo(videoUrl);
+
+                                Mouse.OverrideCursor = null;
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                Debug.WriteLine($"Error playing video: {ex.Message}");
+                                MessageBox.Show($"Không thể phát video: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                                Mouse.OverrideCursor = null;
+                            });
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Mouse.OverrideCursor = null;
+                    Debug.WriteLine($"Error setting up video playback: {ex.Message}");
+                    MessageBox.Show($"Không thể chuẩn bị phát video: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Mouse.OverrideCursor = null;
+                Debug.WriteLine($"Error preparing video playback: {ex.Message}");
+                MessageBox.Show($"Không thể chuẩn bị phát video: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private string GetLocalizedString(string key)
+        {
+            if (Application.Current.Resources["LocalizationDictionary"] is ResourceDictionary localizationDict)
+            {
+                return localizationDict.Contains(key) ? localizationDict[key].ToString() : key;
+            }
+            return key;
+        }
+        private void LogViewedVideo(string videoUrl)
+        {
+            try
+            {
+                // Create log entry
+                string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - VIDEO: {videoUrl}";
+
+                // Add to in-memory history
+                _viewedImageHistory.Add(logEntry); // We can reuse the same list
+
+                // Ensure directory exists
+                string directory = Path.GetDirectoryName(_imageHistoryFilePath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                // Append to file
+                File.AppendAllText(_imageHistoryFilePath, logEntry + Environment.NewLine);
+
+                Debug.WriteLine($"Video view logged: {logEntry}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error logging viewed video: {ex.Message}");
+            }
         }
     }
 }

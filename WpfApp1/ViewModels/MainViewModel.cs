@@ -2,6 +2,8 @@
 using CommunityToolkit.Mvvm.Input;
 using Firebase.Database;
 using System.Windows; // Cần cho Application.Current.MainWindow nếu dùng làm Owner popup
+using WpfApp1.Models;
+
 
 // Thêm using cho các ViewModel khác và các View (Window) bạn sẽ mở popup
 using WpfApp1.ViewModels; // Chứa ChatViewModel, AddFriendViewModel, FriendListViewModel...
@@ -13,15 +15,30 @@ namespace WpfApp1.ViewModels
     {
         // Thuộc tính quan trọng: Giữ ViewModel của View đang hiển thị trong ContentControl
         [ObservableProperty]
-        private ObservableObject _currentViewModel; // Kiểu là ObservableObject hoặc lớp cơ sở chung khác
-        private ChatViewModel _chatViewModel = new ChatViewModel();
+        private ObservableObject _currentViewModel;
+
         private readonly FirebaseClient _firebaseClient;
-        // Constructor
-        public MainViewModel()
+        private ChatViewModel _chatViewModel;
+
+        public ChatViewModel ChatVm { get; private set; }
+        public SettingsViewModel SettingsVm { get; private set; }
+        public MatchingChatViewModel MatchingChatVm { get; }
+
+        public MainViewModel(FirebaseClient firebaseClient)
         {
+            // Gán FirebaseClient được truyền vào
+            _firebaseClient = firebaseClient;
+
             // Khởi tạo View/ViewModel mặc định khi ứng dụng bắt đầu
             // Ví dụ: Hiển thị ChatView làm mặc định
-            CurrentViewModel = new ChatViewModel();
+            ChatVm = new ChatViewModel(_firebaseClient); // ChatViewModel giờ nhận FirebaseClient
+            _chatViewModel = ChatVm; // Gán reference để dùng trong các method khác
+            string currentEmail=SharedData.Instance.userdata.Email;
+            MatchingChatVm = new MatchingChatViewModel(_firebaseClient, currentEmail);
+            MatchingChatVm.MatchFound += OnMatchFound;
+
+            SettingsVm = new SettingsViewModel(ChatVm, _firebaseClient);
+            CurrentViewModel = ChatVm; // Sử dụng ChatVm đã tạo thay vì tạo mới
         }
 
         // --- Commands để thay đổi CurrentViewModel (hiển thị trong ContentControl) ---
@@ -29,18 +46,15 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void ShowChat()
         {
-            // Kiểm tra để tránh tạo lại nếu đang hiển thị rồi (tùy chọn)
-            if (CurrentViewModel is not ChatViewModel)
-            {
-                CurrentViewModel = new ChatViewModel();
-            }
+            // Sử dụng lại ChatVm đã tạo thay vì tạo mới
+            CurrentViewModel = ChatVm;
         }
 
         [RelayCommand]
         private void ShowFriendList()
         {
             // Kiểm tra để tránh tạo lại nếu đang hiển thị rồi 
-           if (CurrentViewModel is not FriendListViewModel)
+            if (CurrentViewModel is not FriendListViewModel)
             {
                 CurrentViewModel = new FriendListViewModel();
             }
@@ -57,19 +71,26 @@ namespace WpfApp1.ViewModels
                 addFriendWin.Owner = Application.Current.MainWindow;
             }
             addFriendWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            addFriendWin.Show();    
+            addFriendWin.Show();
         }
 
         // --- Commands để mở cửa sổ Popup ---
+        private void OnMatchFound(string roomId, string opponentId)
+        {
+            // Được gọi từ MatchingChatViewModel
+            MessageBox.Show($"Đã ghép cặp thành công với {opponentId}! Vào phòng chat: {roomId}");
+
+            // Yêu cầu ChatViewModel tải phòng chat mới
+            // ChatVm.LoadRoom(roomId); // Giả sử ChatVm có phương thức này
+
+            // Tự động chuyển về màn hình chat
+            CurrentViewModel = ChatVm;
+        }
 
         [RelayCommand]
-        private void ShowProfilePopup()
+        private void ShowChatMatching()
         {
-            // Tạo và hiển thị cửa sổ Profile (giả sử tên là ProfileWindow)
-            // ProfileWindow profileWin = new ProfileWindow();
-            // profileWin.Owner = Application.Current.MainWindow; // Gán Owner nếu cần
-            // profileWin.Show();
-            MessageBox.Show("ProfileWindow chưa được tạo!"); // Thông báo tạm thời
+            CurrentViewModel = MatchingChatVm;
         }
 
         [RelayCommand]
@@ -88,20 +109,19 @@ namespace WpfApp1.ViewModels
             settingsWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             settingsWin.Show();
         }
+
         [RelayCommand]
         private void ShowSettings()
         {
-            if (CurrentViewModel is not SettingsViewModel)
-            {
-                CurrentViewModel = new SettingsViewModel(_chatViewModel, _firebaseClient);
-            }
+            // Sử dụng lại SettingsVm đã tạo thay vì tạo mới
+            CurrentViewModel = SettingsVm;
         }
 
         public void Cleanup()
         {
             System.Diagnostics.Debug.WriteLine("MainViewModel: Starting Cleanup...");
 
-            _chatViewModel.Cleanup();
+            _chatViewModel?.Cleanup();
 
             System.Diagnostics.Debug.WriteLine("MainViewModel: Cleanup of cached child ViewModels complete.");
         }

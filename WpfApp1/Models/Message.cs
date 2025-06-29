@@ -19,8 +19,11 @@ namespace WpfApp1.Models
         public bool IsMine { get; set; }
 
         public string Alignment { get; set; }
-        public bool IsImage { get; set; } // Thêm thuộc tính này
+        public bool IsImage { get; set; }
+        public bool IsVideo { get; set; }
         public string ImageUrl { get; set; }
+        public string VideoUrl { get; set; }
+        public string FileUrl { get; set; } 
 
         public Message()
         {

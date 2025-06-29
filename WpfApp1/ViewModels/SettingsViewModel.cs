@@ -9,6 +9,10 @@ using System.Windows.Input;
 using WpfApp1.Models;
 using Firebase.Database;
 using System.Diagnostics;
+using Firebase.Database.Query;
+using Microsoft.Win32;
+using System.Text;
+using System.IO;
 
 namespace WpfApp1.ViewModels
 {
@@ -73,7 +77,7 @@ namespace WpfApp1.ViewModels
             _enableNotifications = true;
             _showDesktopNotifications = true;
             _notifyWhenOffline = false;
-            _selectedLanguage = "Tiếng Việt";
+            _selectedLanguage = Properties.Settings.Default.SelectedLanguage ;
             _currentView = "AccountInfo";
             _userAvatarUrl = SharedData.Instance.userdata.AvatarUrl ?? "";
             var savedLanguage = Properties.Settings.Default.SelectedLanguage;
@@ -197,31 +201,152 @@ namespace WpfApp1.ViewModels
         }
 
         [RelayCommand]
-        private void ExportData()
+        private async void ExportData()
         {
-            MessageBox.Show(GetLocalizedString("ExportDataSuccess"));
+            try
+            {
+                string userEmail = SharedData.Instance.userdata.Email;
+                if (string.IsNullOrEmpty(userEmail))
+                {
+                    MessageBox.Show(GetLocalizedString("ExportDataError_UserNotFound"),
+                                    GetLocalizedString("Error"),
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Error);
+                    return;
+                }
+
+                // Get all contacts to get all chat IDs
+                var contacts = await _chatViewModel.GetContactsAsync(userEmail);
+                if (contacts == null || contacts.Count == 0)
+                {
+                    MessageBox.Show(GetLocalizedString("NoContactsFoundForExport"),
+                                    GetLocalizedString("Info"),
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Information);
+                    return;
+                }
+
+                var saveFileDialog = new SaveFileDialog
+                {
+                    FileName = $"ChatExport_{DateTime.Now:yyyyMMdd_HHmmss}.txt",
+                    Filter = "Text Files (*.txt)|*.txt|All Files (*.*)|*.*",
+                    Title = GetLocalizedString("SaveChatExportTitle")
+                };
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    Mouse.OverrideCursor = Cursors.Wait; // Show busy cursor
+                    try
+                    {
+                        var stringBuilder = new StringBuilder();
+                        stringBuilder.AppendLine($"--- Chat Export for {userEmail} ---");
+                        stringBuilder.AppendLine($"Export Date: {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
+                        stringBuilder.AppendLine("------------------------------------");
+                        stringBuilder.AppendLine();
+
+                        foreach (var contact in contacts)
+                        {
+                            if (!string.IsNullOrEmpty(contact.chatID))
+                            {
+                                stringBuilder.AppendLine($"### Chat with {contact.Name} ({contact.Email}) - Chat ID: {contact.chatID} ###");
+                                stringBuilder.AppendLine("------------------------------------");
+
+                                // Fetch messages for this chatID
+                                var messagesQuery = await _firebaseClient
+                                    .Child("messages")
+                                    .Child(contact.chatID)
+                                    .OrderBy("Timestamp") // Order by timestamp to get chronological order
+                                    .OnceAsync<Message>();
+
+                                var chatMessages = messagesQuery
+                                    .Select(item => item.Object)
+                                    .OrderBy(m => m.Timestamp) // Re-order in case Firebase query doesn't guarantee order
+                                    .ToList();
+
+                                if (chatMessages.Any())
+                                {
+                                    foreach (var message in chatMessages)
+                                    {
+                                        string senderName = (message.SenderId == userEmail) ? "You" : contact.Name;
+                                        string messageContent = message.Content;
+
+                                        if (message.IsImage && !string.IsNullOrEmpty(message.ImageUrl))
+                                        {
+                                            messageContent = $"[Image: {message.ImageUrl}] {message.Content}";
+                                        }
+                                        else if (message.IsVideo && !string.IsNullOrEmpty(message.VideoUrl))
+                                        {
+                                            messageContent = $"[Video: {message.VideoUrl}] {message.Content}";
+                                        }
+                                        else if (!string.IsNullOrEmpty(message.FileUrl))
+                                        {
+                                            messageContent = $"[File: {message.FileUrl}] {message.Content}";
+                                        }
+
+                                        stringBuilder.AppendLine($"[{message.Timestamp:dd/MM/yyyy HH:mm:ss}] {senderName}: {messageContent}");
+                                    }
+                                }
+                                else
+                                {
+                                    stringBuilder.AppendLine("No messages found in this chat.");
+                                }
+                                stringBuilder.AppendLine(); // Add a blank line for separation
+                            }
+                        }
+
+                        File.WriteAllText(saveFileDialog.FileName, stringBuilder.ToString());
+                        MessageBox.Show(GetLocalizedString("ExportDataSuccess") + $" {saveFileDialog.FileName}",
+                                        GetLocalizedString("Success"),
+                                        MessageBoxButton.OK,
+                                        MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error exporting data: {ex.Message}");
+                        MessageBox.Show($"{GetLocalizedString("ExportDataError")}: {ex.Message}",
+                                        GetLocalizedString("Error"),
+                                        MessageBoxButton.OK,
+                                        MessageBoxImage.Error);
+                    }
+                    finally
+                    {
+                        Mouse.OverrideCursor = null; // Restore cursor
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error setting up export: {ex.Message}");
+                MessageBox.Show($"{GetLocalizedString("ExportDataError_General")}: {ex.Message}",
+                                GetLocalizedString("Error"),
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error);
+            }
         }
+
 
         [RelayCommand]
         private async void DeleteData()
         {
             var result = MessageBox.Show(GetLocalizedString("DeleteDataConfirmation"),
-                                       GetLocalizedString("Confirmation"),
-                                       MessageBoxButton.YesNo,
-                                       MessageBoxImage.Warning);
+                                         GetLocalizedString("Confirmation"),
+                                         MessageBoxButton.YesNo,
+                                         MessageBoxImage.Warning);
             if (result == MessageBoxResult.Yes)
             {
+                Mouse.OverrideCursor = Cursors.Wait; // Show busy cursor
                 try
                 {
                     string userEmail = SharedData.Instance.userdata.Email;
                     if (string.IsNullOrEmpty(userEmail))
                     {
-                        MessageBox.Show(GetLocalizedString("DataDeletionError"),
-                                      GetLocalizedString("Error"),
-                                      MessageBoxButton.OK,
-                                      MessageBoxImage.Error);
+                        MessageBox.Show(GetLocalizedString("DataDeletionError_UserNotFound"),
+                                        GetLocalizedString("Error"),
+                                        MessageBoxButton.OK,
+                                        MessageBoxImage.Error);
                         return;
                     }
+
                     if (_chatViewModel == null)
                     {
                         MessageBox.Show("ChatViewModel is not initialized.",
@@ -230,13 +355,15 @@ namespace WpfApp1.ViewModels
                                         MessageBoxImage.Error);
                         return;
                     }
-                    var contacts = await _chatViewModel.GetContactsAsync(SharedData.Instance.userdata.Email);
+
+                    // Get all contacts to identify chat IDs for deletion
+                    var contacts = await _chatViewModel.GetContactsAsync(userEmail);
                     if (contacts == null || contacts.Count == 0)
                     {
-                        MessageBox.Show(GetLocalizedString("NoContactsFound"),
-                                      GetLocalizedString("Info"),
-                                      MessageBoxButton.OK,
-                                      MessageBoxImage.Information);
+                        MessageBox.Show(GetLocalizedString("NoContactsFoundToDelete"),
+                                        GetLocalizedString("Info"),
+                                        MessageBoxButton.OK,
+                                        MessageBoxImage.Information);
                         return;
                     }
 
@@ -244,31 +371,46 @@ namespace WpfApp1.ViewModels
                     {
                         if (!string.IsNullOrEmpty(contact.chatID))
                         {
-                            // Fix: Use single Child call with combined path
+                            // Delete messages associated with this chat ID
                             await _firebaseClient
                                 .Child($"messages/{contact.chatID}")
                                 .DeleteAsync();
                             Debug.WriteLine($"Deleted messages for chatID: {contact.chatID}");
+
+                            // Optionally, if contacts are also stored in Firebase Realtime Database
+                            // and you want to remove the chat ID from the user's contacts list,
+                            // you might need additional logic here depending on your Firebase structure.
+                            // For Firestore contacts, you would remove the document:
+                            // await FirestoreHelper.database.Collection("users").Document(userEmail).Collection("contacts").Document(contact.Email).DeleteAsync();
                         }
                     }
 
+                    // Clear messages from the UI
                     if (_chatViewModel?.Messages != null)
                     {
                         _chatViewModel.Messages.Clear();
                     }
+                    if (_chatViewModel?.Files != null)
+                    {
+                        _chatViewModel.Files.Clear();
+                    }
 
                     MessageBox.Show(GetLocalizedString("DataDeletedMessage"),
-                                  GetLocalizedString("Success"),
-                                  MessageBoxButton.OK,
-                                  MessageBoxImage.Information);
+                                    GetLocalizedString("Success"),
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Error deleting data: {ex.Message}");
                     MessageBox.Show($"{GetLocalizedString("DataDeletionError")}: {ex.Message}",
-                                  GetLocalizedString("Error"),
-                                  MessageBoxButton.OK,
-                                  MessageBoxImage.Error);
+                                    GetLocalizedString("Error"),
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Error);
+                }
+                finally
+                {
+                    Mouse.OverrideCursor = null; // Restore cursor
                 }
             }
         }

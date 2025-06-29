@@ -6,6 +6,8 @@
         public string FileName { get; set; }
         public string FileInfo { get; set; }
         public string FilePathOrUrl { get; set; }
-        public string DownloadUrl { get; set; } // Added this property
+        public string DownloadUrl { get; set; } 
+        public string FileExtension { get; set; }
+        public bool IsVideo { get; set; }
     }
 }

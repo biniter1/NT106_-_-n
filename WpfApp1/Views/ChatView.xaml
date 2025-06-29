@@ -53,6 +53,12 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+
+            <ContextMenu x:Key="FileMessageContextMenu" DataContext="{Binding Path=PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                <MenuItem Header="Tải xuống" 
+                          Command="{Binding DownloadMessageFileCommand}" 
+                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            </ContextMenu>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -201,12 +207,32 @@
                 <ItemsControl ItemsSource="{Binding Messages}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border MaxWidth="400" Background="{Binding IsMine, Converter={StaticResource MessageBackgroundConverter}}" CornerRadius="10" Padding="10" Margin="5" HorizontalAlignment="{Binding IsMine, Converter={StaticResource MessageAlignmentConverter}}">
-                                <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"/>
+                            <Border MaxWidth="400" 
+                                    Background="{Binding IsMine, Converter={StaticResource MessageBackgroundConverter}}" 
+                                    CornerRadius="10" Padding="10" Margin="5" 
+                                    HorizontalAlignment="{Binding IsMine, Converter={StaticResource MessageAlignmentConverter}}" 
+                                    ContextMenu="{StaticResource FileMessageContextMenu}"
+                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                                <Grid>
+                                    <!-- Text message -->
+                                    <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"/>
+                                    <!-- Image message -->
+                                    <Image Source="{Binding ImageUrl}" MaxHeight="400" MaxWidth="400" 
+                                           Stretch="Uniform" Margin="0" 
+                                           Visibility="{Binding IsImage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Image.InputBindings>
+                                            <MouseBinding MouseAction="LeftDoubleClick" 
+                                                          Command="{Binding DataContext.ViewFullImageCommand, 
+                                                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                          CommandParameter="{Binding ImageUrl}" />
+                                        </Image.InputBindings>
+                                    </Image>
+                                </Grid>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
             </ScrollViewer>
 
             <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10" Background="{StaticResource WhiteBrush}">
@@ -227,6 +253,7 @@
                     <Button Grid.Column="1" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource InsertEmojiTooltip}" Command="{Binding ShowEmojiPickerCommand}">
                         <TextBlock Text="😊" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Button>
+                    
 
                     <!-- Ô nhập tin nhắn -->
                     <Border Grid.Column="2" CornerRadius="15" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="{StaticResource WhiteBrush}" Margin="0,0,10,0">
@@ -320,7 +347,19 @@
                                     <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding FileName}" Foreground="{StaticResource TextPrimaryBrush}"/>
                                     <TextBlock Text="{Binding FileInfo}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
-                                <Button Grid.Column="2" FontFamily="Segoe Fluent Icons" Content="" ToolTip="{DynamicResource DownloadTooltip}" Width="30" Height="30" Margin="10,0,0,0" FontSize="16" Background="Transparent" BorderThickness="0" Foreground="Gray" HorizontalAlignment="Right"/>
+                                <Button Grid.Column="2" 
+                                        FontFamily="Segoe Fluent Icons" 
+                                        Content="" 
+                                        ToolTip="{DynamicResource DownloadTooltip}" 
+                                        Width="30" Height="30" 
+                                        Margin="10,0,0,0" 
+                                        FontSize="16" 
+                                        Background="Transparent" 
+                                        BorderThickness="0" 
+                                        Foreground="Gray" 
+                                        HorizontalAlignment="Right"
+                                        Command="{Binding DataContext.DownloadFileCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                        CommandParameter="{Binding}"/>  
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
