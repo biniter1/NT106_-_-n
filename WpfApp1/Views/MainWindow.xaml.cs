@@ -233,13 +233,22 @@ namespace WpfApp1
             {
                 if (App.AppNotifier != null)
                 {
-                    // Create  if needed
-                    var options = new MessageOptions
-                    {
-                      
-                    };
+                    // Tạo UserControl với nội dung thông báo động
+                    var notificationControl = new MyCustomNotificationControl(message);
 
-                    App.AppNotifier.ShowInformation(message, options);
+                    // Tạo custom notification
+                    var notification = new MyCustomNotification(
+                                    message,                       // text quản lý
+                                    notificationControl,           // UserControl hiển thị
+                                    new MessageOptions
+                                    {           // options
+                                        FreezeOnMouseEnter = true,
+                                        UnfreezeOnMouseLeave = true,
+                                        // Bạn có thể thêm Duration, v.v.
+                                    }
+                                );
+
+                    App.AppNotifier.Notify<MyCustomNotification>(() => notification);
                 }
                 else
                 {
