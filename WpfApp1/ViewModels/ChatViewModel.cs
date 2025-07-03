@@ -52,7 +52,30 @@ namespace WpfApp1.ViewModels
         private string _imageHistoryFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "WpfApp1", "ImageHistory.txt");
+        public void InitiateChatWith(Contact contactToChat)
+        {
+            if (contactToChat == null) return;
 
+            // Sử dụng chatID làm khóa chính để tìm kiếm vì nó là duy nhất cho một cặp người dùng
+            var existingContact = Contacts.FirstOrDefault(c => c.chatID == contactToChat.chatID);
+
+            if (existingContact != null)
+            {
+                // Nếu đã có trong danh sách chat, chỉ cần chọn (focus) vào nó
+                SelectedContact = existingContact;
+            }
+            else
+            {
+                // Nếu chưa có, thêm mới vào danh sách
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Contacts.Insert(0, contactToChat); // Thêm vào đầu danh sách cho dễ thấy
+                });
+
+                // Và chọn (focus) vào contact vừa thêm
+                SelectedContact = contactToChat;
+            }
+        }
         partial void OnSelectedContactChanged(Contact value)
         {
             SendMessageCommand.NotifyCanExecuteChanged();
@@ -419,9 +442,6 @@ namespace WpfApp1.ViewModels
                     .Child(contact.chatID)
                     .PostAsync(newMessage);
 
-                // REMOVE THIS LINE:
-                // Messages.Add(newMessage); 
-                // The message will be added by the real-time listener
                 NewMessageText = string.Empty;
             }
         }
@@ -492,11 +512,6 @@ namespace WpfApp1.ViewModels
                             .PostAsync(newMessage);
 
                         newMessage.Id = result.Key;
-
-                        //Application.Current.Dispatcher.Invoke(() =>
-                        //{
-                        //    Messages.Add(newMessage);
-                        //});
 
                         // Create FileItem for sidebar display
                         var fileItem = new FileItem
@@ -831,7 +846,6 @@ namespace WpfApp1.ViewModels
 
             Debug.WriteLine("ChatViewModel cleanup complete.");
         }
-
         // Add this method after the SelectFileAsync method
         [RelayCommand]
         private void ViewFullImage(string imageUrl)
@@ -841,7 +855,6 @@ namespace WpfApp1.ViewModels
                 Debug.WriteLine("Empty image URL provided");
                 return;
             }
-
             try
             {
                 // Create image viewer window
@@ -1156,13 +1169,10 @@ namespace WpfApp1.ViewModels
         {
             try
             {
-                // Create log entry
                 string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - VIDEO: {videoUrl}";
 
-                // Add to in-memory history
                 _viewedImageHistory.Add(logEntry); // We can reuse the same list
 
-                // Ensure directory exists
                 string directory = Path.GetDirectoryName(_imageHistoryFilePath);
                 if (!Directory.Exists(directory))
                 {
