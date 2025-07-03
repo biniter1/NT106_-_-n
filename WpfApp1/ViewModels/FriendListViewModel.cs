@@ -11,6 +11,7 @@ using System.Text;
 using WpfApp1.Views;
 using System.Security.Cryptography;
 using Firebase.Database;
+using WpfApp1.Services;
 
 namespace WpfApp1.ViewModels
 {
@@ -148,7 +149,7 @@ namespace WpfApp1.ViewModels
             try
             {
                 await contactDocRef.SetAsync(contact); // Lưu thông tin contact
-                MessageBox.Show($"Contact with {contact.Name} ({contact.Email}) has been added successfully.");
+                //MessageBox.Show($"Contact with {contact.Name} ({contact.Email}) has been added successfully.");
             }
             catch (Exception ex)
             {
@@ -179,47 +180,48 @@ namespace WpfApp1.ViewModels
             if (contactVM == null) return;
 
             var currentUser = SharedData.Instance.userdata;
+            // Tạo chatID duy nhất và nhất quán
             var chatID = GenerateChatId(currentUser.Email, contactVM.Email);
 
-            // Tạo contact cho người dùng A
-            var newContactA = new Contact
+            // Tạo đối tượng Contact đại diện cho người bạn mà mình muốn chat
+            var contactForCurrentUser = new Contact
             {
                 AvatarUrl = contactVM.AvatarUrl,
                 Name = contactVM.Name,
                 Email = contactVM.Email,
-                chatID = GenerateChatId(SharedData.Instance.userdata.Email, contactVM.Email),
-                IsOnline = true,
+                chatID = chatID, // Sử dụng chatID đã tạo
+                IsOnline = true, // Tạm thời, trạng thái online sẽ được cập nhật sau
             };
 
-            // Lưu contact cho người dùng A
-            //await AddContactAsync(SharedData.userdata.Email, newContactA);
-
-            // Tạo contact cho người dùng B (người bạn)
-            var newContactB = new Contact
+            // Tạo đối tượng Contact đại diện cho mình trong danh sách của người bạn
+            var contactForFriend = new Contact
             {
-                AvatarUrl = SharedData.Instance.userdata.AvatarUrl,
-                Name = SharedData.Instance.userdata.Name,
-                Email = SharedData.Instance.userdata.Email,
-                chatID = GenerateChatId(SharedData.Instance.userdata.Email, contactVM.Email),
-                IsOnline = true,
+                AvatarUrl = currentUser.AvatarUrl,
+                Name = currentUser.Name,
+                Email = currentUser.Email,
+                chatID = chatID, // Sử dụng cùng chatID
+                IsOnline = true, // Tạm thời
             };
 
+            // Kiểm tra và thêm contact cho cả hai người nếu chưa tồn tại
+            // (Logic này của bạn đã đúng)
             var contactsOfA = await GetContactsAsync(currentUser.Email);
             if (!contactsOfA.Any(c => c.chatID == chatID))
             {
-                MessageBox.Show($"Đang mở cửa sổ chat với: {contactVM.Name} ({contactVM.Email})");
-                await AddContactAsync(currentUser.Email, newContactA);
+                await AddContactAsync(currentUser.Email, contactForCurrentUser);
             }
 
             var contactsOfB = await GetContactsAsync(contactVM.Email);
             if (!contactsOfB.Any(c => c.chatID == chatID))
             {
-                await AddContactAsync(contactVM.Email, newContactB);
+                await AddContactAsync(contactVM.Email, contactForFriend);
             }
-            MessageBox.Show($"Bạn đã contact với người này rồi : {contactVM.Name} ({contactVM.Email})");
-            return;
-            // Lưu contact cho người bạn (contact đối phương)
-            //await AddContactAsync(contactVM.Email, newContactB);
+
+            // --- THAY ĐỔI TẠI ĐÂY ---
+            // Thay vì hiển thị MessageBox, hãy phát sự kiện để yêu cầu mở chat
+
+            // Phát sự kiện và gửi đi đối tượng contact mà ChatView cần để làm việc
+            EventAggregator.Instance.Publish(new StartChatEvent(contactForCurrentUser));
         }
         private bool CanSendMessage() => SelectedContact != null;
         private async Task RemoveFriendRequestAsync(string myEmail, string requesterId)
