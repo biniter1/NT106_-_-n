@@ -28,6 +28,7 @@ namespace WpfApp1.ViewModels
         // THÊM MỚI: Tạo instance duy nhất cho FriendListVm
         public FriendListViewModel FriendListVm { get; private set; }
 
+        public AIChatViewModel AIChatVm { get; }
 
         private readonly NotificationService _notificationService;
         private IDisposable _notificationListener;
@@ -41,6 +42,8 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private int _unreadNotificationCount;
 
+        [ObservableProperty]
+        private bool _isAIChatVisible;
         public ObservableCollection<Notification> AllNotifications { get; } = new();
 
         public MainViewModel(FirebaseClient firebaseClient)
@@ -57,6 +60,9 @@ namespace WpfApp1.ViewModels
             string safeKey = currentEmail.Replace(".", "_");
             MatchingChatVm = new MatchingChatViewModel(_firebaseClient, safeKey);
             MatchingChatVm.MatchFound += OnMatchFound;
+
+            AIChatVm = new AIChatViewModel();
+            IsAIChatVisible = false; // Mặc định ẩn
 
             // Đặt View mặc định
             CurrentViewModel = ChatVm;
@@ -92,6 +98,11 @@ namespace WpfApp1.ViewModels
             CurrentViewModel = ChatVm;
         }
 
+        [RelayCommand]
+        private void ToggleAIChat()
+        {
+            IsAIChatVisible = !IsAIChatVisible;
+        }
 
         // --- Commands để thay đổi CurrentViewModel ---
 

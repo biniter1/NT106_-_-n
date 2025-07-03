@@ -8,6 +8,7 @@
         mc:Ignorable="d"
         Title="Settings" Height="600" Width="900"
         WindowStartupLocation="CenterOwner"
+        Icon="pack://application:,,,/Assets/setting.png"
         Background="{StaticResource WhiteBrush}">
     <Grid>
     </Grid>

@@ -9,6 +9,7 @@
         mc:Ignorable="d"
         Title="{DynamicResource AddFriendTitle}" Height="500" Width="450"
         WindowStartupLocation="CenterOwner"
+        Icon="pack://application:,,,/Assets/chat.png"
         Background="#F0F0F0">
     <Window.Resources>
         <ResourceDictionary>
