@@ -163,6 +163,17 @@ namespace WpfApp1.ViewModels
         }
 
         [RelayCommand]
+        private void ShowCreateGroupPopup()
+        {
+            var createGroupWindow = new Views.CreateGroupWindow
+            {
+                Owner = Application.Current.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            
+            createGroupWindow.ShowDialog();
+        }
+
         private void HideNotificationPopup()
         {
             IsNotificationPopupVisible = false;

@@ -423,6 +423,14 @@
                                    FontSize="20" 
                                    FontWeight="Bold" 
                                    Foreground="{StaticResource TextPrimaryColor}"/>
+                        
+                        <!-- Thêm button "Tạo nhóm" ngay dưới tiêu đề -->
+                        <Button Content="+ Tạo nhóm" 
+                                Style="{StaticResource ModernButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                Margin="0,8,0,8"
+                                Command="{Binding CreateGroupCommand}"/>
+                        
                         <Rectangle Height="1" Fill="{StaticResource BorderColor}" Margin="0,8,0,0"/>
                     </StackPanel>
 
