@@ -11,6 +11,13 @@
   <ItemGroup>
     <None Remove="Assets\chat.png" />
     <None Remove="Assets\setting.png" />
+    <None Remove="secret.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="secret.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

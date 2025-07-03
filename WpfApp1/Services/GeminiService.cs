@@ -14,7 +14,6 @@ namespace WpfApp1.Services
         private readonly HttpClient _httpClient;
         private readonly string _projectId = "920846316053"; // THAY THẾ bằng Project ID của bạn
         private readonly string _location = "us-central1"; // THAY THẾ bằng khu vực của bạn
-        private readonly string _apiKey = "AIzaSyAi21xB8WEIcd4UR71wk6Rt4-3b4eg5n_0"; // THAY THẾ bằng API key của bạn
 
         public GeminiService()
         {
@@ -25,8 +24,9 @@ namespace WpfApp1.Services
         {
             try
             {
+                var apiKey = await SecretManager.LoadApiKeyAsync();
                 // Sử dụng REST API trực tiếp thay vì gRPC
-                var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={_apiKey}";
+                var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={apiKey}";
 
                 var requestBody = new
                 {
