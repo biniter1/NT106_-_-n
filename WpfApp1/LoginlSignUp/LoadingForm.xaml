@@ -7,9 +7,7 @@
         AllowsTransparency="True">
     <Window.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
-            </ResourceDictionary.MergedDictionaries>
+            
         </ResourceDictionary>
     </Window.Resources>
     <Border BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="5">

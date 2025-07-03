@@ -1,13 +1,14 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Firebase.Database;
-using System.Windows; // Cần cho Application.Current.MainWindow nếu dùng làm Owner popup
+using System; // Thêm using này nếu chưa có
+using System.Collections.ObjectModel;
+using System.Linq; // Thêm using này nếu chưa có
+using System.Windows;
 using WpfApp1.Models;
-
-
-// Thêm using cho các ViewModel khác và các View (Window) bạn sẽ mở popup
-using WpfApp1.ViewModels; // Chứa ChatViewModel, AddFriendViewModel, FriendListViewModel...
-using WpfApp1.Views;      // Chứa ProfileWindow, SettingsWindow...
+using WpfApp1.Services;
+using WpfApp1.ViewModels;
+using WpfApp1.Views;
 
 namespace WpfApp1.ViewModels
 {
@@ -18,49 +19,107 @@ namespace WpfApp1.ViewModels
         private ObservableObject _currentViewModel;
 
         private readonly FirebaseClient _firebaseClient;
-        private ChatViewModel _chatViewModel;
 
+        // Giữ các instance của ViewModel con để tái sử dụng
         public ChatViewModel ChatVm { get; private set; }
         public SettingsViewModel SettingsVm { get; private set; }
         public MatchingChatViewModel MatchingChatVm { get; }
 
+        // THÊM MỚI: Tạo instance duy nhất cho FriendListVm
+        public FriendListViewModel FriendListVm { get; private set; }
+
+        public AIChatViewModel AIChatVm { get; }
+
+        private readonly NotificationService _notificationService;
+        private IDisposable _notificationListener;
+
+        [ObservableProperty]
+        private bool _isNotificationPopupVisible;
+
+        [ObservableProperty]
+        private string _notificationMessage;
+
+        [ObservableProperty]
+        private int _unreadNotificationCount;
+
+        [ObservableProperty]
+        private bool _isAIChatVisible;
+        public ObservableCollection<Notification> AllNotifications { get; } = new();
+
         public MainViewModel(FirebaseClient firebaseClient)
         {
-            // Gán FirebaseClient được truyền vào
             _firebaseClient = firebaseClient;
 
-            // Khởi tạo View/ViewModel mặc định khi ứng dụng bắt đầu
-            // Ví dụ: Hiển thị ChatView làm mặc định
-            ChatVm = new ChatViewModel(_firebaseClient); // ChatViewModel giờ nhận FirebaseClient
-            _chatViewModel = ChatVm; // Gán reference để dùng trong các method khác
-            string currentEmail=SharedData.Instance.userdata.Email;
-            MatchingChatVm = new MatchingChatViewModel(_firebaseClient, currentEmail);
+            // Khởi tạo các ViewModel con một lần duy nhất
+            ChatVm = new ChatViewModel(_firebaseClient);
+            SettingsVm = new SettingsViewModel(ChatVm, _firebaseClient);
+            // THÊM MỚI: Khởi tạo FriendListVm
+            FriendListVm = new FriendListViewModel();
+
+            string currentEmail = SharedData.Instance.userdata.Email;
+            string safeKey = currentEmail.Replace(".", "_");
+            MatchingChatVm = new MatchingChatViewModel(_firebaseClient, safeKey);
             MatchingChatVm.MatchFound += OnMatchFound;
 
-            SettingsVm = new SettingsViewModel(ChatVm, _firebaseClient);
-            CurrentViewModel = ChatVm; // Sử dụng ChatVm đã tạo thay vì tạo mới
+            AIChatVm = new AIChatViewModel();
+            IsAIChatVisible = false; // Mặc định ẩn
+
+            // Đặt View mặc định
+            CurrentViewModel = ChatVm;
+
+            _notificationService = new NotificationService(firebaseClient);
+            _notificationListener = _notificationService.ListenForNotifications(safeKey, (notification) =>
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (!notification.IsRead && !AllNotifications.Any(n => n.Id == notification.Id))
+                    {
+                        AllNotifications.Insert(0, notification);
+                        UnreadNotificationCount = AllNotifications.Count(n => !n.IsRead);
+                        NotificationMessage = notification.Message;
+                        IsNotificationPopupVisible = true;
+                    }
+                });
+            });
+
+            // THÊM MỚI: Đăng ký lắng nghe sự kiện yêu cầu mở chat
+            EventAggregator.Instance.Subscribe<StartChatEvent>(OnStartChatReceived);
         }
 
-        // --- Commands để thay đổi CurrentViewModel (hiển thị trong ContentControl) ---
+        // THÊM MỚI: Phương thức xử lý sự kiện được phát ra từ FriendListViewModel
+        private void OnStartChatReceived(StartChatEvent e)
+        {
+            if (e?.FriendToChat == null) return;
+
+            // Bước 1: Yêu cầu ChatViewModel chuẩn bị cuộc trò chuyện
+            ChatVm.InitiateChatWith(e.FriendToChat);
+
+            // Bước 2: Chuyển View hiện tại sang ChatView
+            CurrentViewModel = ChatVm;
+        }
+
+        [RelayCommand]
+        private void ToggleAIChat()
+        {
+            IsAIChatVisible = !IsAIChatVisible;
+        }
+
+        // --- Commands để thay đổi CurrentViewModel ---
 
         [RelayCommand]
         private void ShowChat()
         {
-            // Sử dụng lại ChatVm đã tạo thay vì tạo mới
             CurrentViewModel = ChatVm;
         }
 
         [RelayCommand]
         private void ShowFriendList()
         {
-            // Kiểm tra để tránh tạo lại nếu đang hiển thị rồi 
-            if (CurrentViewModel is not FriendListViewModel)
-            {
-                CurrentViewModel = new FriendListViewModel();
-            }
+            // THAY ĐỔI: Sử dụng lại FriendListVm đã tạo thay vì tạo mới
+            CurrentViewModel = FriendListVm;
         }
 
-        // Command để mở cửa sổ AddFriendWindow popup
+        // ... các command và phương thức khác của bạn giữ nguyên ...
         [RelayCommand]
         private void ShowAddFriendPopup()
         {
@@ -74,30 +133,17 @@ namespace WpfApp1.ViewModels
             addFriendWin.Show();
         }
 
-        // --- Commands để mở cửa sổ Popup ---
         private void OnMatchFound(string roomId, string opponentId)
         {
-            // Được gọi từ MatchingChatViewModel
             MessageBox.Show($"Đã ghép cặp thành công với {opponentId}! Vào phòng chat: {roomId}");
-
-            // Yêu cầu ChatViewModel tải phòng chat mới
-            // ChatVm.LoadRoom(roomId); // Giả sử ChatVm có phương thức này
-
-            // Tự động chuyển về màn hình chat
             CurrentViewModel = ChatVm;
-        }
-
-        [RelayCommand]
-        private void ShowChatMatching()
-        {
-            CurrentViewModel = MatchingChatVm;
         }
 
         [RelayCommand]
         private void ShowSettingsPopup()
         {
-            var settingsVM = new SettingsViewModel(_chatViewModel, _firebaseClient);
-            var settingsWin = new SettingsWindow(_chatViewModel, _firebaseClient)
+            var settingsVM = new SettingsViewModel(ChatVm, _firebaseClient);
+            var settingsWin = new SettingsWindow(ChatVm, _firebaseClient)
             {
                 DataContext = settingsVM
             };
@@ -113,7 +159,6 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void ShowSettings()
         {
-            // Sử dụng lại SettingsVm đã tạo thay vì tạo mới
             CurrentViewModel = SettingsVm;
         }
 
@@ -129,12 +174,22 @@ namespace WpfApp1.ViewModels
             createGroupWindow.ShowDialog();
         }
 
+        private void HideNotificationPopup()
+        {
+            IsNotificationPopupVisible = false;
+        }
+
+        [RelayCommand]
+        private void ShowNotifications()
+        {
+            MessageBox.Show($"Bạn có {UnreadNotificationCount} thông báo chưa đọc.");
+        }
+
         public void Cleanup()
         {
+            _notificationListener?.Dispose();
             System.Diagnostics.Debug.WriteLine("MainViewModel: Starting Cleanup...");
-
-            _chatViewModel?.Cleanup();
-
+            ChatVm?.Cleanup();
             System.Diagnostics.Debug.WriteLine("MainViewModel: Cleanup of cached child ViewModels complete.");
         }
     }

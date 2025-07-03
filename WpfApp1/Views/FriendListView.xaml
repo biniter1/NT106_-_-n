@@ -6,12 +6,12 @@
              xmlns:local="clr-namespace:WpfApp1.Views"
              xmlns:vm="clr-namespace:WpfApp1.ViewModels" 
              xmlns:models="clr-namespace:WpfApp1.Models" 
+             xmlns:converters="clr-namespace:WpfApp1.Converters"
              mc:Ignorable="d"
              d:DesignHeight="600" Width="1122">
 
     <UserControl.Resources>
         <ResourceDictionary>
-            <!-- Colors -->
             <SolidColorBrush x:Key="PrimaryColor" Color="#6366F1"/>
             <SolidColorBrush x:Key="SecondaryColor" Color="#8B5CF6"/>
             <SolidColorBrush x:Key="AccentColor" Color="#06B6D4"/>
@@ -24,7 +24,8 @@
             <SolidColorBrush x:Key="SuccessColor" Color="#10B981"/>
             <SolidColorBrush x:Key="DangerColor" Color="#EF4444"/>
 
-            <!-- Gradients -->
+            <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
             <LinearGradientBrush x:Key="FriendGradient" StartPoint="0,0" EndPoint="1,1">
                 <GradientStop Color="#6366F1" Offset="0"/>
                 <GradientStop Color="#8B5CF6" Offset="1"/>
@@ -35,7 +36,6 @@
                 <GradientStop Color="#0891B2" Offset="1"/>
             </LinearGradientBrush>
 
-            <!-- Button Styles -->
             <Style x:Key="ModernButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="{StaticResource PrimaryColor}"/>
                 <Setter Property="Foreground" Value="White"/>
@@ -117,14 +117,7 @@
                 </Setter>
             </Style>
 
-            <!-- Avatar Style -->
             <Style x:Key="AvatarStyle" TargetType="Border">
-                <Style.Resources>
-                    <Style TargetType="Ellipse">
-                        <Setter Property="StrokeThickness" Value="3"/>
-                        <Setter Property="Stroke" Value="White"/>
-                    </Style>
-                </Style.Resources>
                 <Setter Property="CornerRadius" Value="50"/>
                 <Setter Property="Padding" Value="0"/>
                 <Setter Property="Effect">
@@ -134,7 +127,6 @@
                 </Setter>
             </Style>
 
-            <!-- ListBox Styles -->
             <Style x:Key="ModernListBoxStyle" TargetType="ListBox">
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="BorderThickness" Value="0"/>
@@ -170,7 +162,6 @@
                 </Setter>
             </Style>
 
-            <!-- Card Style -->
             <Style x:Key="CardStyle" TargetType="Border">
                 <Setter Property="Background" Value="{StaticResource SurfaceColor}"/>
                 <Setter Property="CornerRadius" Value="16"/>
@@ -182,11 +173,27 @@
                 </Setter>
             </Style>
 
-            <!-- Data Templates -->
             <DataTemplate x:Key="FriendListItemTemplate">
                 <StackPanel Orientation="Horizontal">
                     <Border Style="{StaticResource AvatarStyle}" Width="40" Height="40">
-                        <Ellipse Fill="{StaticResource FriendGradient}"/>
+                        <Grid>
+                            <Border CornerRadius="20" Background="#20000000" Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"/>
+                            <Image Source="{Binding AvatarUrl}" Stretch="UniformToFill">
+                                <Image.Clip>
+                                    <EllipseGeometry Center="20,20" RadiusX="20" RadiusY="20"/>
+                                </Image.Clip>
+                                <Image.Style>
+                                    <Style TargetType="Image">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsLoadingAvatar}" Value="True">
+                                                <Setter Property="Visibility" Value="Hidden"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Image.Style>
+                            </Image>
+                        </Grid>
                     </Border>
                     <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Name}" 
@@ -203,7 +210,24 @@
             <DataTemplate x:Key="GroupListItemTemplate">
                 <StackPanel Orientation="Horizontal">
                     <Border Style="{StaticResource AvatarStyle}" Width="40" Height="40">
-                        <Ellipse Fill="{StaticResource GroupGradient}"/>
+                        <Grid>
+                            <Border CornerRadius="20" Background="#20000000" Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"/>
+                            <Image Source="{Binding AvatarUrl}" Stretch="UniformToFill">
+                                <Image.Clip>
+                                    <EllipseGeometry Center="20,20" RadiusX="20" RadiusY="20"/>
+                                </Image.Clip>
+                                <Image.Style>
+                                    <Style TargetType="Image">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsLoadingAvatar}" Value="True">
+                                                <Setter Property="Visibility" Value="Hidden"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Image.Style>
+                            </Image>
+                        </Grid>
                     </Border>
                     <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Name}" 
@@ -221,7 +245,24 @@
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel HorizontalAlignment="Center">
                         <Border Style="{StaticResource AvatarStyle}" Width="100" Height="100" Margin="0,0,0,20">
-                            <Ellipse Fill="{StaticResource FriendGradient}"/>
+                            <Grid>
+                                <Border CornerRadius="50" Background="#20000000" Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"/>
+                                <Image Source="{Binding AvatarUrl}" Stretch="UniformToFill">
+                                    <Image.Clip>
+                                        <EllipseGeometry Center="50,50" RadiusX="50" RadiusY="50"/>
+                                    </Image.Clip>
+                                    <Image.Style>
+                                        <Style TargetType="Image">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsLoadingAvatar}" Value="True">
+                                                    <Setter Property="Visibility" Value="Hidden"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Image.Style>
+                                </Image>
+                            </Grid>
                         </Border>
 
                         <TextBlock Text="{Binding Name}" 
@@ -256,7 +297,24 @@
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel HorizontalAlignment="Center">
                         <Border Style="{StaticResource AvatarStyle}" Width="100" Height="100" Margin="0,0,0,20">
-                            <Ellipse Fill="{StaticResource GroupGradient}"/>
+                            <Grid>
+                                <Border CornerRadius="50" Background="#20000000" Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"/>
+                                <Image Source="{Binding AvatarUrl}" Stretch="UniformToFill">
+                                    <Image.Clip>
+                                        <EllipseGeometry Center="50,50" RadiusX="50" RadiusY="50"/>
+                                    </Image.Clip>
+                                    <Image.Style>
+                                        <Style TargetType="Image">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsLoadingAvatar}" Value="True">
+                                                    <Setter Property="Visibility" Value="Hidden"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Image.Style>
+                                </Image>
+                            </Grid>
                         </Border>
 
                         <TextBlock Text="{Binding Name}" 
@@ -296,7 +354,24 @@
                         </Grid.ColumnDefinitions>
 
                         <Border Grid.Column="0" Style="{StaticResource AvatarStyle}" Width="50" Height="50" Margin="0,0,16,0">
-                            <Ellipse Fill="{StaticResource FriendGradient}"/>
+                            <Grid>
+                                <Border CornerRadius="25" Background="#20000000" Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"/>
+                                <Image Source="{Binding AvatarUrl}" Stretch="UniformToFill">
+                                    <Image.Clip>
+                                        <EllipseGeometry Center="25,25" RadiusX="25" RadiusY="25"/>
+                                    </Image.Clip>
+                                    <Image.Style>
+                                        <Style TargetType="Image">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsLoadingAvatar}" Value="True">
+                                                    <Setter Property="Visibility" Value="Hidden"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Image.Style>
+                                </Image>
+                            </Grid>
                         </Border>
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -341,7 +416,6 @@
                 <ColumnDefinition Width="280"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Left Panel - Contacts -->
             <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,8,0" Grid.RowSpan="2">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
@@ -368,7 +442,24 @@
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
                                     <Border Style="{StaticResource AvatarStyle}" Width="36" Height="36">
-                                        <Ellipse Fill="{StaticResource AccentColor}"/>
+                                        <Grid>
+                                            <Border CornerRadius="18" Background="#20000000" Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"/>
+                                            <Image Source="{Binding AvatarUrl}" Stretch="UniformToFill">
+                                                <Image.Clip>
+                                                    <EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/>
+                                                </Image.Clip>
+                                                <Image.Style>
+                                                    <Style TargetType="Image">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsLoadingAvatar}" Value="True">
+                                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Image.Style>
+                                            </Image>
+                                        </Grid>
                                     </Border>
                                     <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" 
@@ -383,8 +474,7 @@
                 </DockPanel>
             </Border>
 
-            <!-- Center Panel - Selected Contact -->
-            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="8,0,84,0" Grid.RowSpan="2">
+            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="8,0,8,0" Grid.RowSpan="2">
                 <ContentControl Content="{Binding SelectedContact}">
                     <ContentControl.Style>
                         <Style TargetType="ContentControl">
@@ -410,8 +500,7 @@
                 </ContentControl>
             </Border>
 
-            <!-- Right Panel - Friend Requests -->
-            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="451,0,0,0" Grid.RowSpan="2" Grid.ColumnSpan="2">
+            <Border Grid.Column="2" Style="{StaticResource CardStyle}" Margin="8,0,0,0" Grid.RowSpan="2">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
                         <TextBlock Text="{StaticResource FriendRequestsTitle}" 
@@ -421,17 +510,9 @@
                         <Rectangle Height="1" Fill="{StaticResource BorderColor}" Margin="0,8,0,0"/>
                     </StackPanel>
 
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" RenderTransformOrigin="0.5,0.5" Width="288">
-                        <ScrollViewer.RenderTransform>
-                            <TransformGroup>
-                                <ScaleTransform/>
-                                <SkewTransform AngleY="-0.783"/>
-                                <RotateTransform/>
-                                <TranslateTransform Y="-1.586"/>
-                            </TransformGroup>
-                        </ScrollViewer.RenderTransform>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding FriendRequests}"
-                                      ItemTemplate="{StaticResource FriendRequestItemTemplate}" Width="300"/>
+                                      ItemTemplate="{StaticResource FriendRequestItemTemplate}"/>
                     </ScrollViewer>
                 </DockPanel>
             </Border>

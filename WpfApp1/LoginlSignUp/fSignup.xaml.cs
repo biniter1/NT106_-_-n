@@ -25,6 +25,7 @@ namespace WpfApp1.LoginlSignUp
         public fSignup()
         {
             InitializeComponent();
+            LocalizationManager.LanguageChanged += OnLanguageChanged;
             this.MouseLeftButtonDown += (s, e) =>
             {
                 if (e.ButtonState == MouseButtonState.Pressed)
@@ -33,6 +34,25 @@ namespace WpfApp1.LoginlSignUp
 
             cboGender.SelectedIndex = 0;
             dpBirthDate.SelectedDate = System.DateTime.Now.AddYears(-18);
+        }
+        private void OnLanguageChanged(object sender, EventArgs e)
+        {
+            // Force the UI to refresh bindings
+            InvalidateVisual();
+            // Optionally, update specific bindings
+            UpdateBindings();
+        }
+        private void UpdateBindings()
+        {
+            // Update bindings for controls that use localized strings
+            foreach (var element in LogicalTreeHelper.GetChildren(this))
+            {
+                if (element is FrameworkElement fe)
+                {
+                    fe.GetBindingExpression(FrameworkElement.DataContextProperty)?.UpdateTarget();
+                    // Update other bindings as needed
+                }
+            }
         }
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {

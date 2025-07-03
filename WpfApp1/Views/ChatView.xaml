@@ -11,7 +11,6 @@
              d:DesignHeight="600" d:DesignWidth="940">
     <UserControl.Resources>
         <ResourceDictionary>
-            <!-- Giữ nguyên các SolidColorBrush và Converter -->
             <SolidColorBrush x:Key="PrimaryBrush" Color="#6c63ff"/>
             <SolidColorBrush x:Key="LightGrayBrush" Color="#f0f0f0"/>
             <SolidColorBrush x:Key="WhiteBrush" Color="#FFFFFF"/>
@@ -39,6 +38,7 @@
             <converters:TextColorConverter x:Key="TextColorConverter"/>
             <converters:FileTypeToIconConverter x:Key="FileTypeToIconConverter"/>
             <converters:ToLowerConverter x:Key="ToLowerConverter"/>
+            <converters:NameToFallbackConverter x:Key="NameToFallbackConverter"/>
 
             <Style x:Key="SearchBoxPlaceholderStyle" TargetType="TextBox">
                 <Setter Property="Template">
@@ -99,13 +99,11 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <!-- Avatar container with loading overlay -->
                                     <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Margin="0,0,10,0" Background="#20000000" Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
-                                        <!-- Loading overlay, semi-transparent -->
                                     </Border>
                                     <Image Grid.Column="0" Width="40" Height="40" Margin="0,0,10,0" VerticalAlignment="Center" 
-                           Source="{Binding AvatarUrl}" 
-                           Stretch="UniformToFill">
+                                           Source="{Binding AvatarUrl}" 
+                                           Stretch="UniformToFill">
                                         <Image.Clip>
                                             <EllipseGeometry Center="20,20" RadiusX="20" RadiusY="20"/>
                                         </Image.Clip>
@@ -113,11 +111,9 @@
                                             <Style TargetType="Image">
                                                 <Setter Property="Visibility" Value="Visible"/>
                                                 <Style.Triggers>
-                                                    <!-- Show image only when not loading -->
                                                     <DataTrigger Binding="{Binding IsLoadingAvatar}" Value="True">
                                                         <Setter Property="Visibility" Value="Hidden"/>
                                                     </DataTrigger>
-
                                                 </Style.Triggers>
                                             </Style>
                                         </Image.Style>
@@ -180,12 +176,28 @@
 
             <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="35" Height="35" CornerRadius="17.5" Background="{StaticResource AvatarPlaceholderBackground}" Margin="0,0,10,0">
-                        <TextBlock Text="" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Width="35" Height="35" CornerRadius="17.5" Margin="0,0,10,0" Background="#20000000" Visibility="{Binding SelectedContact.IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
                     </Border>
+                    <Image Width="35" Height="35" Margin="0,0,10,0" VerticalAlignment="Center" 
+                           Source="{Binding SelectedContact.AvatarUrl}" 
+                           Stretch="UniformToFill">
+                        <Image.Clip>
+                            <EllipseGeometry Center="17.5,17.5" RadiusX="17.5" RadiusY="17.5"/>
+                        </Image.Clip>
+                        <Image.Style>
+                            <Style TargetType="Image">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedContact.IsLoadingAvatar}" Value="True">
+                                        <Setter Property="Visibility" Value="Hidden"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Image.Style>
+                    </Image>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="{Binding SelectedContact.Name, Converter={StaticResource NameToFallbackConverter}}"
-           FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                   FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
                         <TextBlock FontSize="11">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -223,6 +235,7 @@
                                         Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"
                                     />
                                     <!-- Image message -->
+
                                     <Image Source="{Binding ImageUrl}" MaxHeight="400" MaxWidth="400" 
                                            Stretch="Uniform" Margin="0" 
                                            Visibility="{Binding IsImage, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -238,7 +251,6 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-
             </ScrollViewer>
 
             <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10" Background="{StaticResource WhiteBrush}">
@@ -250,7 +262,6 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Nút chọn file -->
                     <Button Grid.Column="0" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource AttachFileTooltip}" Command="{Binding SelectFileCommand}">
                         <TextBlock Text="📎" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Button>
@@ -264,7 +275,6 @@
                     </Button>
 
 
-                    <!-- Ô nhập tin nhắn -->
                     <Border Grid.Column="2" CornerRadius="15" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="{StaticResource WhiteBrush}" Margin="0,0,10,0">
                         <TextBox Text="{Binding NewMessageText, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" Padding="12,4" FontSize="14" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}">
                             <TextBox.Style>
@@ -284,7 +294,6 @@
                         </TextBox>
                     </Border>
 
-                    <!-- Nút gửi -->
                     <Button Grid.Column="3" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource SendTooltip}" Command="{Binding SendMessageCommand}" CommandParameter="{Binding SelectedContact}">
                         <TextBlock Text="" Margin="0,15,0,0" FontFamily="Segoe Fluent Icons" FontSize="20" Foreground="{StaticResource PrimaryBrush}">
                             <TextBlock.RenderTransform>
@@ -358,7 +367,7 @@
                                 </StackPanel>
                                 <Button Grid.Column="2" 
                                         FontFamily="Segoe Fluent Icons" 
-                                        Content="" 
+                                        Content="&#xE896;" 
                                         ToolTip="{DynamicResource DownloadTooltip}" 
                                         Width="30" Height="30" 
                                         Margin="10,0,0,0" 
@@ -368,7 +377,7 @@
                                         Foreground="Gray" 
                                         HorizontalAlignment="Right"
                                         Command="{Binding DataContext.DownloadFileCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                        CommandParameter="{Binding}"/>  
+                                        CommandParameter="{Binding}"/>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

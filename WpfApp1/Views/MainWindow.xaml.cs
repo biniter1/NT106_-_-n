@@ -73,7 +73,6 @@ namespace WpfApp1
 
             if (mainViewModel.ChatVm != null)
             {
-                mainViewModel.ChatVm.OnNewMessageNotificationRequested += HandleNewMessageNotification;
                 Debug.WriteLine("Đã đăng ký sự kiện OnNewMessageNotificationRequested từ ChatViewModel.");
             }
             else
@@ -123,48 +122,6 @@ namespace WpfApp1
             addFriendWin.Owner = this;
             addFriendWin.Show();
         }
-
-        // Method đơn giản cho notification cơ bản
-        public void ShowNotification(string message)
-        {
-            ShowNotificationWithChatId(message, null);
-        }
-
-        // Method chính cho notification với chatID
-        public void ShowNotificationWithChatId(string message, string chatID)
-        {
-            try
-            {
-                NotificationText.Text = message;
-                if (!string.IsNullOrEmpty(chatID))
-                {
-                    NotificationText.Tag = chatID;
-                }
-                MessageNotificationPopup.IsOpen = true;
-
-                // Dispose timer cũ nếu có
-                _notificationTimer?.Dispose();
-
-                // Tạo timer mới
-                _notificationTimer = new System.Timers.Timer(3000);
-                _notificationTimer.AutoReset = false;
-                _notificationTimer.Elapsed += (s, e) =>
-                {
-                    Dispatcher.Invoke(() =>
-                    {
-                        MessageNotificationPopup.IsOpen = false;
-                    });
-                    _notificationTimer?.Dispose();
-                    _notificationTimer = null;
-                };
-                _notificationTimer.Start();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error showing notification: {ex.Message}");
-            }
-        }
-
         private string GetLocalizedString(string key)
         {
             try
@@ -181,51 +138,6 @@ namespace WpfApp1
             return key;
         }
 
-        private void HandleNewMessageNotification(string senderName, string messageContent, string chatID)
-        {
-            try
-            {
-                PlayNotificationSound();
-
-                bool enableNotifications = true;
-                bool showDesktopNotifications = true;
-
-                if (this.DataContext is MainViewModel mainVm && mainVm.SettingsVm != null)
-                {
-                    enableNotifications = mainVm.SettingsVm.EnableNotifications;
-                    showDesktopNotifications = mainVm.SettingsVm.ShowDesktopNotifications;
-                }
-
-                if (!enableNotifications)
-                {
-                    Debug.WriteLine("Thông báo đã bị tắt trong cài đặt. Bỏ qua hiển thị.");
-                    return;
-                }
-
-                string notificationTitle = GetLocalizedString("NewMessageArrived");
-                string fullNotificationMessage = $"{GetLocalizedString("Notification_NewMessageFrom")} {senderName}: {messageContent}";
-
-                // Kiểm tra xem có cần hiển thị notification không
-                var mainViewModel = this.DataContext as MainViewModel;
-                ChatViewModel currentChatViewModel = mainViewModel?.ChatVm;
-                bool isCurrentChatSelected = !string.IsNullOrEmpty(chatID) &&
-                    currentChatViewModel?.SelectedContact?.chatID == chatID;
-
-                if (!this.IsActive || (!isCurrentChatSelected && this.IsActive))
-                {
-                    ShowNotificationWithChatId(fullNotificationMessage, chatID);
-                }
-
-                if (showDesktopNotifications)
-                {
-                    ShowDesktopNotification(notificationTitle, fullNotificationMessage, chatID);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error handling new message notification: {ex.Message}");
-            }
-        }
 
         private void ShowDesktopNotification(string title, string message, string chatID)
         {
@@ -233,13 +145,22 @@ namespace WpfApp1
             {
                 if (App.AppNotifier != null)
                 {
-                    // Create  if needed
-                    var options = new MessageOptions
-                    {
-                      
-                    };
+                    // Tạo UserControl với nội dung thông báo động
+                    var notificationControl = new MyCustomNotificationControl(message);
 
-                    App.AppNotifier.ShowInformation(message, options);
+                    // Tạo custom notification
+                    var notification = new MyCustomNotification(
+                                    message,                       // text quản lý
+                                    notificationControl,           // UserControl hiển thị
+                                    new MessageOptions
+                                    {           // options
+                                        FreezeOnMouseEnter = true,
+                                        UnfreezeOnMouseLeave = true,
+                                        
+                                    }
+                                );
+
+                    App.AppNotifier.Notify<MyCustomNotification>(() => notification);
                 }
                 else
                 {
@@ -264,47 +185,6 @@ namespace WpfApp1
             }
         }
 
-        private void NotificationText_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            try
-            {
-                string chatIDToSwitch = (sender as TextBlock)?.Tag?.ToString();
-
-                if (!string.IsNullOrEmpty(chatIDToSwitch))
-                {
-                    if (DataContext is MainViewModel mainViewModel && mainViewModel.ChatVm is ChatViewModel chatViewModel)
-                    {
-                        var contactToSwitch = chatViewModel.Contacts?.FirstOrDefault(c => c.chatID == chatIDToSwitch);
-                        if (contactToSwitch != null)
-                        {
-                            chatViewModel.SelectedContact = contactToSwitch;
-                            mainViewModel.CurrentViewModel = chatViewModel;
-                            Debug.WriteLine($"Đã chuyển đến cuộc trò chuyện với: {contactToSwitch.Name}");
-                        }
-                    }
-                }
-
-                MessageNotificationPopup.IsOpen = false;
-
-                if (this.WindowState == WindowState.Minimized)
-                {
-                    this.WindowState = WindowState.Normal;
-                }
-                this.Activate();
-                this.Topmost = true;
-                this.Topmost = false;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error handling notification click: {ex.Message}");
-                MessageNotificationPopup.IsOpen = false;
-            }
-        }
-
-        private void CloseNotification_Click(object sender, RoutedEventArgs e)
-        {
-            MessageNotificationPopup.IsOpen = false;
-        }
 
         private void MainWindow_Closing(object sender, CancelEventArgs e)
         {

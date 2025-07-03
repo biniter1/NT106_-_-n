@@ -43,3 +43,5 @@ publish/
 *.tmp
 *.bak
 *.swp
+
+secret.json

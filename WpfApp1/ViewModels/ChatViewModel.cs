@@ -52,7 +52,30 @@ namespace WpfApp1.ViewModels
         private string _imageHistoryFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "WpfApp1", "ImageHistory.txt");
+        public void InitiateChatWith(Contact contactToChat)
+        {
+            if (contactToChat == null) return;
 
+            // Sử dụng chatID làm khóa chính để tìm kiếm vì nó là duy nhất cho một cặp người dùng
+            var existingContact = Contacts.FirstOrDefault(c => c.chatID == contactToChat.chatID);
+
+            if (existingContact != null)
+            {
+                // Nếu đã có trong danh sách chat, chỉ cần chọn (focus) vào nó
+                SelectedContact = existingContact;
+            }
+            else
+            {
+                // Nếu chưa có, thêm mới vào danh sách
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Contacts.Insert(0, contactToChat); // Thêm vào đầu danh sách cho dễ thấy
+                });
+
+                // Và chọn (focus) vào contact vừa thêm
+                SelectedContact = contactToChat;
+            }
+        }
         partial void OnSelectedContactChanged(Contact value)
         {
             SendMessageCommand.NotifyCanExecuteChanged();
@@ -835,7 +858,6 @@ namespace WpfApp1.ViewModels
                 Debug.WriteLine("Empty image URL provided");
                 return;
             }
-
             try
             {
                 var viewer = new Window
@@ -1129,6 +1151,7 @@ namespace WpfApp1.ViewModels
                 string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - VIDEO: {videoUrl}";
 
                 _viewedImageHistory.Add(logEntry);
+
 
                 string directory = Path.GetDirectoryName(_imageHistoryFilePath);
                 if (!Directory.Exists(directory))

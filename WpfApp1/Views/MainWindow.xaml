@@ -9,100 +9,97 @@
         xmlns:viewModels="clr-namespace:WpfApp1.ViewModels"
         xmlns:views="clr-namespace:WpfApp1.Views"
         mc:Ignorable="d"
+        Icon="pack://application:,,,/Assets/chat.png"
         Title="{DynamicResource AppTitle}" Height="600" Width="1269"
         Background="#F5F5F5">
     <Window.Resources>
         <ResourceDictionary>
+            <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
-            <Style x:Key="SearchBoxPlaceholderStyle" TargetType="TextBox">
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="TextBox">
-                            <Grid>
-                                <TextBlock Text="{DynamicResource SearchPlaceholderChat}"
-                                           Foreground="{StaticResource TextSecondaryBrush}"
-                                           Visibility="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}" />
-                                <ScrollViewer x:Name="PART_ContentHost" Margin="0" />
-                            </Grid>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-
-            <DataTemplate DataType="{x:Type viewModels:MatchingChatViewModel}">
-                <views:MatchingChatView/>
-            </DataTemplate>
-            
             <DataTemplate DataType="{x:Type viewModels:ChatViewModel}">
                 <views:ChatView/>
             </DataTemplate>
-
             <DataTemplate DataType="{x:Type viewModels:FriendListViewModel}">
                 <views:FriendListView />
             </DataTemplate>
-
             <DataTemplate DataType="{x:Type viewModels:SettingsViewModel}">
                 <views:SettingsView/>
             </DataTemplate>
         </ResourceDictionary>
     </Window.Resources>
 
-    <Grid x:Name="chatGrid">
+    <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="60"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="{StaticResource Sidebar}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="WhiteSmoke" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
             <StackPanel VerticalAlignment="Stretch" Margin="0, 10, 0, 0">
-                <Button FontFamily="Segoe MDL2 Assets" Content="" ToolTip="{DynamicResource ProfileTooltip}"
-                        Command="{Binding ShowChatMatchingCommand}" Width="40" Height="40" FontSize="18" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5"/>
-
                 <Button FontFamily="Segoe Fluent Icons" Content="" ToolTip="{DynamicResource MessageTooltip}"
                         Command="{Binding ShowChatCommand}" Width="40" Height="40" FontSize="18" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5"/>
-
                 <Button FontFamily="Segoe Fluent Icons" Content="" ToolTip="{DynamicResource FriendsTooltip}"
                         Command="{Binding ShowFriendListCommand}" Width="40" Height="40" FontSize="18" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5"/>
-
                 <Button FontFamily="Segoe MDL2 Assets" Content="" ToolTip="{DynamicResource SettingsTooltip}"
                         Command="{Binding ShowSettingsPopupCommand}" Width="40" Height="40" FontSize="18" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5"/>
             </StackPanel>
         </Border>
-        
-        <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}"/>
-        
-        <Popup x:Name="MessageNotificationPopup"
-               Placement="Top"
-               PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
-               AllowsTransparency="True"
-               PopupAnimation="Fade"
-               HorizontalOffset="0"
-               VerticalOffset="0"
-               StaysOpen="False"
-               Width="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ActualWidth}"
-               Height="Auto"
-               >
-            <Border Background="#202020" BorderBrush="#333333" BorderThickness="1" CornerRadius="5" Padding="10"
-                    Margin="10"
-                    >
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" VerticalAlignment="Center">
-                    <TextBlock x:Name="NotificationText"
-                               TextWrapping="Wrap"
-                               Foreground="White"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Left"
-                               FontWeight="SemiBold"
-                               Margin="0,0,10,0"
-                               MouseLeftButtonDown="NotificationText_MouseLeftButtonDown"
-                               Cursor="Hand"/>
-                    <Button Content="X"
-                            Style="{StaticResource CloseButtonStyle}"
-                            Click="CloseNotification_Click"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            />
-                </StackPanel>
+
+        <Grid Grid.Column="1">
+            <ContentControl Content="{Binding CurrentViewModel}"/>
+
+            <Border MaxWidth="400" Padding="15,12" 
+                    HorizontalAlignment="Right" VerticalAlignment="Top" 
+                    Margin="0,20,20,0"
+                    Background="#28a745"
+                    CornerRadius="8"
+                    Visibility="{Binding IsNotificationPopupVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border.Effect>
+                    <DropShadowEffect ShadowDepth="3" BlurRadius="8" Opacity="0.3"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding NotificationMessage}"
+                               Foreground="White" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="✕" 
+                            Command="{Binding HideNotificationPopupCommand}"
+                            Foreground="White" Opacity="0.7" FontWeight="Bold" 
+                            BorderThickness="0" Background="Transparent" 
+                            VerticalAlignment="Top" Margin="10,-5,-5,-5"/>
+                </Grid>
             </Border>
-        </Popup>
+
+            <Button Command="{Binding ToggleAIChatCommand}"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Margin="0,0,30,30" Width="60" Height="60">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Ellipse Fill="#6c63ff">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect ShadowDepth="2" BlurRadius="5" Opacity="0.4"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+                            <TextBlock Text="AI" Foreground="White" FontSize="24"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+
+            <Border Width="350" Height="500" 
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Margin="0,0,20,100"
+                    Visibility="{Binding IsAIChatVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border.Effect>
+                    <DropShadowEffect ShadowDepth="4" Color="Black" Opacity="0.3" BlurRadius="10"/>
+                </Border.Effect>
+                <views:AIChatView DataContext="{Binding AIChatVm}" />
+            </Border>
+
+        </Grid>
     </Grid>
 </Window>

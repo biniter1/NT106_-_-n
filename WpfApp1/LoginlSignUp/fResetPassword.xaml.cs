@@ -25,6 +25,26 @@ namespace WpfApp1.LoginlSignUp
         public fResetPassword()
         {
             InitializeComponent();
+            LocalizationManager.LanguageChanged += OnLanguageChanged;
+        }
+        private void OnLanguageChanged(object sender, EventArgs e)
+        {
+            // Force the UI to refresh bindings
+            InvalidateVisual();
+            // Optionally, update specific bindings
+            UpdateBindings();
+        }
+        private void UpdateBindings()
+        {
+            // Update bindings for controls that use localized strings
+            foreach (var element in LogicalTreeHelper.GetChildren(this))
+            {
+                if (element is FrameworkElement fe)
+                {
+                    fe.GetBindingExpression(FrameworkElement.DataContextProperty)?.UpdateTarget();
+                    // Update other bindings as needed
+                }
+            }
         }
         private async void btnSubmit_Click(object sender, RoutedEventArgs e)
         {
