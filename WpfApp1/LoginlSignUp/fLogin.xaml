@@ -14,9 +14,7 @@
 
     <Window.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
-            </ResourceDictionary.MergedDictionaries>
+            
             <Style x:Key="TextBoxStyle" TargetType="{x:Type TextBox}">
                 <Setter Property="Padding" Value="10"/>
                 <Setter Property="Background" Value="#F0F0F0"/>

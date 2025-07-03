@@ -244,7 +244,7 @@ namespace WpfApp1
                                     {           // options
                                         FreezeOnMouseEnter = true,
                                         UnfreezeOnMouseLeave = true,
-                                        // Bạn có thể thêm Duration, v.v.
+                                        
                                     }
                                 );
 

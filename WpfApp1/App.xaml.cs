@@ -23,16 +23,17 @@ namespace WpfApp1
             System.Diagnostics.Debug.WriteLine("Starting application...");
             AppFirebaseClient = new FirebaseClient("https://chatapp-177-default-rtdb.asia-southeast1.firebasedatabase.app/");
 
-            AppNotifier = new Notifier(static cfg =>
+            App.AppNotifier = new Notifier(cfg =>
             {
-                cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(
-                    notificationLifetime: TimeSpan.FromSeconds(5),
-                    maximumNotificationCount: MaximumNotificationCount.FromCount(5));
-
-                cfg.PositionProvider = new PrimaryScreenPositionProvider(
-                    Corner.BottomRight,
+                cfg.PositionProvider = new WindowPositionProvider(
+                    parentWindow: Application.Current.MainWindow,
+                    corner: Corner.TopRight,
                     offsetX: 10,
                     offsetY: 10);
+
+                cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(
+                    notificationLifetime: TimeSpan.FromSeconds(3), // Thời gian mỗi toast tồn tại
+                    maximumNotificationCount: MaximumNotificationCount.FromCount(5));
 
                 cfg.Dispatcher = Application.Current.Dispatcher;
             });
