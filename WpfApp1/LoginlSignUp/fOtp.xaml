@@ -9,9 +9,7 @@
 
     <Window.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Resources/StringResources.vi.xaml" />
-            </ResourceDictionary.MergedDictionaries>
+            
             <Style TargetType="Button">
                 <Setter Property="Background" Value="#4CAF50"/>
                 <Setter Property="Foreground" Value="White"/>
