@@ -28,11 +28,6 @@
                     </Setter.Value>
                 </Setter>
             </Style>
-
-            <DataTemplate DataType="{x:Type viewModels:MatchingChatViewModel}">
-                <views:MatchingChatView/>
-            </DataTemplate>
-            
             <DataTemplate DataType="{x:Type viewModels:ChatViewModel}">
                 <views:ChatView/>
             </DataTemplate>
@@ -55,9 +50,7 @@
 
         <Border Grid.Column="0" Background="{StaticResource Sidebar}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
             <StackPanel VerticalAlignment="Stretch" Margin="0, 10, 0, 0">
-                <Button FontFamily="Segoe MDL2 Assets" Content="" ToolTip="{DynamicResource ProfileTooltip}"
-                        Command="{Binding ShowChatMatchingCommand}" Width="40" Height="40" FontSize="18" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5"/>
-     
+                
                 <Button FontFamily="Segoe Fluent Icons" Content="" ToolTip="{DynamicResource MessageTooltip}"
                         Command="{Binding ShowChatCommand}" Width="40" Height="40" FontSize="18" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5"/>
 

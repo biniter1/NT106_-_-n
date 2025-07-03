@@ -119,12 +119,6 @@ namespace WpfApp1.ViewModels
         }
 
         [RelayCommand]
-        private void ShowChatMatching()
-        {
-            CurrentViewModel = MatchingChatVm;
-        }
-
-        [RelayCommand]
         private void ShowSettingsPopup()
         {
             var settingsVM = new SettingsViewModel(_chatViewModel, _firebaseClient);
