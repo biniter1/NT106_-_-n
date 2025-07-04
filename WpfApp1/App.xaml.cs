@@ -3,11 +3,11 @@ using System.Data;
 using System.Windows;
 using Firebase.Database;
 using WpfApp1.Models;
-using ToastNotifications; // Add this
-using ToastNotifications.Lifetime; // Add this
-using ToastNotifications.Position;
+using ToastNotifications;
 using ToastNotifications.Lifetime;
-using System; // THÊM DÒNG NÀY CHO TimeSpanhreading.Tasks;
+using ToastNotifications.Position;
+using System;
+using System.Threading.Tasks;
 
 namespace WpfApp1
 {
@@ -18,24 +18,31 @@ namespace WpfApp1
     {
         public static FirebaseClient AppFirebaseClient { get; private set; }
         public static Notifier AppNotifier { get; private set; }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             System.Diagnostics.Debug.WriteLine("Starting application...");
             AppFirebaseClient = new FirebaseClient("https://chatapp-177-default-rtdb.asia-southeast1.firebasedatabase.app/");
 
-            App.AppNotifier = new Notifier(cfg =>
+            AppNotifier = new Notifier(cfg =>
             {
-                cfg.PositionProvider = new WindowPositionProvider(
-                    parentWindow: Application.Current.MainWindow,
-                    corner: Corner.TopRight,
-                    offsetX: 10,
-                    offsetY: 10);
+                // SỬA LỖI: Thay thế WindowPositionProvider bằng PrimaryScreenPositionProvider
+                // Điều này sẽ đảm bảo thông báo luôn xuất hiện ở góc màn hình chính.
+                cfg.PositionProvider = new PrimaryScreenPositionProvider(
+                    corner: Corner.BottomRight,
+                    offsetX: 20, // Tăng khoảng cách một chút cho đẹp hơn
+                    offsetY: 20);
 
+                // Cấu hình thời gian hiển thị và số lượng thông báo tối đa
                 cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(
-                    notificationLifetime: TimeSpan.FromSeconds(3), // Thời gian mỗi toast tồn tại
+                    notificationLifetime: TimeSpan.FromSeconds(3),
                     maximumNotificationCount: MaximumNotificationCount.FromCount(5));
 
                 cfg.Dispatcher = Application.Current.Dispatcher;
+
+                // (Tùy chọn) Cấu hình giao diện chung
+                cfg.DisplayOptions.TopMost = true; // Luôn hiển thị trên các cửa sổ khác
+                cfg.DisplayOptions.Width = 350;
             });
 
             base.OnStartup(e);
@@ -68,6 +75,7 @@ namespace WpfApp1
                 System.Diagnostics.Debug.WriteLine($"Error initializing Firestore: {ex.Message}");
             }
         }
+
         protected override void OnExit(ExitEventArgs e)
         {
             // Dispose the notifier when the application exits
@@ -75,7 +83,7 @@ namespace WpfApp1
             base.OnExit(e);
         }
 
-        // You might need a method to update the FirebaseClient with an auth token after login.
+        // Các phương thức khác của bạn giữ nguyên
         public static void UpdateFirebaseClientAuth(string idToken)
         {
             AppFirebaseClient = new FirebaseClient(

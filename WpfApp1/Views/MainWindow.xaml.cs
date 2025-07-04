@@ -1,25 +1,16 @@
-﻿using System.Collections.Specialized;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Media;
-using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Linq; // Thêm using này
+using ToastNotifications.Core;
 using WpfApp1.Models;
 using WpfApp1.ViewModels;
 using WpfApp1.Views;
-using ToastNotifications.Messages;
-using ToastNotifications;
-using ToastNotifications.Lifetime;
-using ToastNotifications.Core;
+
 namespace WpfApp1
 {
     /// <summary>
@@ -28,7 +19,7 @@ namespace WpfApp1
     public partial class MainWindow : Window
     {
         string CurrentEmail;
-        private System.Timers.Timer _notificationTimer; // Lưu trữ timer để có thể dispose
+        private System.Timers.Timer _notificationTimer;
 
         public MainWindow(string email)
         {
@@ -71,16 +62,17 @@ namespace WpfApp1
             var mainViewModel = new MainViewModel(App.AppFirebaseClient);
             this.DataContext = mainViewModel;
 
-            if (mainViewModel.ChatVm != null)
-            {
-                Debug.WriteLine("Đã đăng ký sự kiện OnNewMessageNotificationRequested từ ChatViewModel.");
-            }
-            else
-            {
-                Debug.WriteLine("ChatViewModel (ChatVm) trong MainViewModel là null. Không thể đăng ký thông báo.");
-            }
+            mainViewModel.ShowNotificationRequested += MainViewModel_ShowNotificationRequested;
         }
 
+        // Xử lý khi nhận được yêu cầu hiển thị thông báo
+        private void MainViewModel_ShowNotificationRequested(object sender, NewMessageEventArgs e)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                ShowDesktopNotification(e.Title, e.Message, e.ChatID);
+            });
+        }
         public async Task LoadDataCurrentUser(string email)
         {
             var db = FirestoreHelper.database;
@@ -122,22 +114,6 @@ namespace WpfApp1
             addFriendWin.Owner = this;
             addFriendWin.Show();
         }
-        private string GetLocalizedString(string key)
-        {
-            try
-            {
-                if (Application.Current.Resources["LocalizationDictionary"] is ResourceDictionary localizationDict)
-                {
-                    return localizationDict.Contains(key) ? localizationDict[key].ToString() : key;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting localized string: {ex.Message}");
-            }
-            return key;
-        }
-
 
         private void ShowDesktopNotification(string title, string message, string chatID)
         {
@@ -145,26 +121,30 @@ namespace WpfApp1
             {
                 if (App.AppNotifier != null)
                 {
-                    // Tạo UserControl với nội dung thông báo động
-                    var notificationControl = new MyCustomNotificationControl(message);
+                    var notificationControl = new MyCustomNotificationControl(title, message);
 
-                    // Tạo custom notification
-                    var notification = new MyCustomNotification(
-                                    message,                       // text quản lý
-                                    notificationControl,           // UserControl hiển thị
-                                    new MessageOptions
-                                    {           // options
-                                        FreezeOnMouseEnter = true,
-                                        UnfreezeOnMouseLeave = true,
-                                        
-                                    }
-                                );
+                    // Tạo một tham chiếu đến đối tượng notification để có thể gọi phương thức Close()
+                    MyCustomNotification notification = null;
 
-                    App.AppNotifier.Notify<MyCustomNotification>(() => notification);
-                }
-                else
-                {
-                    Debug.WriteLine("AppNotifier is null. Không thể hiển thị desktop notification.");
+                    // Gán hành động đóng từ control vào phương thức Close() của notification
+                    // Đây là bước quan trọng để nút 'X' hoạt động
+                    notificationControl.CloseAction = () =>
+                    {
+                        notification?.Close();
+                    };
+
+                    // Khởi tạo đối tượng notification sau khi đã gán CloseAction
+                    notification = new MyCustomNotification(
+                        message,
+                        notificationControl,
+                        new MessageOptions
+                        {
+                            FreezeOnMouseEnter = true, // Tạm dừng bộ đếm thời gian khi di chuột vào
+                            UnfreezeOnMouseLeave = true, // Tiếp tục đếm khi di chuột ra
+                        }
+                    );
+
+                    App.AppNotifier.Notify(() => notification);
                 }
             }
             catch (Exception ex)
@@ -173,35 +153,14 @@ namespace WpfApp1
             }
         }
 
-        private void PlayNotificationSound()
-        {
-            try
-            {
-                SystemSounds.Beep.Play();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Lỗi khi phát âm thanh thông báo: {ex.Message}");
-            }
-        }
-
-
         private void MainWindow_Closing(object sender, CancelEventArgs e)
         {
             try
             {
-                // Dispose timer khi đóng window
-                _notificationTimer?.Dispose();
-                _notificationTimer = null;
-
                 if (this.DataContext is MainViewModel mainVM)
                 {
-                    System.Diagnostics.Debug.WriteLine("MainWindow_Closing: Calling MainViewModel.Cleanup().");
+                    mainVM.ShowNotificationRequested -= MainViewModel_ShowNotificationRequested;
                     mainVM.Cleanup();
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("MainWindow_Closing: MainViewModel not found in DataContext. Cleanup might be incomplete.");
                 }
             }
             catch (Exception ex)
