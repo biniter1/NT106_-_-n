@@ -11,13 +11,6 @@
   <ItemGroup>
     <None Remove="Assets\chat.png" />
     <None Remove="Assets\setting.png" />
-    <None Remove="secret.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="secret.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -52,6 +45,9 @@
     <None Update="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <None Update="Services\secret.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

@@ -1168,5 +1168,76 @@ namespace WpfApp1.ViewModels
                 Debug.WriteLine($"Error logging viewed video: {ex.Message}");
             }
         }
+        [RelayCommand]
+        private async Task DeleteContactAsync(Contact contactToDelete)
+        {
+            if (contactToDelete == null) return;
+
+            // Hiển thị hộp thoại xác nhận trước khi xóa
+            var result = MessageBox.Show(
+                $"Bạn có chắc chắn muốn xóa liên hệ '{contactToDelete.Name}' không? Toàn bộ lịch sử trò chuyện sẽ bị xóa vĩnh viễn và không thể khôi phục.",
+                "Xác nhận xóa",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.No) return;
+
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                string currentUserEmail = SharedData.Instance.userdata.Email;
+                string contactEmail = contactToDelete.Email;
+                string chatID = contactToDelete.chatID;
+
+                // BƯỚC 3.1: Xóa lịch sử chat trong Realtime Database
+                await DeleteChatHistoryAsync(chatID);
+
+                // BƯỚC 3.2: Xóa contact khỏi danh sách của người dùng hiện tại
+                await DeleteContactEntryAsync(currentUserEmail, contactEmail);
+
+                // BƯỚC 3.3: Xóa người dùng hiện tại khỏi danh sách của contact kia
+                await DeleteContactEntryAsync(contactEmail, currentUserEmail);
+
+                // Cập nhật giao diện
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Contacts.Remove(contactToDelete);
+                    if (SelectedContact == contactToDelete)
+                    {
+                        SelectedContact = null; // Xóa vùng chat nếu contact đang được chọn bị xóa
+                    }
+                });
+
+                // Có thể thêm thông báo thành công ở đây
+                // App.Current.NotificationManager.Show(new ToastNotifications.Messages.Success("Đã xóa liên hệ thành công!"));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Lỗi khi xóa liên hệ: {ex.Message}");
+                MessageBox.Show("Đã xảy ra lỗi trong quá trình xóa liên hệ.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        // 2. CÁC PHƯƠNG THỨC HỖ TRỢ XÓA BACKEND
+        private async Task DeleteChatHistoryAsync(string chatID)
+        {
+            if (string.IsNullOrEmpty(chatID)) return;
+            Debug.WriteLine($"Đang xóa lịch sử chat: messages/{chatID}");
+            await firebaseClient.Child("messages").Child(chatID).DeleteAsync();
+        }
+
+        private async Task DeleteContactEntryAsync(string ownerEmail, string contactEmailToDelete)
+        {
+            if (string.IsNullOrEmpty(ownerEmail) || string.IsNullOrEmpty(contactEmailToDelete)) return;
+
+            var db = FirestoreHelper.database;
+            Debug.WriteLine($"Đang xóa entry: users/{ownerEmail}/contacts/{contactEmailToDelete}");
+            await db.Collection("users").Document(ownerEmail).Collection("contacts").Document(contactEmailToDelete).DeleteAsync();
+        }
     }
 }
