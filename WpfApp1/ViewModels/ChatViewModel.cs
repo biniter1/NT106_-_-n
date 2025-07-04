@@ -32,8 +32,6 @@ namespace WpfApp1.ViewModels
         public ObservableCollection<Contact> Contacts { get; set; }
         public ObservableCollection<FileItem> Files { get; set; }
 
-        public event Action<string, string, string> OnNewMessageNotificationRequested;
-
         [ObservableProperty]
         private string _newMessageText;
 
@@ -52,6 +50,8 @@ namespace WpfApp1.ViewModels
         private string _imageHistoryFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "WpfApp1", "ImageHistory.txt");
+        public event EventHandler<NewMessageEventArgs> NewMessageNotificationRequested;
+
         public void InitiateChatWith(Contact contactToChat)
         {
             if (contactToChat == null) return;
@@ -216,7 +216,6 @@ namespace WpfApp1.ViewModels
                             msg.IsMine = msg.SenderId == SharedData.Instance.userdata?.Email;
                             msg.Alignment = msg.IsMine ? "Right" : "Left";
 
-                            // For group chats, add sender name to message content if not mine
                             if (isGroupChat && !msg.IsMine)
                             {
                                 var senderName = GetSenderDisplayName(msg.SenderId);
@@ -242,7 +241,6 @@ namespace WpfApp1.ViewModels
                     });
                 }
 
-                // Set up real-time listener (existing code with group chat handling)
                 messageSubscription = firebaseClient
                     .Child("messages")
                     .Child(roomId)
@@ -258,7 +256,6 @@ namespace WpfApp1.ViewModels
                                 message.IsMine = message.SenderId == SharedData.Instance.userdata?.Email;
                                 message.Alignment = message.IsMine ? "Right" : "Left";
 
-                                // For group chats, add sender name
                                 if (isGroupChat && !message.IsMine)
                                 {
                                     var senderName = GetSenderDisplayName(message.SenderId);
@@ -281,44 +278,55 @@ namespace WpfApp1.ViewModels
                                     Messages.Insert(insertIndex, message);
                                     Debug.WriteLine($"Đã thêm tin nhắn mới: {message.Id} tại vị trí {insertIndex}");
 
-                                    // Notification logic for group chats
+                                    // <<< THAY ĐỔI BẮT ĐẦU TẠI ĐÂY >>>
                                     if (!message.IsMine)
                                     {
                                         bool isCurrentChatSelected = (SelectedContact?.chatID == roomId);
                                         bool isAppActive = Application.Current.MainWindow?.IsActive ?? false;
+                                        bool shouldNotify = !isAppActive || !isCurrentChatSelected;
 
-                                        if (!isAppActive || (!isCurrentChatSelected && isAppActive))
+                                        if (shouldNotify)
                                         {
-                                            string senderNameForNotification = GetSenderDisplayName(message.SenderId) ?? message.SenderId;
-                                            string notificationContent = message.Content;
+                                            // 1. Chuẩn bị nội dung cho thông báo
+                                            string titleForNotification = GetSenderDisplayName(message.SenderId) ?? message.SenderId;
+                                            string messageForNotification = message.Content;
 
                                             if (isGroupChat)
                                             {
-                                                var groupName = SelectedContact?.Name ?? "Group";
-                                                notificationContent = $"[{groupName}] {senderNameForNotification}: {message.Content}";
+                                                // Trong group chat, Title là tên nhóm, Message là "Người gửi: Nội dung"
+                                                var contactInList = Contacts.FirstOrDefault(c => c.chatID == roomId);
+                                                titleForNotification = contactInList?.Name ?? "Nhóm chat";
+                                                messageForNotification = $"{GetSenderDisplayName(message.SenderId)}: {message.Content}";
                                             }
 
                                             if (message.IsImage)
                                             {
-                                                notificationContent = GetLocalizedString("Notification_NewImage");
+                                                messageForNotification = isGroupChat
+                                                    ? $"{GetSenderDisplayName(message.SenderId)}: {GetLocalizedString("Notification_NewImage")}"
+                                                    : GetLocalizedString("Notification_NewImage");
                                             }
                                             else if (message.IsVideo)
                                             {
-                                                notificationContent = GetLocalizedString("Notification_NewVideo");
+                                                messageForNotification = isGroupChat
+                                                    ? $"{GetSenderDisplayName(message.SenderId)}: {GetLocalizedString("Notification_NewVideo")}"
+                                                    : GetLocalizedString("Notification_NewVideo");
                                             }
                                             else if (!string.IsNullOrEmpty(message.FileUrl))
                                             {
-                                                notificationContent = $"{GetLocalizedString("Notification_NewFile")} \"{message.Content}\"";
+                                                messageForNotification = isGroupChat
+                                                    ? $"{GetSenderDisplayName(message.SenderId)}: {GetLocalizedString("Notification_NewFile")} \"{message.Content}\""
+                                                    : $"{GetLocalizedString("Notification_NewFile")} \"{message.Content}\"";
                                             }
 
-                                            OnNewMessageNotificationRequested?.Invoke(
-                                                senderNameForNotification,
-                                                notificationContent,
-                                                roomId
+                                            // 2. Kích hoạt event với dữ liệu đã chuẩn bị
+                                            NewMessageNotificationRequested?.Invoke(
+                                                this,
+                                                new NewMessageEventArgs(titleForNotification, messageForNotification, roomId)
                                             );
-                                            Debug.WriteLine($"Yêu cầu thông báo: '{notificationContent}' từ '{senderNameForNotification}' trong chat '{roomId}'");
+                                            Debug.WriteLine($"ĐÃ KÍCH HOẠT EVENT THÔNG BÁO: Title='{titleForNotification}', Message='{messageForNotification}', ChatID='{roomId}'");
                                         }
                                     }
+                                    // <<< THAY ĐỔI KẾT THÚC TẠI ĐÂY >>>
                                 }
                             }
                             else if (messageEvent.EventType == FirebaseEventType.Delete)
