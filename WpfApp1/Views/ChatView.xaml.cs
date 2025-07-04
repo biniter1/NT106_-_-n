@@ -12,7 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-
+using Emoji.Wpf;
 namespace WpfApp1.Views
 {
     /// <summary>
@@ -43,6 +43,16 @@ namespace WpfApp1.Views
                     fe.GetBindingExpression(FrameworkElement.DataContextProperty)?.UpdateTarget();
                     // Update other bindings as needed
                 }
+            }
+        }
+        private void Picker_Picked(object sender, Emoji.Wpf.EmojiPickedEventArgs e)
+        {
+            // Get the ViewModel
+            var viewModel = DataContext as ViewModels.ChatViewModel;
+            if (viewModel != null)
+            {
+                // Append the selected emoji to the current message text
+                viewModel.NewMessageText += e.Emoji;
             }
         }
     }

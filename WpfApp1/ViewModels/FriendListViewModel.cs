@@ -11,27 +11,43 @@ using System.Text;
 using WpfApp1.Views;
 using System.Security.Cryptography;
 using Firebase.Database;
+using System.Windows.Controls; 
+using System.IO;
 using WpfApp1.Services;
-
+using System.Diagnostics;
 namespace WpfApp1.ViewModels
 {
+    // Define GroupData class
+    public class GroupData
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string? AvatarUrl { get; set; }
+    }
+
     public partial class FriendListViewModel : ObservableObject
     {
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(UnfriendCommand))]
         [NotifyCanExecuteChangedFor(nameof(LeaveGroupCommand))]
         [NotifyCanExecuteChangedFor(nameof(SendMessageCommand))]
-        private IChatContact _selectedContact; // Vẫn là IChatContact
+        private IChatContact? _selectedContact; // Made nullable
+
         public User userdata = SharedData.Instance.userdata;
 
+        private readonly FirebaseClient firebaseClient;
+
         [ObservableProperty]
-        private ObservableObject _currentViewModel;
+        private ObservableObject? _currentViewModel; // Made nullable
 
         public ObservableCollection<IChatContact> CombinedContacts { get; } // Chứa FriendViewModel và GroupViewModel
         public ObservableCollection<FriendRequestViewModel> FriendRequests { get; }
 
+        public event Action<IChatContact>? RequestOpenChat; // Made nullable
+
         public FriendListViewModel()
         {
+            firebaseClient = new FirebaseClient("https://chatapp-177-default-rtdb.asia-southeast1.firebasedatabase.app/");
             CombinedContacts = new ObservableCollection<IChatContact>();
             FriendRequests = new ObservableCollection<FriendRequestViewModel>();
             LoadInitialData();
@@ -40,7 +56,7 @@ namespace WpfApp1.ViewModels
         // --- Command Methods ---
 
         [RelayCommand(CanExecute = nameof(CanUnfriend))]
-        private async void Unfriend(FriendViewModel friendVM) // Tham số là FriendViewModel
+        private async Task Unfriend(FriendViewModel friendVM) // Changed to Task
         {
             if (friendVM == null) return;
             FriendData friendModel = friendVM.GetModel(); // Lấy Contact Model gốc
@@ -93,27 +109,39 @@ namespace WpfApp1.ViewModels
             {
                 MessageBox.Show($"Có lỗi khi hủy kết bạn: {ex.Message}");
             }
-
         }
 
         private bool CanUnfriend() => SelectedContact is FriendViewModel;
 
-
         [RelayCommand(CanExecute = nameof(CanLeaveGroup))]
-        private void LeaveGroup(GroupViewModel groupVM) // Tham số là GroupViewModel
+        private async Task LeaveGroup(GroupViewModel groupVM) // Changed to Task
         {
             if (groupVM == null) return;
-            Group groupModel = groupVM.GetModel(); // Lấy Group Model gốc
 
-            MessageBox.Show($"Đang rời nhóm: {groupModel.Name} ({groupModel.Id})");
-            // *** Logic rời nhóm thật với groupModel.Id ***
+            var result = MessageBox.Show($"Bạn có chắc chắn muốn rời khỏi nhóm '{groupVM.Name}'?",
+                                        "Xác nhận rời nhóm",
+                                        MessageBoxButton.YesNo,
+                                        MessageBoxImage.Question);
 
-            CombinedContacts.Remove(groupVM);
-            if (SelectedContact == groupVM) SelectedContact = null;
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    await RemoveUserFromGroup(groupVM.GetModel(), SharedData.Instance.userdata.Email);
+
+                    CombinedContacts.Remove(groupVM);
+                    if (SelectedContact == groupVM) SelectedContact = null;
+
+                    MessageBox.Show($"Đã rời khỏi nhóm '{groupVM.Name}' thành công.");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi khi rời nhóm: {ex.Message}");
+                }
+            }
         }
-        private bool CanLeaveGroup() => SelectedContact is GroupViewModel;
 
-        public event Action<IChatContact> RequestOpenChat;
+        private bool CanLeaveGroup() => SelectedContact is GroupViewModel;
 
         public static string GenerateChatId(string email1, string email2)
         {
@@ -130,6 +158,26 @@ namespace WpfApp1.ViewModels
                 return base64.Replace('+', '-').Replace('/', '_').TrimEnd('=');
             }
         }
+
+        private string GenerateGroupChatId()
+        {
+            return $"group_{Guid.NewGuid():N}";
+        }
+
+        public static string GenerateGroupChatId(List<string> memberEmails)
+        {
+            // Sort emails to ensure consistent ID generation
+            var sortedEmails = memberEmails.OrderBy(e => e).ToList();
+            var combinedEmails = string.Join(":", sortedEmails);
+
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes($"group:{combinedEmails}"));
+                string base64 = Convert.ToBase64String(hashBytes);
+                return $"group_{base64.Replace('+', '-').Replace('/', '_').TrimEnd('=')}";
+            }
+        }
+
         public async Task AddContactAsync(string email, Contact contact)
         {
             var db = FirestoreHelper.database;
@@ -156,6 +204,7 @@ namespace WpfApp1.ViewModels
                 MessageBox.Show($"Error adding contact: {ex.Message}");
             }
         }
+
         public async Task<List<Contact>> GetContactsAsync(string email)
         {
             var db = FirestoreHelper.database;
@@ -175,7 +224,7 @@ namespace WpfApp1.ViewModels
         }
 
         [RelayCommand(CanExecute = nameof(CanSendMessage))]
-        private async void SendMessage(IChatContact contactVM)
+        private async Task SendMessage(IChatContact contactVM) // Changed to Task
         {
             if (contactVM == null) return;
 
@@ -223,7 +272,9 @@ namespace WpfApp1.ViewModels
             // Phát sự kiện và gửi đi đối tượng contact mà ChatView cần để làm việc
             EventAggregator.Instance.Publish(new StartChatEvent(contactForCurrentUser));
         }
+
         private bool CanSendMessage() => SelectedContact != null;
+
         private async Task RemoveFriendRequestAsync(string myEmail, string requesterId)
         {
             try
@@ -260,8 +311,9 @@ namespace WpfApp1.ViewModels
                 MessageBox.Show($"Lỗi khi xóa friend request: {ex.Message}");
             }
         }
+
         [RelayCommand]
-        private async void AcceptRequest(FriendRequestViewModel requestVM)
+        private async Task AcceptRequest(FriendRequestViewModel requestVM) // Changed to Task
         {
             if (requestVM == null) return;
             FriendRequest requestModel = requestVM.GetModel();
@@ -350,10 +402,8 @@ namespace WpfApp1.ViewModels
             }
         }
 
-
-
         [RelayCommand]
-        private async void DeclineRequest(FriendRequestViewModel requestVM)
+        private async Task DeclineRequest(FriendRequestViewModel requestVM) // Changed to Task
         {
             if (requestVM == null) return;
             FriendRequest requestModel = requestVM.GetModel();
@@ -362,6 +412,7 @@ namespace WpfApp1.ViewModels
             FriendRequests.Remove(requestVM);
             await RemoveFriendRequestAsync(myEmail: SharedData.Instance.userdata.Email, requesterId: requestModel.EmailRequesterId);
         }
+
         public async Task<List<FriendData>> LoadFriendsAsync(string email)
         {
             var db = FirestoreHelper.database;
@@ -384,9 +435,9 @@ namespace WpfApp1.ViewModels
                             {
                                 var friend = new FriendData
                                 {
-                                    Email = friendDict.ContainsKey("Email") ? friendDict["Email"].ToString() : "",
-                                    Name = friendDict.ContainsKey("Name") ? friendDict["Name"].ToString() : "",
-                                    AvatarUrl = friendDict.ContainsKey("AvatarUrl") ? friendDict["AvatarUrl"].ToString() : "",
+                                    Email = friendDict.ContainsKey("Email") ? friendDict["Email"]?.ToString() ?? "" : "",
+                                    Name = friendDict.ContainsKey("Name") ? friendDict["Name"]?.ToString() ?? "" : "",
+                                    AvatarUrl = friendDict.ContainsKey("AvatarUrl") ? friendDict["AvatarUrl"]?.ToString() ?? "" : "",
                                     IsOnline = friendDict.ContainsKey("IsOnline") ? Convert.ToBoolean(friendDict["IsOnline"]) : false
                                 };
 
@@ -402,10 +453,278 @@ namespace WpfApp1.ViewModels
             }
             return friendList;
         }
+
+        public async Task<List<Group>> LoadGroupsAsync(string userEmail)
+        {
+            var db = FirestoreHelper.database;
+            var groupList = new List<Group>();
+
+            try
+            {
+                // Get user's groups
+                var userGroupsRef = db.Collection("UserGroups").Document(userEmail);
+                var userGroupsSnapshot = await userGroupsRef.GetSnapshotAsync();
+
+                if (userGroupsSnapshot.Exists && userGroupsSnapshot.ContainsField("groups"))
+                {
+                    var groupIds = userGroupsSnapshot.GetValue<List<string>>("groups");
+
+                    foreach (var groupId in groupIds)
+                    {
+                        var groupDocRef = db.Collection("Groups").Document(groupId);
+                        var groupSnapshot = await groupDocRef.GetSnapshotAsync();
+
+                        if (groupSnapshot.Exists)
+                        {
+                            var group = groupSnapshot.ConvertTo<Group>();
+                            groupList.Add(group);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading groups: {ex.Message}");
+            }
+
+            return groupList;
+        }
+
+        private async Task SaveGroupToFirestore(Group group)
+        {
+            try
+            {
+                var db = FirestoreHelper.database;
+                var groupDocRef = db.Collection("Groups").Document(group.Id);
+                await groupDocRef.SetAsync(group);
+
+                // Add group to user's groups collection
+                var userGroupRef = db.Collection("UserGroups").Document(SharedData.Instance.userdata.Email);
+                var userGroupsSnapshot = await userGroupRef.GetSnapshotAsync();
+
+                if (!userGroupsSnapshot.Exists)
+                {
+                    await userGroupRef.SetAsync(new Dictionary<string, object>
+                    {
+                        { "groups", new List<string> { group.Id } }
+                    });
+                }
+                else
+                {
+                    await userGroupRef.UpdateAsync("groups", FieldValue.ArrayUnion(group.Id));
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Lỗi khi lưu nhóm: {ex.Message}");
+            }
+        }
+
+        private async Task AddMembersToGroup(Group group, List<string> memberEmails)
+        {
+            try
+            {
+                var db = FirestoreHelper.database;
+                var groupDocRef = db.Collection("Groups").Document(group.Id);
+
+                // Add members to group
+                foreach (var email in memberEmails)
+                {
+                    if (!group.MemberEmails.Contains(email))
+                    {
+                        await groupDocRef.UpdateAsync("MemberEmails", FieldValue.ArrayUnion(email));
+
+                        // Add group to member's groups collection
+                        var memberGroupRef = db.Collection("UserGroups").Document(email);
+                        var memberGroupsSnapshot = await memberGroupRef.GetSnapshotAsync();
+
+                        if (!memberGroupsSnapshot.Exists)
+                        {
+                            await memberGroupRef.SetAsync(new Dictionary<string, object>
+                            {
+                                { "groups", new List<string> { group.Id } }
+                            });
+                        }
+                        else
+                        {
+                            await memberGroupRef.UpdateAsync("groups", FieldValue.ArrayUnion(group.Id));
+                        }
+                    }
+                }
+
+                // Update member count
+                await groupDocRef.UpdateAsync("MemberCount", group.MemberEmails.Count + memberEmails.Count);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Lỗi khi thêm thành viên: {ex.Message}");
+            }
+        }
+
+        private async Task RemoveUserFromGroup(Group group, string userEmail)
+        {
+            try
+            {
+                var db = FirestoreHelper.database;
+                var groupDocRef = db.Collection("Groups").Document(group.Id);
+
+                // Remove user from group members
+                await groupDocRef.UpdateAsync("MemberEmails", FieldValue.ArrayRemove(userEmail));
+                await groupDocRef.UpdateAsync("AdminEmails", FieldValue.ArrayRemove(userEmail));
+                await groupDocRef.UpdateAsync("MemberCount", FieldValue.Increment(-1));
+
+                // Remove group from user's groups
+                var userGroupRef = db.Collection("UserGroups").Document(userEmail);
+                await userGroupRef.UpdateAsync("groups", FieldValue.ArrayRemove(group.Id));
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Lỗi khi rời nhóm: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private async Task CreateGroup() // Updated method
+        {
+            try
+            {
+                var createGroupWindow = new Views.CreateGroupWindow
+                {
+                    Owner = Application.Current.MainWindow,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                if (createGroupWindow.ShowDialog() == true)
+                {
+                    var groupData = new GroupData
+                    {
+                        Name = createGroupWindow.GroupName,
+                        Description = createGroupWindow.GroupDescription,
+                        AvatarUrl = createGroupWindow.SelectedAvatarPath
+                    };
+
+                    // Get selected friends
+                    var selectedFriendEmails = createGroupWindow.GetSelectedFriendEmails();
+
+                    // Upload avatar if selected
+                    if (!string.IsNullOrEmpty(groupData.AvatarUrl) && File.Exists(groupData.AvatarUrl))
+                    {
+                        try
+                        {
+                            string fileName = $"group_avatar_{DateTime.Now:yyyyMMddHHmmssfff}_{Path.GetFileName(groupData.AvatarUrl)}";
+                            string uploadedUrl = await FirebaseStorageHelper.UploadFileAsync(groupData.AvatarUrl, fileName);
+                            groupData.AvatarUrl = uploadedUrl;
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Không thể tải lên ảnh đại diện: {ex.Message}", "Cảnh báo",
+                                MessageBoxButton.OK, MessageBoxImage.Warning);
+                            groupData.AvatarUrl = "/Assets/DefaultGroupAvatar.png";
+                        }
+                    }
+                    else
+                    {
+                        groupData.AvatarUrl = "/Assets/DefaultGroupAvatar.png";
+                    }
+
+                    // Create initial member list with current user
+                    var initialMembers = new List<string> { SharedData.Instance.userdata.Email };
+                    initialMembers.AddRange(selectedFriendEmails);
+
+                    // Create group with current user as admin and selected friends as members
+                    var newGroup = new Group
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Name = groupData.Name,
+                        Description = groupData.Description,
+                        AvatarUrl = groupData.AvatarUrl,
+                        CreatedBy = SharedData.Instance.userdata.Email,
+                        CreatedAt = DateTime.UtcNow,
+                        MemberEmails = initialMembers,
+                        AdminEmails = new List<string> { SharedData.Instance.userdata.Email },
+                        MemberCount = initialMembers.Count,
+                        GroupChatId = GenerateGroupChatId()
+                    };
+
+                    await SaveGroupToFirestore(newGroup);
+
+                    // Add group to all members' groups collection
+                    if (selectedFriendEmails.Any())
+                    {
+                        await AddMembersToGroup(newGroup, selectedFriendEmails);
+                    }
+
+                    // Automatically create group contact for chat for all members
+                    var groupContact = new Contact
+                    {
+                        Name = newGroup.Name,
+                        Email = newGroup.GroupChatId,
+                        AvatarUrl = newGroup.AvatarUrl,
+                        chatID = newGroup.GroupChatId,
+                        IsOnline = true
+                    };
+
+                    // Add contact for current user
+                    await AddContactAsync(SharedData.Instance.userdata.Email, groupContact);
+
+                    // Add contact for all selected friends
+                    foreach (var friendEmail in selectedFriendEmails)
+                    {
+                        await AddContactAsync(friendEmail, groupContact);
+                    }
+
+                    var groupVM = new GroupViewModel(newGroup);
+                    CombinedContacts.Add(groupVM);
+                    SortContacts();
+
+                    string memberInfo = selectedFriendEmails.Any()
+                        ? $" với {selectedFriendEmails.Count} thành viên"
+                        : "";
+
+                    MessageBox.Show($"Nhóm '{newGroup.Name}' đã được tạo thành công{memberInfo}!", "Thành công",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi tạo nhóm: {ex.Message}", "Lỗi",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        private async Task InviteToGroup(GroupViewModel groupVM) // Changed to Task
+        {
+            if (groupVM == null) return;
+
+            try
+            {
+                // For now, show a simple message
+                // In a real application, you would create a proper invitation window
+                MessageBox.Show($"Invite members functionality will be implemented for group: {groupVM.Name}");
+
+                // Example of adding members (you would get this from a UI)
+                var selectedFriends = new List<string>(); // This would come from user selection
+                if (selectedFriends.Any())
+                {
+                    await AddMembersToGroup(groupVM.GetModel(), selectedFriends);
+                    MessageBox.Show($"Đã mời {selectedFriends.Count} thành viên vào nhóm!");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi mời thành viên: {ex.Message}");
+            }
+        }
+
         // --- Helper Methods ---
         private async void LoadInitialData()
         {
+            // Load friends (existing code)
             List<FriendData> friends = await LoadFriendsAsync(SharedData.Instance.userdata.Email);
+
+            // Load groups (new code)
+            List<Group> groups = await LoadGroupsAsync(SharedData.Instance.userdata.Email);
 
             var db = FirestoreHelper.database;
             var doc = db.Collection("AddFriendQuery").Document(SharedData.Instance.userdata.Email);
@@ -419,23 +738,32 @@ namespace WpfApp1.ViewModels
                     {
                         FriendRequest newRequest = new FriendRequest
                         {
-                            EmailRequestId = request["EmailRequestId"]?.ToString(),
+                            EmailRequestId = request["EmailRequestId"]?.ToString() ?? "",
                             RequesterAvatarUrl = request.ContainsKey("RequesterAvatarUrl") ? request["RequesterAvatarUrl"]?.ToString() : null,
-                            RequesterName = request["RequesterName"]?.ToString(),
-                            EmailRequesterId = request["EmailRequesterId"]?.ToString(),
+                            RequesterName = request["RequesterName"]?.ToString() ?? "",
+                            EmailRequesterId = request["EmailRequesterId"]?.ToString() ?? "",
                             RequestTime = request.ContainsKey("RequestTime") ? ((Google.Cloud.Firestore.Timestamp)request["RequestTime"]).ToDateTime() : DateTime.UtcNow,
-
                         };
                         requests.Add(newRequest);
                     }
                 }
             }
+
             // *** Chuyển Models thành ViewModels ***
             CombinedContacts.Clear();
+
+            // Add friends
             foreach (var friend in friends)
             {
                 CombinedContacts.Add(new FriendViewModel(friend));
             }
+
+            // Add groups
+            foreach (var group in groups)
+            {
+                CombinedContacts.Add(new GroupViewModel(group));
+            }
+
             FriendRequests.Clear();
             foreach (var request in requests)
             {
@@ -443,7 +771,9 @@ namespace WpfApp1.ViewModels
             }
 
             SortContacts();
+            await StartListeningToFriendStatusAsync();
         }
+
         private void SortContacts()
         {
             var sortedContacts = CombinedContacts.OrderBy(c => c.Name).ToList();
@@ -453,5 +783,104 @@ namespace WpfApp1.ViewModels
                 CombinedContacts.Add(contact);
             }
         }
+        private string EscapeEmail(string email)
+        {
+            if (string.IsNullOrEmpty(email)) return string.Empty;
+            return email.Replace('.', '_')
+                         .Replace('#', '_')
+                         .Replace('$', '_')
+                         .Replace('[', '_')
+                         .Replace(']', '_')
+                         .Replace('/', '_');
+        }
+
+        private readonly Dictionary<string, IDisposable> _friendStatusListeners = new Dictionary<string, IDisposable>();
+
+        private async Task StartListeningToFriendStatusAsync()
+        {
+            foreach (var listener in _friendStatusListeners.Values)
+            {
+                listener?.Dispose();
+            }
+            _friendStatusListeners.Clear();
+            Debug.WriteLine("Cleared old friend status listeners.");
+            Debug.WriteLine($"Kiểm tra... Số lượng trong CombinedContacts: {CombinedContacts.Count}");
+
+            // Dùng OfType<FriendViewModel>() để chỉ lấy những contact là bạn bè, bỏ qua các nhóm.
+            var friends = CombinedContacts.OfType<FriendViewModel>().ToList();
+
+            Debug.WriteLine($"Đã tìm thấy {friends.Count} FriendViewModel để lắng nghe.");
+
+            if (!friends.Any())
+            {
+                Debug.WriteLine("No friends in the list to listen to.");
+                return;
+            }
+
+            foreach (var friendVM in friends)
+            {
+                if (friendVM == null || string.IsNullOrEmpty(friendVM.Email)) continue;
+
+                string friendEmailToListen = friendVM.Email;
+                string escapedFriendEmail = EscapeEmail(friendEmailToListen);
+                Debug.WriteLine($"---{escapedFriendEmail}---");
+
+                try
+                {
+                    string pathToListen = $"user_status/{escapedFriendEmail}";
+                    Debug.WriteLine($"---> Đang lắng nghe trên đường dẫn: {pathToListen}");
+
+                    var statusListener = firebaseClient
+                        .Child(pathToListen)
+                        .AsObservable<object>()
+                        .Subscribe(
+                            rawEvent =>
+                            {
+
+                                if (rawEvent.Key == "isOnline")
+                                {
+                                    Debug.WriteLine($"[isOnline EVENT] cho {friendEmailToListen}");
+
+                                    bool newIsOnline = false;
+                                    if (rawEvent.Object != null)
+                                    {
+                                        try { newIsOnline = Convert.ToBoolean(rawEvent.Object); }
+                                        catch { newIsOnline = false; }
+                                    }
+
+                                    Debug.WriteLine($"---> Trạng thái IsOnline mới là: {newIsOnline}");
+
+                                    // Cập nhật UI trên luồng chính
+                                    Application.Current.Dispatcher.Invoke(() =>
+                                    {
+                                        var friendToUpdate = CombinedContacts
+                                            .OfType<FriendViewModel>()
+                                            .FirstOrDefault(f => f.Email == friendEmailToListen);
+
+                                        if (friendToUpdate != null)
+                                        {
+                                            Debug.WriteLine($"---> Đang cập nhật IsOnline cho {friendToUpdate.Name} thành {newIsOnline}");
+                                            friendToUpdate.IsOnline = newIsOnline;
+                                        }
+                                    });
+                                }
+                            },
+                            // Hành động khi có lỗi
+                            error =>
+                            {
+                                Debug.WriteLine($"[LISTENER ERROR] Lỗi khi lắng nghe {friendEmailToListen}: {error.Message}");
+                            });
+
+                    _friendStatusListeners[friendEmailToListen] = statusListener;
+                    Debug.WriteLine($"---> Đã thiết lập listener thành công cho: {friendEmailToListen}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[PRESENCE SETUP FAIL] Không thể thiết lập listener cho {friendEmailToListen}: {ex.Message}");
+                }
+            }
+        }
     }
 }
+
+

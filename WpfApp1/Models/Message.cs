@@ -9,6 +9,9 @@ namespace WpfApp1.Models
         // ID người gửi
         public string SenderId { get; set; }
 
+        // Tên hiển thị của người gửi
+        public string SenderDisplayName { get; set; }
+
         // Nội dung tin nhắn
         public string Content { get; set; }
 

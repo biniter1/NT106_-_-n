@@ -6,6 +6,7 @@
              xmlns:local="clr-namespace:WpfApp1.Views"
              xmlns:models="clr-namespace:WpfApp1.Models"
              xmlns:converters="clr-namespace:WpfApp1.Converters"
+             xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="940">
     <UserControl.Resources>
@@ -226,7 +227,15 @@
                                     ContextMenu="{StaticResource FileMessageContextMenu}"
                                     Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
                                 <Grid>
-                                    <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"/>
+                                    <!-- Text message -->
+                                    <emoji:TextBlock
+                                        Text="{Binding Content}"
+                                        TextWrapping="Wrap"
+                                        FontSize="14"
+                                        Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"
+                                    />
+                                    <!-- Image message -->
+
                                     <Image Source="{Binding ImageUrl}" MaxHeight="400" MaxWidth="400" 
                                            Stretch="Uniform" Margin="0" 
                                            Visibility="{Binding IsImage, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -257,9 +266,14 @@
                         <TextBlock Text="📎" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Button>
 
-                    <Button Grid.Column="1" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource InsertEmojiTooltip}" Command="{Binding ShowEmojiPickerCommand}">
-                        <TextBlock Text="😊" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    <!-- Nút chọn emoji -->
+                    <Button Grid.Column="1" Background="White" BorderThickness="0" >
+                        <emoji:Picker 
+                          Background="Transparent"
+                          FontSize="30" 
+                          Picked="Picker_Picked"/>
                     </Button>
+
 
                     <Border Grid.Column="2" CornerRadius="15" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="{StaticResource WhiteBrush}" Margin="0,0,10,0">
                         <TextBox Text="{Binding NewMessageText, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" Padding="12,4" FontSize="14" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}">
