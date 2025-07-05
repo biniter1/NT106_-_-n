@@ -189,6 +189,7 @@
                         </Style>
                     </ListBox.ItemContainerStyle>
                 </ListBox>
+                
             </Grid>
         </Border>
 
@@ -200,6 +201,11 @@
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Width="35" Height="35" CornerRadius="17.5" Margin="0,0,10,0" Background="#20000000" Visibility="{Binding SelectedContact.IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
                     </Border>
@@ -239,6 +245,17 @@
                         </TextBlock>
                     </StackPanel>
                 </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <Button FontFamily="Segoe Fluent Icons" Content="" ToolTip="{DynamicResource VideoCallTooltip}"
+                                Command="{Binding StartVideoCallCommand}"
+                                CommandParameter="{Binding SelectedContact}"
+                                Width="40" Height="40" FontSize="18" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5,0"/>
+                        <Button FontFamily="Segoe Fluent Icons" Content="" ToolTip="{DynamicResource VoiceCallTooltip}"
+                                Command="{Binding StartVoiceCallCommand}"
+                                CommandParameter="{Binding SelectedContact}"
+                                Width="40" Height="40" FontSize="18" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5,0"/>
+                    </StackPanel>
+                </Grid>
             </Border>
 
             <ScrollViewer Grid.Row="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="10">

@@ -22,7 +22,9 @@ using System.Windows.Media.Imaging;
 using System.Linq;
 using ToastNotifications.Messages;
 using System.Collections.Generic; // Added for List<IDisposable> and Dictionary<string, IDisposable>
-using System.Threading.Tasks; // Added for Task
+using System.Threading.Tasks;
+using WpfApp1.Services;
+using WpfApp1.Views; // Added for Task
 
 namespace WpfApp1.ViewModels
 {
@@ -51,6 +53,10 @@ namespace WpfApp1.ViewModels
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "WpfApp1", "ImageHistory.txt");
         public event EventHandler<NewMessageEventArgs> NewMessageNotificationRequested;
+
+        private WebRTCService _currentCallService;
+        private CallWindow _callWindow;
+        private IDisposable _callStateListener;
 
         public void InitiateChatWith(Contact contactToChat)
         {
@@ -111,9 +117,7 @@ namespace WpfApp1.ViewModels
             SelectedContact = null;
             NewMessageText = string.Empty;
 
-            firebaseClient = fbClient; // GÁN FIREBASECLIENT ĐƯỢC TRUYỀN TỪ BÊN NGOÀI
-
-            // Đảm bảo SharedData.Instance.userdata đã có dữ liệu trước khi ChatViewModel được tạo
+            firebaseClient = fbClient;
             userdata = SharedData.Instance.userdata;
 
             if (userdata != null && !string.IsNullOrEmpty(userdata.Email))
@@ -129,7 +133,155 @@ namespace WpfApp1.ViewModels
 
             LoadInitialData();
         }
+        private string EscapeEmail(string email)
+        {
+            if (string.IsNullOrEmpty(email)) return string.Empty;
+            return email.Replace('.', '_')
+                        .Replace('@', '_') // Thêm xử lý cho ký tự @
+                        .Replace('#', '_')
+                        .Replace('$', '_')
+                        .Replace('[', '_')
+                        .Replace(']', '_')
+                        .Replace('/', '_');
+        }
 
+        [RelayCommand(CanExecute = nameof(CanStartCall))]
+        private async Task StartVideoCallAsync(Contact recipient)
+        {
+            await StartCallAsync(recipient, "Video");
+        }
+        [RelayCommand(CanExecute = nameof(CanStartCall))]
+        private async Task StartVoiceCallAsync(Contact recipient)
+        {
+            await StartCallAsync(recipient, "Voice");
+        }
+        private async Task StartCallAsync(Contact recipient, string callType)
+        {
+            if (recipient == null) return;
+            var currentUser = SharedData.Instance.userdata;
+            if (currentUser == null) return;
+
+            var callSignal = new CallSignal
+            {
+                CallId = Guid.NewGuid().ToString(),
+                CallerId = currentUser.Email,
+                CallerName = currentUser.Name,
+                CallerAvatarUrl = currentUser.AvatarUrl,
+                CalleeId = recipient.Email,
+                CallType = callType,
+                Status = "Ringing",
+                Timestamp = DateTime.UtcNow
+            };
+
+            _currentCallService = new WebRTCService(firebaseClient, callSignal);
+            var callViewModel = new CallViewModel(_currentCallService);
+            _callWindow = new CallWindow(callViewModel);
+
+            await _currentCallService.InitializeAsync();
+            await _currentCallService.AddAudioTrackAsync();
+            if (callType == "Video")
+            {
+                await _currentCallService.AddVideoTrackAsync();
+            }
+            _currentCallService.OnIceCandidateReady += async (candidate) =>
+            {
+                try
+                {
+                    string recipientSafeEmail = EscapeEmail(recipient.Email);
+                    var iceSignal = IceCandidateSignal.FromWebRtcCandidate(candidate);
+                    await firebaseClient
+                        .Child("ice_candidates")
+                        .Child(recipientSafeEmail) // Gửi đến người nhận
+                        .Child(callSignal.CallId)
+                        .PostAsync(iceSignal);
+                }
+                catch (Exception ex) { Debug.WriteLine($"Error sending ICE candidate: {ex.Message}"); }
+            };
+
+            // === BƯỚC 4: LẮNG NGHE PHẢN HỒI VÀ ICE TỪ NGƯỜI NHẬN ===
+            ListenForCallUpdates(callSignal);
+
+            _currentCallService.OnSdpOfferReady += async (sdpOffer) =>
+            {
+                callSignal.SdpOffer = sdpOffer;
+                try
+                {
+                    string recipientSafeEmail = EscapeEmail(recipient.Email);
+                    await firebaseClient
+                        .Child("calls")
+                        .Child(recipientSafeEmail)
+                        .Child(callSignal.CallId)
+                        .PutAsync(callSignal);
+
+                    Debug.WriteLine($"Call signal with SDP Offer sent to {recipient.Email}.");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error sending call signal: {ex.Message}");
+                    MessageBox.Show("Không thể thực hiện cuộc gọi. Vui lòng thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _callWindow.Close();
+                }
+            };
+
+            await _currentCallService.CreateOfferAsync();
+            _callWindow.Show();
+        }
+        private void ListenForCallUpdates(CallSignal call)
+        {
+            string currentUserSafeEmail = EscapeEmail(SharedData.Instance.userdata.Email);
+
+            // Lắng nghe thay đổi trạng thái chính (Answer)
+            _callStateListener = firebaseClient
+                .Child("calls")
+                .Child(currentUserSafeEmail) // Lắng nghe trên kênh của chính mình
+                .Child(call.CallId)
+                .AsObservable<CallSignal>()
+                .Subscribe(async callEvent =>
+                {
+                    if (callEvent.EventType == FirebaseEventType.InsertOrUpdate && callEvent.Object != null)
+                    {
+                        var updatedCall = callEvent.Object;
+                        if (updatedCall.Status == "Accepted" && !string.IsNullOrEmpty(updatedCall.SdpAnswer))
+                        {
+                            Debug.WriteLine("Call accepted and SDP Answer received.");
+                            await _currentCallService.HandleAnswerAsync(updatedCall.SdpAnswer);
+
+                            // Sau khi nhận Answer, bắt đầu lắng nghe ICE của người nhận
+                            ListenForRemoteIceCandidates(call.CalleeId, call.CallId);
+                        }
+                        else if (updatedCall.Status == "Declined" || updatedCall.Status == "Ended")
+                        {
+                            Debug.WriteLine("Call was declined or has ended.");
+                            _currentCallService?.HangUp();
+                            _callWindow?.Close();
+                            _callStateListener?.Dispose();
+                        }
+                    }
+                });
+        }
+        private void ListenForRemoteIceCandidates(string remoteUserEmail, string callId)
+        {
+            string currentUserSafeEmail = EscapeEmail(SharedData.Instance.userdata.Email);
+            firebaseClient
+                .Child("ice_candidates")
+                .Child(currentUserSafeEmail) // Lắng nghe trên kênh của mình
+                .Child(callId)
+                .AsObservable<IceCandidateSignal>()
+                .Subscribe(iceEvent =>
+                {
+                    if (iceEvent.EventType == FirebaseEventType.InsertOrUpdate && iceEvent.Object != null)
+                    {
+                        Debug.WriteLine("Received remote ICE candidate.");
+                        var remoteCandidate = iceEvent.Object.ToWebRtcCandidate();
+                        _currentCallService.AddIceCandidateAsync(remoteCandidate);
+                    }
+                });
+        }
+
+        private bool CanStartCall(Contact recipient)
+        {
+            return recipient != null;
+        }
         [RelayCommand]
         private async void OnAvatarUpdated(string newAvatarUrl)
         {
@@ -670,18 +822,6 @@ namespace WpfApp1.ViewModels
 
             StartListeningToContactsPresence();
         }
-
-        private string EscapeEmail(string email)
-        {
-            if (string.IsNullOrEmpty(email)) return string.Empty;
-            return email.Replace('.', '_')
-                         .Replace('#', '_')
-                         .Replace('$', '_')
-                         .Replace('[', '_')
-                         .Replace(']', '_')
-                         .Replace('/', '_');
-        }
-
         private async void SetCurrentUserGlobalStatus(bool isOnline)
         {
             if (userdata == null || string.IsNullOrEmpty(userdata.Email))

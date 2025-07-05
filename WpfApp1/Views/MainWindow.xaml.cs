@@ -6,10 +6,14 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
+using Firebase.Database.Query;
+using Firebase.Database.Streaming;
 using ToastNotifications.Core;
 using WpfApp1.Models;
+using WpfApp1.Services;
 using WpfApp1.ViewModels;
 using WpfApp1.Views;
+using static WpfApp1.ViewModels.MainViewModel;
 
 namespace WpfApp1
 {
@@ -19,7 +23,6 @@ namespace WpfApp1
     public partial class MainWindow : Window
     {
         string CurrentEmail;
-        private System.Timers.Timer _notificationTimer;
 
         public MainWindow(string email)
         {
@@ -29,7 +32,94 @@ namespace WpfApp1
             this.Closing += MainWindow_Closing;
             LocalizationManager.LanguageChanged += OnLanguageChanged;
         }
+        private string EscapeEmail(string email)
+        {
+            if (string.IsNullOrEmpty(email)) return string.Empty;
+            return email.Replace('.', '_').Replace('@', '_').Replace('#', '_').Replace('$', '_').Replace('[', '_').Replace(']', '_').Replace('/', '_');
+        }
+        private async void HandleCallResponse(CallSignal call, bool accepted)
+        {
+            string calleeSafeEmail = EscapeEmail(call.CalleeId);
+            await App.AppFirebaseClient.Child("calls").Child(calleeSafeEmail).Child(call.CallId).DeleteAsync();
 
+            if (accepted)
+            {
+                var webRtcService = new WebRTCService(App.AppFirebaseClient, call);
+                var callViewModel = new CallViewModel(webRtcService);
+                var callWindow = new CallWindow(callViewModel);
+
+                await webRtcService.InitializeAsync();
+                await webRtcService.AddAudioTrackAsync();
+                if (call.CallType == "Video")
+                {
+                    await webRtcService.AddVideoTrackAsync();
+                }
+                webRtcService.OnIceCandidateReady += async (candidate) =>
+                {
+                    try
+                    {
+                        string callerSafeEmail = EscapeEmail(call.CalleeId);
+                        var iceSignal = IceCandidateSignal.FromWebRtcCandidate(candidate);
+                        await App.AppFirebaseClient
+                            .Child("ice_candidates")
+                            .Child(callerSafeEmail) // Gửi về cho người gọi
+                            .Child(call.CallId)
+                            .PostAsync(iceSignal);
+                    }
+                    catch (Exception ex) { Debug.WriteLine($"Error sending ICE candidate: {ex.Message}"); }
+                };
+                ListenForRemoteIceCandidates(webRtcService, call.CallerId, call.CallId);
+
+                webRtcService.OnSdpAnswerReady += async (sdpAnswer) =>
+                {
+                    call.Status = "Accepted";
+                    call.SdpAnswer = sdpAnswer;
+                    try
+                    {
+                        string callerSafeEmail = EscapeEmail(call.CallerId);
+                        await App.AppFirebaseClient
+                            .Child("calls")
+                            .Child(callerSafeEmail)
+                            .Child(call.CallId)
+                            .PutAsync(call);
+
+                        Debug.WriteLine("Sent SDP Answer back to caller.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error sending SDP Answer: {ex.Message}");
+                        callWindow.Close();
+                    }
+                };
+
+                await webRtcService.HandleOfferAsync(call.SdpOffer);
+                callWindow.Show();
+            }
+            else
+            {
+                call.Status = "Declined";
+                string callerSafeEmail = call.CallerId.Replace('.', '_');
+                await App.AppFirebaseClient.Child("calls").Child(callerSafeEmail).Child(call.CallId).PutAsync(call);
+            }
+        }
+        private void ListenForRemoteIceCandidates(WebRTCService service, string remoteUserEmail, string callId)
+        {
+            string currentUserSafeEmail = EscapeEmail(SharedData.Instance.userdata.Email);
+            App.AppFirebaseClient
+                .Child("ice_candidates")
+                .Child(currentUserSafeEmail) // Lắng nghe trên kênh của mình
+                .Child(callId)
+                .AsObservable<IceCandidateSignal>()
+                .Subscribe(iceEvent =>
+                {
+                    if (iceEvent.EventType == FirebaseEventType.InsertOrUpdate && iceEvent.Object != null)
+                    {
+                        Debug.WriteLine("Received remote ICE candidate.");
+                        var remoteCandidate = iceEvent.Object.ToWebRtcCandidate();
+                        service.AddIceCandidateAsync(remoteCandidate);
+                    }
+                });
+        }
         private void OnLanguageChanged(object sender, EventArgs e)
         {
             InvalidateVisual();
@@ -62,9 +152,23 @@ namespace WpfApp1
             this.DataContext = mainViewModel;
 
             mainViewModel.ShowNotificationRequested += MainViewModel_ShowNotificationRequested;
-
-            // --- BƯỚC 1: LẮNG NGHE SỰ KIỆN CLICK TỪ NOTIFICATIONWINDOW ---
             NotificationWindow.NotificationClicked += OnNotificationClicked;
+
+
+            mainViewModel.IncomingCallReceived += MainViewModel_IncomingCallReceived;
+        }
+        private void MainViewModel_IncomingCallReceived(object sender, IncomingCallEventArgs e)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                var callWindow = new IncomingCallWindow(e.Call);
+
+                // Đăng ký sự kiện chấp nhận/từ chối từ cửa sổ popup
+                callWindow.CallAccepted += (acceptedCall) => HandleCallResponse(acceptedCall, true);
+                callWindow.CallDeclined += (declinedCall) => HandleCallResponse(declinedCall, false);
+
+                callWindow.Show();
+            });
         }
         private void OnNotificationClicked(string chatID)
         {
@@ -168,7 +272,7 @@ namespace WpfApp1
         {
             try
             {
-                // --- BƯỚC 4: HỦY ĐĂNG KÝ SỰ KIỆN ĐỂ TRÁNH RÒ RỈ BỘ NHỚ ---
+                
                 NotificationWindow.NotificationClicked -= OnNotificationClicked;
 
                 NotificationWindow.CloseAllNotifications();
@@ -176,6 +280,7 @@ namespace WpfApp1
                 if (this.DataContext is MainViewModel mainVM)
                 {
                     mainVM.ShowNotificationRequested -= MainViewModel_ShowNotificationRequested;
+                    mainVM.IncomingCallReceived -= MainViewModel_IncomingCallReceived;
                     mainVM.Cleanup();
                 }
             }
