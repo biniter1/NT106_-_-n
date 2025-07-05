@@ -24,26 +24,6 @@ namespace WpfApp1
             System.Diagnostics.Debug.WriteLine("Starting application...");
             AppFirebaseClient = new FirebaseClient("https://chatapp-177-default-rtdb.asia-southeast1.firebasedatabase.app/");
 
-            AppNotifier = new Notifier(cfg =>
-            {
-                // SỬA LỖI: Thay thế WindowPositionProvider bằng PrimaryScreenPositionProvider
-                // Điều này sẽ đảm bảo thông báo luôn xuất hiện ở góc màn hình chính.
-                cfg.PositionProvider = new PrimaryScreenPositionProvider(
-                    corner: Corner.BottomRight,
-                    offsetX: 20, // Tăng khoảng cách một chút cho đẹp hơn
-                    offsetY: 20);
-
-                // Cấu hình thời gian hiển thị và số lượng thông báo tối đa
-                cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(
-                    notificationLifetime: TimeSpan.FromSeconds(3),
-                    maximumNotificationCount: MaximumNotificationCount.FromCount(5));
-
-                cfg.Dispatcher = Application.Current.Dispatcher;
-
-                // (Tùy chọn) Cấu hình giao diện chung
-                cfg.DisplayOptions.TopMost = true; // Luôn hiển thị trên các cửa sổ khác
-                cfg.DisplayOptions.Width = 350;
-            });
 
             base.OnStartup(e);
 
@@ -78,12 +58,9 @@ namespace WpfApp1
 
         protected override void OnExit(ExitEventArgs e)
         {
-            // Dispose the notifier when the application exits
             AppNotifier?.Dispose();
             base.OnExit(e);
         }
-
-        // Các phương thức khác của bạn giữ nguyên
         public static void UpdateFirebaseClientAuth(string idToken)
         {
             AppFirebaseClient = new FirebaseClient(

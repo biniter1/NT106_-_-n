@@ -119,32 +119,16 @@ namespace WpfApp1
         {
             try
             {
-                if (App.AppNotifier != null)
+                Debug.WriteLine($"ShowDesktopNotification called: {title} - {message}");
+
+                // Ensure we're on the UI thread
+                if (Application.Current.Dispatcher.CheckAccess())
                 {
-                    var notificationControl = new MyCustomNotificationControl(title, message);
-
-                    // Tạo một tham chiếu đến đối tượng notification để có thể gọi phương thức Close()
-                    MyCustomNotification notification = null;
-
-                    // Gán hành động đóng từ control vào phương thức Close() của notification
-                    // Đây là bước quan trọng để nút 'X' hoạt động
-                    notificationControl.CloseAction = () =>
-                    {
-                        notification?.Close();
-                    };
-
-                    // Khởi tạo đối tượng notification sau khi đã gán CloseAction
-                    notification = new MyCustomNotification(
-                        message,
-                        notificationControl,
-                        new MessageOptions
-                        {
-                            FreezeOnMouseEnter = true, // Tạm dừng bộ đếm thời gian khi di chuột vào
-                            UnfreezeOnMouseLeave = true, // Tiếp tục đếm khi di chuột ra
-                        }
-                    );
-
-                    App.AppNotifier.Notify(() => notification);
+                    CreateNotificationWindow(title, message);
+                }
+                else
+                {
+                    Application.Current.Dispatcher.Invoke(() => CreateNotificationWindow(title, message));
                 }
             }
             catch (Exception ex)
@@ -152,11 +136,27 @@ namespace WpfApp1
                 Debug.WriteLine($"Error showing desktop notification: {ex.Message}");
             }
         }
+        private void CreateNotificationWindow(string title, string message)
+        {
+            try
+            {
+                var notificationWindow = new NotificationWindow(title, message);
+                notificationWindow.Show();
+                Debug.WriteLine("NotificationWindow created and shown");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error creating notification window: {ex.Message}");
+            }
+        }
 
         private void MainWindow_Closing(object sender, CancelEventArgs e)
         {
             try
             {
+                // Đóng tất cả notifications
+                NotificationWindow.CloseAllNotifications();
+
                 if (this.DataContext is MainViewModel mainVM)
                 {
                     mainVM.ShowNotificationRequested -= MainViewModel_ShowNotificationRequested;
@@ -167,6 +167,10 @@ namespace WpfApp1
             {
                 Debug.WriteLine($"Error during window closing: {ex.Message}");
             }
+        }
+        private void CloseAllNotifications()
+        {
+            NotificationWindow.CloseAllNotifications();
         }
     }
 }
