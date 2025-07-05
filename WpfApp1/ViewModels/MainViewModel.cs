@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Firebase.Database;
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using WpfApp1.Models;
@@ -84,6 +85,33 @@ namespace WpfApp1.ViewModels
                 ChatVm.NewMessageNotificationRequested += OnNewMessageNotificationFromChat;
             }
         }
+        public void OpenChat(string chatID)
+        {
+            if (string.IsNullOrEmpty(chatID)) return;
+
+            Debug.WriteLine($"MainViewModel: Received request to open chat for ID: {chatID}");
+
+            // Tìm contact tương ứng trong ChatViewModel
+            var contactToOpen = ChatVm?.Contacts.FirstOrDefault(c => c.chatID == chatID);
+
+            if (contactToOpen != null)
+            {
+                Debug.WriteLine($"Found contact: {contactToOpen.Name}. Initiating chat.");
+
+                // Sử dụng phương thức đã có sẵn trong ChatViewModel để chọn contact
+                ChatVm.InitiateChatWith(contactToOpen);
+
+                // Quan trọng: Đảm bảo giao diện chính đang hiển thị ChatView
+                CurrentViewModel = ChatVm;
+            }
+            else
+            {
+                Debug.WriteLine($"Contact with ChatID {chatID} not found in the current contact list.");
+                // Tùy chọn: Xử lý trường hợp contact chưa được tải.
+                // Hiện tại, chúng ta giả định contact đã có trong danh sách.
+            }
+        }
+
 
         // THÊM 3: PHƯƠNG THỨC XỬ LÝ KHI NHẬN ĐƯỢC EVENT TỪ CHATVIEWMODEL
         private void OnNewMessageNotificationFromChat(object sender, NewMessageEventArgs e)

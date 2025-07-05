@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
@@ -8,69 +11,84 @@ namespace WpfApp1.Views
 {
     public partial class NotificationWindow : Window
     {
+        private readonly string _chatID;
+        public static event Action<string> NotificationClicked;
+
         private DispatcherTimer _autoCloseTimer;
         private DispatcherTimer _progressTimer;
         private int _totalSeconds = 5;
         private int _currentSecond = 0;
         private bool _isClosing = false;
 
-        public NotificationWindow(string title, string message)
+        public NotificationWindow(string title, string message, string chatID)
         {
             InitializeComponent();
 
-            // Set content
+            _chatID = chatID;
             TitleText.Text = title;
             MessageText.Text = message;
 
-            // Position window
-            PositionWindow();
-
-            // Setup timers
             SetupAutoCloseTimer();
             SetupProgressTimer();
 
-            // Show with animation
-            this.Loaded += (s, e) => StartFadeInAnimation();
+            // THAY ĐỔI CHÍNH: Di chuyển việc định vị và bắt đầu animation vào sự kiện Loaded
+            // để đảm bảo ActualWidth và ActualHeight đã có giá trị chính xác.
+            this.Loaded += (s, e) =>
+            {
+                PositionWindow();
+                StartFadeInAnimation();
+            };
 
-            Debug.WriteLine($"NotificationWindow created: {title} - {message}");
+            this.MouseLeftButtonDown += NotificationWindow_MouseLeftButtonDown;
+            Debug.WriteLine($"NotificationWindow created: {title} - {message} - ChatID: {_chatID}");
         }
 
+        private void NotificationWindow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Bỏ qua nếu người dùng click vào nút đóng
+            if (e.OriginalSource is FrameworkElement element && element.Name == "CloseButton")
+            {
+                return;
+            }
+
+            Debug.WriteLine($"Notification clicked for chat ID: {_chatID}");
+            NotificationClicked?.Invoke(_chatID);
+            CloseNotification();
+        }
+
+        /// <summary>
+        /// Vị trí cửa sổ thông báo ở góc dưới bên phải.
+        /// </summary>
         private void PositionWindow()
         {
-            // Position at bottom-right corner of screen
             var workArea = SystemParameters.WorkArea;
 
-            // Calculate position (accounting for potential multiple notifications)
-            var notificationHeight = 130; // Estimated height including margin
-            var existingNotifications = GetExistingNotificationsCount();
+            // Lấy danh sách các thông báo đang hiển thị, sắp xếp từ trên xuống dưới
+            var existingNotifications = Application.Current.Windows.OfType<NotificationWindow>()
+                                             .Where(w => w.IsVisible && w != this)
+                                             .OrderBy(w => w.Top)
+                                             .ToList();
 
-            this.Left = workArea.Right - 370; // 350 width + 20 margin
-            this.Top = workArea.Bottom - 130 - 20 - (existingNotifications * notificationHeight); // Bottom position
+            // Kích thước của cửa sổ này
+            var notificationWidth = this.ActualWidth;
+            var notificationHeight = this.ActualHeight;
+            const double margin = 20.0;
+            const double spacing = 10.0;
+
+            // Tính toán vị trí Left
+            this.Left = workArea.Right - notificationWidth - margin;
+
+            // Tính toán vị trí Top, xếp chồng lên các thông báo đã có
+            this.Top = workArea.Bottom - notificationHeight - margin - (existingNotifications.Count * (notificationHeight + spacing));
 
             Debug.WriteLine($"Positioned at: Left={this.Left}, Top={this.Top}");
         }
 
-        private int GetExistingNotificationsCount()
-        {
-            // Count existing notification windows
-            int count = 0;
-            foreach (Window window in Application.Current.Windows)
-            {
-                if (window is NotificationWindow && window != this && window.IsVisible)
-                {
-                    count++;
-                }
-            }
-            return count;
-        }
-
         private void SetupAutoCloseTimer()
         {
-            _autoCloseTimer = new DispatcherTimer();
-            _autoCloseTimer.Interval = TimeSpan.FromSeconds(_totalSeconds);
+            _autoCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_totalSeconds) };
             _autoCloseTimer.Tick += (sender, e) =>
             {
-                Debug.WriteLine("Auto-close timer triggered");
                 _autoCloseTimer.Stop();
                 CloseNotification();
             };
@@ -78,8 +96,7 @@ namespace WpfApp1.Views
 
         private void SetupProgressTimer()
         {
-            _progressTimer = new DispatcherTimer();
-            _progressTimer.Interval = TimeSpan.FromMilliseconds(100); // Update every 100ms for smooth progress
+            _progressTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
             _progressTimer.Tick += (sender, e) =>
             {
                 _currentSecond += 100;
@@ -97,50 +114,38 @@ namespace WpfApp1.Views
         {
             var fadeInStoryboard = (Storyboard)this.Resources["FadeInStoryboard"];
             fadeInStoryboard.Begin(this);
-
-            // Start timers after fade in
             _autoCloseTimer.Start();
             _progressTimer.Start();
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("Close button clicked");
             CloseNotification();
         }
 
         private void CloseNotification()
         {
             if (_isClosing) return;
-
             _isClosing = true;
-            Debug.WriteLine("Closing notification with animation");
-
-            // Stop timers
             _autoCloseTimer?.Stop();
             _progressTimer?.Stop();
-
-            // Start fade out animation
             var fadeOutStoryboard = (Storyboard)this.Resources["FadeOutStoryboard"];
             fadeOutStoryboard.Begin(this);
         }
 
         private void FadeOut_Completed(object sender, EventArgs e)
         {
-            Debug.WriteLine("Fade out animation completed, closing window");
             this.Close();
         }
 
-        private void Window_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        private void Window_MouseEnter(object sender, MouseEventArgs e)
         {
-            Debug.WriteLine("Mouse entered notification - pausing timers");
             _autoCloseTimer?.Stop();
             _progressTimer?.Stop();
         }
 
-        private void Window_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+        private void Window_MouseLeave(object sender, MouseEventArgs e)
         {
-            Debug.WriteLine("Mouse left notification - resuming timers");
             if (!_isClosing)
             {
                 _autoCloseTimer?.Start();
@@ -150,56 +155,41 @@ namespace WpfApp1.Views
 
         protected override void OnClosed(EventArgs e)
         {
-            Debug.WriteLine("NotificationWindow closed");
-
-            // Cleanup timers
-            _autoCloseTimer?.Stop();
-            _progressTimer?.Stop();
-            _autoCloseTimer = null;
-            _progressTimer = null;
-
-            // Reposition remaining notifications
-            RepositionRemainingNotifications();
-
             base.OnClosed(e);
+            // Hủy đăng ký sự kiện để tránh rò rỉ bộ nhớ
+            this.MouseLeftButtonDown -= NotificationWindow_MouseLeftButtonDown;
+            RepositionRemainingNotifications();
         }
 
+        /// <summary>
+        /// Sắp xếp lại các thông báo còn lại một cách mượt mà.
+        /// </summary>
         private void RepositionRemainingNotifications()
         {
             try
             {
-                var notifications = new System.Collections.Generic.List<NotificationWindow>();
+                var notifications = Application.Current.Windows.OfType<NotificationWindow>()
+                                         .Where(w => w.IsVisible && w != this)
+                                         .OrderBy(w => w.Top)
+                                         .ToList();
 
-                // Collect all remaining notification windows
-                foreach (Window window in Application.Current.Windows)
-                {
-                    if (window is NotificationWindow notif && window != this && window.IsVisible)
-                    {
-                        notifications.Add(notif);
-                    }
-                }
-
-                // Reposition them (from bottom up)
                 var workArea = SystemParameters.WorkArea;
-                var notificationHeight = 130;
+                const double margin = 20.0;
+                const double spacing = 10.0;
 
                 for (int i = 0; i < notifications.Count; i++)
                 {
-                    var targetTop = workArea.Bottom - 130 - 20 - (i * notificationHeight);
+                    var notif = notifications[i];
+                    var notificationHeight = notif.ActualHeight;
+
+                    var targetTop = workArea.Bottom - notificationHeight - margin - (i * (notificationHeight + spacing));
 
                     // Animate to new position
-                    var storyboard = new Storyboard();
-                    var animation = new DoubleAnimation
+                    var animation = new DoubleAnimation(targetTop, TimeSpan.FromMilliseconds(300))
                     {
-                        To = targetTop,
-                        Duration = TimeSpan.FromMilliseconds(300),
                         EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
                     };
-
-                    Storyboard.SetTarget(animation, notifications[i]);
-                    Storyboard.SetTargetProperty(animation, new PropertyPath("Top"));
-                    storyboard.Children.Add(animation);
-                    storyboard.Begin();
+                    notif.BeginAnimation(Window.TopProperty, animation);
                 }
             }
             catch (Exception ex)
@@ -208,29 +198,11 @@ namespace WpfApp1.Views
             }
         }
 
-        // Method to manually close all notifications
         public static void CloseAllNotifications()
         {
-            try
+            foreach (var window in Application.Current.Windows.OfType<NotificationWindow>().ToList())
             {
-                var notificationsToClose = new System.Collections.Generic.List<NotificationWindow>();
-
-                foreach (Window window in Application.Current.Windows)
-                {
-                    if (window is NotificationWindow notif && window.IsVisible)
-                    {
-                        notificationsToClose.Add(notif);
-                    }
-                }
-
-                foreach (var notification in notificationsToClose)
-                {
-                    notification.CloseNotification();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error closing all notifications: {ex.Message}");
+                window.CloseNotification();
             }
         }
     }
