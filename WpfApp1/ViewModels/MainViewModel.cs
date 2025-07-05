@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Firebase.Database;
+using Firebase.Database.Query;
+using Firebase.Database.Streaming;
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -27,6 +29,12 @@ namespace WpfApp1.ViewModels
         public MatchingChatViewModel MatchingChatVm { get; }
         public FriendListViewModel FriendListVm { get; private set; }
         public AIChatViewModel AIChatVm { get; }
+        public class IncomingCallEventArgs : EventArgs
+        {
+            public CallSignal Call { get; }
+            public IncomingCallEventArgs(CallSignal call) { Call = call; }
+        }
+        private IDisposable _callListener;
 
         private readonly NotificationService _notificationService;
         private IDisposable _notificationListener;
@@ -39,9 +47,10 @@ namespace WpfApp1.ViewModels
 
         // THÊM 1: KHAI BÁO EVENT ĐỂ MAINWINDOW LẮNG NGHE
         public event EventHandler<NewMessageEventArgs> ShowNotificationRequested;
-
+        public event EventHandler<IncomingCallEventArgs> IncomingCallReceived;
         public MainViewModel(FirebaseClient firebaseClient)
         {
+
             _firebaseClient = firebaseClient;
 
             // Khởi tạo các ViewModel con một lần duy nhất
@@ -83,7 +92,38 @@ namespace WpfApp1.ViewModels
             if (ChatVm != null)
             {
                 ChatVm.NewMessageNotificationRequested += OnNewMessageNotificationFromChat;
+
             }
+            ListenForIncomingCalls();
+        }
+        private void ListenForIncomingCalls()
+        {
+            var currentUser = SharedData.Instance.userdata;
+            if (currentUser == null || string.IsNullOrEmpty(currentUser.Email)) return;
+
+            string safeEmail = currentUser.Email.Replace('.', '_');
+
+            _callListener = _firebaseClient
+                .Child("calls")
+                .Child(safeEmail)
+                .AsObservable<CallSignal>()
+                .Subscribe(callEvent =>
+                {
+                    if (callEvent.EventType == FirebaseEventType.InsertOrUpdate && callEvent.Object != null)
+                    {
+                        var call = callEvent.Object;
+                        // Chỉ xử lý các cuộc gọi mới đang ở trạng thái "Ringing"
+                        if (call.Status == "Ringing")
+                        {
+                            Debug.WriteLine($"Incoming call received from {call.CallerName}. Call ID: {call.CallId}");
+                            // Phát event để MainWindow xử lý (hiển thị popup)
+                            IncomingCallReceived?.Invoke(this, new IncomingCallEventArgs(call));
+                        }
+                    }
+                }, ex =>
+                {
+                    Debug.WriteLine($"Error listening for calls: {ex.Message}");
+                });
         }
         public void OpenChat(string chatID)
         {
@@ -174,7 +214,7 @@ namespace WpfApp1.ViewModels
             {
                 ChatVm.NewMessageNotificationRequested -= OnNewMessageNotificationFromChat;
             }
-
+            _callListener?.Dispose();
             ChatVm?.Cleanup();
             System.Diagnostics.Debug.WriteLine("MainViewModel: Cleanup of cached child ViewModels complete.");
         }
