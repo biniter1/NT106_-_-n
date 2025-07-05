@@ -23,6 +23,8 @@ namespace WpfApp1.ViewModels
 
         private readonly WebRTCService _webRTCService;
 
+
+
         public CallViewModel(WebRTCService webRTCService)
         {
             _webRTCService = webRTCService;
