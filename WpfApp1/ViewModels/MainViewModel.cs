@@ -58,7 +58,7 @@ namespace WpfApp1.ViewModels
             FriendListVm = new FriendListViewModel();
 
             string currentEmail = SharedData.Instance.userdata.Email;
-            string safeKey = currentEmail.Replace(".", "_");
+            string safeKey = EscapeEmail(currentEmail);
             MatchingChatVm = new MatchingChatViewModel(_firebaseClient, safeKey);
             MatchingChatVm.MatchFound += OnMatchFound;
 
@@ -90,12 +90,23 @@ namespace WpfApp1.ViewModels
             }
             ListenForIncomingCalls();
         }
+        private string EscapeEmail(string email)
+        {
+            if (string.IsNullOrEmpty(email)) return string.Empty;
+            return email.Replace('.', '_')
+                        .Replace('@', '_') // Thêm xử lý cho ký tự @
+                        .Replace('#', '_')
+                        .Replace('$', '_')
+                        .Replace('[', '_')
+                        .Replace(']', '_')
+                        .Replace('/', '_');
+        }
         private void ListenForIncomingCalls()
         {
             var currentUser = SharedData.Instance.userdata;
             if (currentUser == null || string.IsNullOrEmpty(currentUser.Email)) return;
 
-            string safeEmail = currentUser.Email.Replace('.', '_');
+            string safeEmail = EscapeEmail(currentUser.Email);
 
             _callListener = _firebaseClient
                 .Child("calls")
@@ -103,6 +114,7 @@ namespace WpfApp1.ViewModels
                 .AsObservable<CallSignal>()
                 .Subscribe(callEvent =>
                 {
+
                     if (callEvent.EventType == FirebaseEventType.InsertOrUpdate && callEvent.Object != null)
                     {
                         var call = callEvent.Object;
