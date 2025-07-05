@@ -251,9 +251,6 @@ namespace WpfApp1.ViewModels
                 chatID = chatID, // Sử dụng cùng chatID
                 IsOnline = true, // Tạm thời
             };
-
-            // Kiểm tra và thêm contact cho cả hai người nếu chưa tồn tại
-            // (Logic này của bạn đã đúng)
             var contactsOfA = await GetContactsAsync(currentUser.Email);
             if (!contactsOfA.Any(c => c.chatID == chatID))
             {
@@ -265,11 +262,6 @@ namespace WpfApp1.ViewModels
             {
                 await AddContactAsync(contactVM.Email, contactForFriend);
             }
-
-            // --- THAY ĐỔI TẠI ĐÂY ---
-            // Thay vì hiển thị MessageBox, hãy phát sự kiện để yêu cầu mở chat
-
-            // Phát sự kiện và gửi đi đối tượng contact mà ChatView cần để làm việc
             EventAggregator.Instance.Publish(new StartChatEvent(contactForCurrentUser));
         }
 
@@ -699,8 +691,7 @@ namespace WpfApp1.ViewModels
 
             try
             {
-                // For now, show a simple message
-                // In a real application, you would create a proper invitation window
+                
                 MessageBox.Show($"Invite members functionality will be implemented for group: {groupVM.Name}");
 
                 // Example of adding members (you would get this from a UI)

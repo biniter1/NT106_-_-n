@@ -53,8 +53,7 @@ namespace WpfApp1
 
             if (App.AppFirebaseClient == null)
             {
-                MessageBox.Show("Lỗi khởi tạo Firebase: FirebaseClient chưa được thiết lập. Vui lòng đăng nhập lại.",
-                    "Lỗi Firebase", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Lỗi khởi tạo Firebase: FirebaseClient chưa được thiết lập. Vui lòng đăng nhập lại.", "Lỗi Firebase", MessageBoxButton.OK, MessageBoxImage.Error);
                 Application.Current.Shutdown();
                 return;
             }
@@ -63,8 +62,31 @@ namespace WpfApp1
             this.DataContext = mainViewModel;
 
             mainViewModel.ShowNotificationRequested += MainViewModel_ShowNotificationRequested;
-        }
 
+            // --- BƯỚC 1: LẮNG NGHE SỰ KIỆN CLICK TỪ NOTIFICATIONWINDOW ---
+            NotificationWindow.NotificationClicked += OnNotificationClicked;
+        }
+        private void OnNotificationClicked(string chatID)
+        {
+            // Đảm bảo chạy trên luồng UI
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Lấy MainViewModel từ DataContext
+                if (this.DataContext is MainViewModel mainVm)
+                {
+                    // Gọi phương thức mới để mở chat
+                    mainVm.OpenChat(chatID);
+                }
+
+                // Đưa cửa sổ chính lên phía trước
+                if (this.WindowState == WindowState.Minimized)
+                {
+                    this.WindowState = WindowState.Normal;
+                }
+                this.Activate();
+                this.Focus();
+            });
+        }
         // Xử lý khi nhận được yêu cầu hiển thị thông báo
         private void MainViewModel_ShowNotificationRequested(object sender, NewMessageEventArgs e)
         {
@@ -119,28 +141,20 @@ namespace WpfApp1
         {
             try
             {
-                Debug.WriteLine($"ShowDesktopNotification called: {title} - {message}");
-
-                // Ensure we're on the UI thread
-                if (Application.Current.Dispatcher.CheckAccess())
-                {
-                    CreateNotificationWindow(title, message);
-                }
-                else
-                {
-                    Application.Current.Dispatcher.Invoke(() => CreateNotificationWindow(title, message));
-                }
+                Debug.WriteLine($"ShowDesktopNotification called: {title} - {message} - ChatID: {chatID}");
+                CreateNotificationWindow(title, message, chatID);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error showing desktop notification: {ex.Message}");
             }
         }
-        private void CreateNotificationWindow(string title, string message)
+        private void CreateNotificationWindow(string title, string message, string chatID)
         {
             try
             {
-                var notificationWindow = new NotificationWindow(title, message);
+                // Truyền cả chatID vào constructor
+                var notificationWindow = new NotificationWindow(title, message, chatID);
                 notificationWindow.Show();
                 Debug.WriteLine("NotificationWindow created and shown");
             }
@@ -154,7 +168,9 @@ namespace WpfApp1
         {
             try
             {
-                // Đóng tất cả notifications
+                // --- BƯỚC 4: HỦY ĐĂNG KÝ SỰ KIỆN ĐỂ TRÁNH RÒ RỈ BỘ NHỚ ---
+                NotificationWindow.NotificationClicked -= OnNotificationClicked;
+
                 NotificationWindow.CloseAllNotifications();
 
                 if (this.DataContext is MainViewModel mainVM)
