@@ -53,7 +53,6 @@ namespace WpfApp1.ViewModels
 
             _firebaseClient = firebaseClient;
 
-            // Khởi tạo các ViewModel con một lần duy nhất
             ChatVm = new ChatViewModel(_firebaseClient);
             SettingsVm = new SettingsViewModel(ChatVm, _firebaseClient);
             FriendListVm = new FriendListViewModel();
@@ -64,12 +63,9 @@ namespace WpfApp1.ViewModels
             MatchingChatVm.MatchFound += OnMatchFound;
 
             AIChatVm = new AIChatViewModel();
-            IsAIChatVisible = false; // Mặc định ẩn
+            IsAIChatVisible = false; 
 
-            // Đặt View mặc định
             CurrentViewModel = ChatVm;
-
-            // Hệ thống notification có sẵn của bạn
             _notificationService = new NotificationService(firebaseClient);
             _notificationListener = _notificationService.ListenForNotifications(safeKey, (notification) =>
             {
@@ -85,10 +81,8 @@ namespace WpfApp1.ViewModels
                 });
             });
 
-            // Đăng ký lắng nghe sự kiện yêu cầu mở chat
             EventAggregator.Instance.Subscribe<StartChatEvent>(OnStartChatReceived);
 
-            // THÊM 2: ĐĂNG KÝ LẮNG NGHE SỰ KIỆN TIN NHẮN MỚI TỪ CHATVIEWMODEL
             if (ChatVm != null)
             {
                 ChatVm.NewMessageNotificationRequested += OnNewMessageNotificationFromChat;
@@ -112,11 +106,9 @@ namespace WpfApp1.ViewModels
                     if (callEvent.EventType == FirebaseEventType.InsertOrUpdate && callEvent.Object != null)
                     {
                         var call = callEvent.Object;
-                        // Chỉ xử lý các cuộc gọi mới đang ở trạng thái "Ringing"
                         if (call.Status == "Ringing")
                         {
                             Debug.WriteLine($"Incoming call received from {call.CallerName}. Call ID: {call.CallId}");
-                            // Phát event để MainWindow xử lý (hiển thị popup)
                             IncomingCallReceived?.Invoke(this, new IncomingCallEventArgs(call));
                         }
                     }
@@ -130,45 +122,28 @@ namespace WpfApp1.ViewModels
             if (string.IsNullOrEmpty(chatID)) return;
 
             Debug.WriteLine($"MainViewModel: Received request to open chat for ID: {chatID}");
-
-            // Tìm contact tương ứng trong ChatViewModel
             var contactToOpen = ChatVm?.Contacts.FirstOrDefault(c => c.chatID == chatID);
 
             if (contactToOpen != null)
             {
                 Debug.WriteLine($"Found contact: {contactToOpen.Name}. Initiating chat.");
-
-                // Sử dụng phương thức đã có sẵn trong ChatViewModel để chọn contact
                 ChatVm.InitiateChatWith(contactToOpen);
-
-                // Quan trọng: Đảm bảo giao diện chính đang hiển thị ChatView
                 CurrentViewModel = ChatVm;
             }
             else
             {
                 Debug.WriteLine($"Contact with ChatID {chatID} not found in the current contact list.");
-                // Tùy chọn: Xử lý trường hợp contact chưa được tải.
-                // Hiện tại, chúng ta giả định contact đã có trong danh sách.
             }
         }
-
-
-        // THÊM 3: PHƯƠNG THỨC XỬ LÝ KHI NHẬN ĐƯỢC EVENT TỪ CHATVIEWMODEL
         private void OnNewMessageNotificationFromChat(object sender, NewMessageEventArgs e)
         {
-            // Chỉ cần chuyển tiếp (phát lại) event này để MainWindow bắt được
             ShowNotificationRequested?.Invoke(this, e);
         }
 
-        // THÊM MỚI: Phương thức xử lý sự kiện được phát ra từ FriendListViewModel
         private void OnStartChatReceived(StartChatEvent e)
         {
             if (e?.FriendToChat == null) return;
-
-            // Bước 1: Yêu cầu ChatViewModel chuẩn bị cuộc trò chuyện
             ChatVm.InitiateChatWith(e.FriendToChat);
-
-            // Bước 2: Chuyển View hiện tại sang ChatView
             CurrentViewModel = ChatVm;
         }
 
@@ -177,13 +152,9 @@ namespace WpfApp1.ViewModels
         {
             IsAIChatVisible = !IsAIChatVisible;
         }
-
-        // --- Commands để thay đổi CurrentViewModel ---
         [RelayCommand] private void ShowChat() => CurrentViewModel = ChatVm;
         [RelayCommand] private void ShowFriendList() => CurrentViewModel = FriendListVm;
-        [RelayCommand] private void ShowSettings() => CurrentViewModel = SettingsVm;
 
-        // ... các command và phương thức khác của bạn giữ nguyên ...
         [RelayCommand]
         private void ShowAddFriendPopup()
         {
@@ -201,9 +172,39 @@ namespace WpfApp1.ViewModels
             MessageBox.Show($"Đã ghép cặp thành công với {opponentId}! Vào phòng chat: {roomId}");
             CurrentViewModel = ChatVm;
         }
+        [RelayCommand]
+        private void ShowSettingsPopup()
+        {
+            var settingsVM = new SettingsViewModel(ChatVm, _firebaseClient);
+            var settingsWin = new SettingsWindow(ChatVm, _firebaseClient)
+            {
+                DataContext = settingsVM
+            };
 
-        // ... các phương thức khác giữ nguyên ...
+            if (Application.Current.MainWindow != null)
+            {
+                settingsWin.Owner = Application.Current.MainWindow;
+            }
+            settingsWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            settingsWin.Show();
+        }
 
+        [RelayCommand]
+        private void ShowSettings()
+        {
+            CurrentViewModel = SettingsVm;
+        }
+        [RelayCommand]
+        private void ShowCreateGroupPopup()
+        {
+            var createGroupWindow = new Views.CreateGroupWindow
+            {
+                Owner = Application.Current.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            createGroupWindow.ShowDialog();
+        }
         public void Cleanup()
         {
             _notificationListener?.Dispose();

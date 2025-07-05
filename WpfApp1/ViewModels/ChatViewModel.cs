@@ -187,7 +187,12 @@ namespace WpfApp1.ViewModels
             {
                 try
                 {
+
+                    
+
                     string recipientSafeEmail = EscapeEmail(recipient.Email);
+                    
+
                     var iceSignal = IceCandidateSignal.FromWebRtcCandidate(candidate);
                     await firebaseClient
                         .Child("ice_candidates")
@@ -198,7 +203,7 @@ namespace WpfApp1.ViewModels
                 catch (Exception ex) { Debug.WriteLine($"Error sending ICE candidate: {ex.Message}"); }
             };
 
-            // === BƯỚC 4: LẮNG NGHE PHẢN HỒI VÀ ICE TỪ NGƯỜI NHẬN ===
+            
             ListenForCallUpdates(callSignal);
 
             _currentCallService.OnSdpOfferReady += async (sdpOffer) =>
@@ -207,6 +212,10 @@ namespace WpfApp1.ViewModels
                 try
                 {
                     string recipientSafeEmail = EscapeEmail(recipient.Email);
+                    string firebasePath = $"calls/{recipientSafeEmail}/{callSignal.CallId}";
+
+                    // === LOG GỠ LỖI 1 ===
+                    Debug.WriteLine($"[CALLER] Attempting to send call signal to path: {firebasePath}");
                     await firebaseClient
                         .Child("calls")
                         .Child(recipientSafeEmail)
