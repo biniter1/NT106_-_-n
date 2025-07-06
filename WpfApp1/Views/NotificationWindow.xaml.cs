@@ -156,14 +156,9 @@ namespace WpfApp1.Views
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
-            // Hủy đăng ký sự kiện để tránh rò rỉ bộ nhớ
             this.MouseLeftButtonDown -= NotificationWindow_MouseLeftButtonDown;
             RepositionRemainingNotifications();
         }
-
-        /// <summary>
-        /// Sắp xếp lại các thông báo còn lại một cách mượt mà.
-        /// </summary>
         private void RepositionRemainingNotifications()
         {
             try

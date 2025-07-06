@@ -4,6 +4,7 @@ using System.Net.Mail;
 using System.Windows;
 using System.Xml.Linq;
 using WpfApp1.Models;
+using WpfApp1.Views; // Added for CustomMessageBox
 
 namespace WpfApp1.ViewModels
 {
@@ -34,10 +35,10 @@ namespace WpfApp1.ViewModels
             {
                 if (string.IsNullOrWhiteSpace(FeedbackMessage))
                 {
-                    MessageBox.Show(GetLocalizedString("FeedbackEmptyMessage"),
-                                  GetLocalizedString("Error"),
-                                  MessageBoxButton.OK,
-                                  MessageBoxImage.Warning);
+                    CustomMessageBox.Show(GetLocalizedString("FeedbackEmptyMessage"),
+                                        GetLocalizedString("Error"),
+                                        CustomMessageBoxWindow.MessageButtons.OK,
+                                        CustomMessageBoxWindow.MessageIcon.Warning);
                     return;
                 }
 
@@ -60,10 +61,10 @@ namespace WpfApp1.ViewModels
                     // Send email
                     client.Send(mail);
 
-                    MessageBox.Show(GetLocalizedString("FeedbackSentMessage"),
-                                  GetLocalizedString("Success"),
-                                  MessageBoxButton.OK,
-                                  MessageBoxImage.Information);
+                    CustomMessageBox.Show(GetLocalizedString("FeedbackSentMessage"),
+                                        GetLocalizedString("Success"),
+                                        CustomMessageBoxWindow.MessageButtons.OK,
+                                        CustomMessageBoxWindow.MessageIcon.Information);
 
                     // Close the window
                     CloseWindow();
@@ -71,10 +72,10 @@ namespace WpfApp1.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"{GetLocalizedString("FeedbackErrorMessage")}: {ex.Message}",
-                              GetLocalizedString("Error"),
-                              MessageBoxButton.OK,
-                              MessageBoxImage.Error);
+                CustomMessageBox.Show($"{GetLocalizedString("FeedbackErrorMessage")}: {ex.Message}",
+                                    GetLocalizedString("Error"),
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 

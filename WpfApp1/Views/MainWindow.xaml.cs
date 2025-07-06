@@ -32,11 +32,13 @@ namespace WpfApp1
             this.Closing += MainWindow_Closing;
             LocalizationManager.LanguageChanged += OnLanguageChanged;
         }
+
         private string EscapeEmail(string email)
         {
             if (string.IsNullOrEmpty(email)) return string.Empty;
             return email.Replace('.', '_').Replace('@', '_').Replace('#', '_').Replace('$', '_').Replace('[', '_').Replace(']', '_').Replace('/', '_');
         }
+
         private async void HandleCallResponse(CallSignal call, bool accepted)
         {
             string calleeSafeEmail = EscapeEmail(call.CalleeId);
@@ -102,6 +104,7 @@ namespace WpfApp1
                 await App.AppFirebaseClient.Child("calls").Child(callerSafeEmail).Child(call.CallId).PutAsync(call);
             }
         }
+
         private void ListenForRemoteIceCandidates(WebRTCService service, string remoteUserEmail, string callId)
         {
             string currentUserSafeEmail = EscapeEmail(SharedData.Instance.userdata.Email);
@@ -120,6 +123,7 @@ namespace WpfApp1
                     }
                 });
         }
+
         private void OnLanguageChanged(object sender, EventArgs e)
         {
             InvalidateVisual();
@@ -143,7 +147,10 @@ namespace WpfApp1
 
             if (App.AppFirebaseClient == null)
             {
-                MessageBox.Show("Lỗi khởi tạo Firebase: FirebaseClient chưa được thiết lập. Vui lòng đăng nhập lại.", "Lỗi Firebase", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show("Lỗi khởi tạo Firebase: FirebaseClient chưa được thiết lập. Vui lòng đăng nhập lại.",
+                                    "Lỗi Firebase",
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
                 Application.Current.Shutdown();
                 return;
             }
@@ -154,9 +161,9 @@ namespace WpfApp1
             mainViewModel.ShowNotificationRequested += MainViewModel_ShowNotificationRequested;
             NotificationWindow.NotificationClicked += OnNotificationClicked;
 
-
             mainViewModel.IncomingCallReceived += MainViewModel_IncomingCallReceived;
         }
+
         private void MainViewModel_IncomingCallReceived(object sender, IncomingCallEventArgs e)
         {
             Application.Current.Dispatcher.Invoke(() =>
@@ -170,6 +177,7 @@ namespace WpfApp1
                 callWindow.Show();
             });
         }
+
         private void OnNotificationClicked(string chatID)
         {
             // Đảm bảo chạy trên luồng UI
@@ -191,6 +199,7 @@ namespace WpfApp1
                 this.Focus();
             });
         }
+
         // Xử lý khi nhận được yêu cầu hiển thị thông báo
         private void MainViewModel_ShowNotificationRequested(object sender, NewMessageEventArgs e)
         {
@@ -199,13 +208,16 @@ namespace WpfApp1
                 ShowDesktopNotification(e.Title, e.Message, e.ChatID);
             });
         }
+
         public async Task LoadDataCurrentUser(string email)
         {
             var db = FirestoreHelper.database;
             if (db == null)
             {
-                MessageBox.Show("Firestore database is not initialized!", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show("Firestore database is not initialized!",
+                                    "Error",
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
                 return;
             }
 
@@ -222,15 +234,19 @@ namespace WpfApp1
                 else
                 {
                     Debug.WriteLine($"User document not found for email: {email}");
-                    MessageBox.Show($"User not found for email: {email}", "Error",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    CustomMessageBox.Show($"User not found for email: {email}",
+                                        "Error",
+                                        CustomMessageBoxWindow.MessageButtons.OK,
+                                        CustomMessageBoxWindow.MessageIcon.Error);
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error loading user data: {ex.Message}");
-                MessageBox.Show($"Error loading user data: {ex.Message}", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show($"Error loading user data: {ex.Message}",
+                                    "Error",
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -253,6 +269,7 @@ namespace WpfApp1
                 Debug.WriteLine($"Error showing desktop notification: {ex.Message}");
             }
         }
+
         private void CreateNotificationWindow(string title, string message, string chatID)
         {
             try
@@ -272,7 +289,6 @@ namespace WpfApp1
         {
             try
             {
-                
                 NotificationWindow.NotificationClicked -= OnNotificationClicked;
 
                 NotificationWindow.CloseAllNotifications();
@@ -289,6 +305,7 @@ namespace WpfApp1
                 Debug.WriteLine($"Error during window closing: {ex.Message}");
             }
         }
+
         private void CloseAllNotifications()
         {
             NotificationWindow.CloseAllNotifications();

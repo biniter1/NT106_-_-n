@@ -14,7 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using Google.Rpc;
-
+using WpfApp1.Views;
 namespace WpfApp1.LoginlSignUp
 {
     public partial class fCode : Window
@@ -148,7 +148,7 @@ namespace WpfApp1.LoginlSignUp
             }
             if (otp == code)
             {
-                MessageBox.Show("Xác thực OTP thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBoxResult result= CustomMessageBox.Show("Xác thực OTP thành công!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
                 LoginlSignUp.fNewPassword f = new LoginlSignUp.fNewPassword(email);
                 this.Hide();
                 f.Show();
@@ -169,7 +169,7 @@ namespace WpfApp1.LoginlSignUp
 
         private void resendLink_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Đã gửi lại mã OTP mới!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBoxResult result = CustomMessageBox.Show("Đã gửi lại mã OTP mới!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
 
             countdownTime = TimeSpan.FromSeconds(90);
             UpdateCountdownDisplay();

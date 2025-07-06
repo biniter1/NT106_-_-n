@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using Firebase.Storage;
 using WpfApp1.Models;
+using WpfApp1.Views; // Added for CustomMessageBox
 
 namespace WpfApp1.ViewModels
 {
@@ -94,8 +95,8 @@ namespace WpfApp1.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error selecting avatar: {ex.Message}", "Error",
-                                    MessageBoxButton.OK, MessageBoxImage.Error);
+                    CustomMessageBox.Show($"Error selecting avatar: {ex.Message}", "Error",
+                                        CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                 }
             }
         }
@@ -110,16 +111,16 @@ namespace WpfApp1.ViewModels
 
                 if (HasErrors)
                 {
-                    MessageBox.Show("Please fix all validation errors before saving.", "Validation Error",
-                                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                    CustomMessageBox.Show("Please fix all validation errors before saving.", "Validation Error",
+                                        CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                     return;
                 }
 
                 // Check if any changes were made
                 if (!HasChanges())
                 {
-                    MessageBox.Show("No changes detected.", "Information",
-                                    MessageBoxButton.OK, MessageBoxImage.Information);
+                    CustomMessageBox.Show("No changes detected.", "Information",
+                                        CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
                     return;
                 }
 
@@ -145,8 +146,8 @@ namespace WpfApp1.ViewModels
 
                 await SaveToDatabase(userData);
 
-                MessageBox.Show("Profile updated successfully!", "Success",
-                                MessageBoxButton.OK, MessageBoxImage.Information);
+                CustomMessageBox.Show("Profile updated successfully!", "Success",
+                                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
 
                 // Update original values
                 UpdateOriginalValues();
@@ -162,8 +163,8 @@ namespace WpfApp1.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error saving profile: {ex.Message}", "Error",
-                                MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show($"Error saving profile: {ex.Message}", "Error",
+                                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -234,8 +235,9 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void ResetToDefaults()
         {
-            var result = MessageBox.Show("Are you sure you want to reset all fields to their original values?",
-                                        "Confirm Reset", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            var result = CustomMessageBox.Show("Are you sure you want to reset all fields to their original values?",
+                                        "Confirm Reset", CustomMessageBoxWindow.MessageButtons.YesNo,
+                                        CustomMessageBoxWindow.MessageIcon.Information);
 
             if (result == MessageBoxResult.Yes)
             {

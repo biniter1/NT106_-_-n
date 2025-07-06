@@ -11,10 +11,11 @@ using System.Text;
 using WpfApp1.Views;
 using System.Security.Cryptography;
 using Firebase.Database;
-using System.Windows.Controls; 
+using System.Windows.Controls;
 using System.IO;
 using WpfApp1.Services;
 using System.Diagnostics;
+
 namespace WpfApp1.ViewModels
 {
     // Define GroupData class
@@ -103,11 +104,13 @@ namespace WpfApp1.ViewModels
                 // Cập nhật lại giao diện
                 SortContacts();
 
-                MessageBox.Show("Đã hủy kết bạn thành công.");
+                CustomMessageBox.Show("Đã hủy kết bạn thành công.", "Thành công",
+                                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Có lỗi khi hủy kết bạn: {ex.Message}");
+                CustomMessageBox.Show($"Có lỗi khi hủy kết bạn: {ex.Message}", "Lỗi",
+                                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -118,10 +121,10 @@ namespace WpfApp1.ViewModels
         {
             if (groupVM == null) return;
 
-            var result = MessageBox.Show($"Bạn có chắc chắn muốn rời khỏi nhóm '{groupVM.Name}'?",
+            var result = CustomMessageBox.Show($"Bạn có chắc chắn muốn rời khỏi nhóm '{groupVM.Name}'?",
                                         "Xác nhận rời nhóm",
-                                        MessageBoxButton.YesNo,
-                                        MessageBoxImage.Question);
+                                        CustomMessageBoxWindow.MessageButtons.YesNo,
+                                        CustomMessageBoxWindow.MessageIcon.Question);
 
             if (result == MessageBoxResult.Yes)
             {
@@ -132,11 +135,13 @@ namespace WpfApp1.ViewModels
                     CombinedContacts.Remove(groupVM);
                     if (SelectedContact == groupVM) SelectedContact = null;
 
-                    MessageBox.Show($"Đã rời khỏi nhóm '{groupVM.Name}' thành công.");
+                    CustomMessageBox.Show($"Đã rời khỏi nhóm '{groupVM.Name}' thành công.", "Thành công",
+                                        CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Lỗi khi rời nhóm: {ex.Message}");
+                    CustomMessageBox.Show($"Lỗi khi rời nhóm: {ex.Message}", "Lỗi",
+                                        CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                 }
             }
         }
@@ -187,7 +192,8 @@ namespace WpfApp1.ViewModels
             var userDocSnapshot = await userDocRef.GetSnapshotAsync();
             if (!userDocSnapshot.Exists)
             {
-                MessageBox.Show($"User {email} does not exist.");
+                CustomMessageBox.Show($"User {email} does not exist.", "Lỗi",
+                                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                 return;
             }
 
@@ -197,11 +203,11 @@ namespace WpfApp1.ViewModels
             try
             {
                 await contactDocRef.SetAsync(contact); // Lưu thông tin contact
-                //MessageBox.Show($"Contact with {contact.Name} ({contact.Email}) has been added successfully.");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error adding contact: {ex.Message}");
+                CustomMessageBox.Show($"Error adding contact: {ex.Message}", "Lỗi",
+                                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -300,7 +306,8 @@ namespace WpfApp1.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi khi xóa friend request: {ex.Message}");
+                CustomMessageBox.Show($"Lỗi khi xóa friend request: {ex.Message}", "Lỗi",
+                                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -310,7 +317,8 @@ namespace WpfApp1.ViewModels
             if (requestVM == null) return;
             FriendRequest requestModel = requestVM.GetModel();
 
-            MessageBox.Show($"Đã chấp nhận lời mời từ: {requestModel.RequesterName} ({requestModel.EmailRequesterId})");
+            CustomMessageBox.Show($"Đã chấp nhận lời mời từ: {requestModel.RequesterName} ({requestModel.EmailRequesterId})",
+                                "Thành công", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
 
             // --- Tạo đối tượng bạn bè mới ---
             var newFriendModel = new FriendData
@@ -390,7 +398,8 @@ namespace WpfApp1.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Có lỗi khi cập nhật dữ liệu: {ex.Message}");
+                CustomMessageBox.Show($"Có lỗi khi cập nhật dữ liệu: {ex.Message}", "Lỗi",
+                                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -399,7 +408,8 @@ namespace WpfApp1.ViewModels
         {
             if (requestVM == null) return;
             FriendRequest requestModel = requestVM.GetModel();
-            MessageBox.Show($"Đã từ chối lời mời từ: {requestModel.RequesterName} ({requestModel.EmailRequesterId})");
+            CustomMessageBox.Show($"Đã từ chối lời mời từ: {requestModel.RequesterName} ({requestModel.EmailRequesterId})",
+                                "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
 
             FriendRequests.Remove(requestVM);
             await RemoveFriendRequestAsync(myEmail: SharedData.Instance.userdata.Email, requesterId: requestModel.EmailRequesterId);
@@ -609,8 +619,8 @@ namespace WpfApp1.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show($"Không thể tải lên ảnh đại diện: {ex.Message}", "Cảnh báo",
-                                MessageBoxButton.OK, MessageBoxImage.Warning);
+                            CustomMessageBox.Show($"Không thể tải lên ảnh đại diện: {ex.Message}", "Cảnh báo",
+                                CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                             groupData.AvatarUrl = "/Assets/DefaultGroupAvatar.png";
                         }
                     }
@@ -673,14 +683,14 @@ namespace WpfApp1.ViewModels
                         ? $" với {selectedFriendEmails.Count} thành viên"
                         : "";
 
-                    MessageBox.Show($"Nhóm '{newGroup.Name}' đã được tạo thành công{memberInfo}!", "Thành công",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    CustomMessageBox.Show($"Nhóm '{newGroup.Name}' đã được tạo thành công{memberInfo}!", "Thành công",
+                        CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi khi tạo nhóm: {ex.Message}", "Lỗi",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show($"Lỗi khi tạo nhóm: {ex.Message}", "Lỗi",
+                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -691,20 +701,22 @@ namespace WpfApp1.ViewModels
 
             try
             {
-                
-                MessageBox.Show($"Invite members functionality will be implemented for group: {groupVM.Name}");
+                CustomMessageBox.Show($"Invite members functionality will be implemented for group: {groupVM.Name}",
+                                    "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
 
                 // Example of adding members (you would get this from a UI)
                 var selectedFriends = new List<string>(); // This would come from user selection
                 if (selectedFriends.Any())
                 {
                     await AddMembersToGroup(groupVM.GetModel(), selectedFriends);
-                    MessageBox.Show($"Đã mời {selectedFriends.Count} thành viên vào nhóm!");
+                    CustomMessageBox.Show($"Đã mời {selectedFriends.Count} thành viên vào nhóm!", "Thành công",
+                                        CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi khi mời thành viên: {ex.Message}");
+                CustomMessageBox.Show($"Lỗi khi mời thành viên: {ex.Message}", "Lỗi",
+                                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -873,5 +885,3 @@ namespace WpfApp1.ViewModels
         }
     }
 }
-
-

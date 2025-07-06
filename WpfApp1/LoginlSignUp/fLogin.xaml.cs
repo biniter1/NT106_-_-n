@@ -11,6 +11,9 @@ using WpfApp1.Models;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
+using static System.Net.WebRequestMethods;
+using WpfApp1.Views;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace WpfApp1.LoginlSignUp
 {
@@ -33,8 +36,8 @@ namespace WpfApp1.LoginlSignUp
             {
                 if (!IsNetworkAvailable())
                 {
-                    MessageBox.Show("Không có kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.", "Lỗi kết nối",
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
+  
+                    MessageBoxResult result = CustomMessageBox.Show("Không có kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
                     return;
                 }
 
@@ -58,8 +61,8 @@ namespace WpfApp1.LoginlSignUp
                     {
                         loadingForm.CloseWithFadeOut();
                         this.Opacity = 1; // Hiển thị lại form đăng nhập
-                        MessageBox.Show("Không thể tự động đăng nhập. Vui lòng đăng nhập thủ công.\nChi tiết lỗi: " + ex.Message,
-                            "Lỗi tự động đăng nhập", MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBoxResult result = CustomMessageBox.Show("Không thể tự động đăng nhập.Vui lòng đăng nhập thủ công.\nChi tiết lỗi: " + ex.Message, "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
+
                     }
                 }
             };
@@ -156,9 +159,6 @@ namespace WpfApp1.LoginlSignUp
             }
             catch (Exception ex)
             {
-                // Log the exception for debugging
-                Console.WriteLine($"Auto login error: {ex.Message}");
-                // If auto-login fails, proceed to manual login
             }
         }
 
@@ -181,8 +181,8 @@ namespace WpfApp1.LoginlSignUp
 
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ thông tin đăng nhập!", "Thông báo",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBoxResult result = CustomMessageBox.Show("Vui lòng nhập đầy đủ thông tin đăng nhập!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
+
                 return;
             }
 
@@ -191,8 +191,8 @@ namespace WpfApp1.LoginlSignUp
                 var db = FirestoreHelper.database;
                 if (db == null)
                 {
-                    MessageBox.Show("Không thể kết nối đến cơ sở dữ liệu!", "Lỗi",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBoxResult result = CustomMessageBox.Show("Không thể kết nối đến cơ sở dữ liệu!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
+
                     return;
                 }
 
@@ -201,8 +201,8 @@ namespace WpfApp1.LoginlSignUp
 
                 if (!snapshot.Exists)
                 {
-                    MessageBox.Show("Tài khoản không tồn tại!", "Lỗi",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBoxResult result = CustomMessageBox.Show("Tài khoản không tồn tại!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
+
                     return;
                 }
 
@@ -210,8 +210,8 @@ namespace WpfApp1.LoginlSignUp
                 string decryptedPassword = data.Password;
                 if (password != decryptedPassword)
                 {
-                    MessageBox.Show("Mật khẩu không chính xác!", "Lỗi",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBoxResult result = CustomMessageBox.Show("Mật khẩu không chính xác!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
+
                     return;
                 }
 
@@ -244,8 +244,8 @@ namespace WpfApp1.LoginlSignUp
 
                         if (!emailVerified)
                         {
-                            MessageBox.Show("Email của bạn chưa được xác minh. Vui lòng kiểm tra hộp thư!", "Xác minh Email",
-                                MessageBoxButton.OK, MessageBoxImage.Warning);
+                            MessageBoxResult resultt = CustomMessageBox.Show("Email của bạn chưa được xác minh. Vui lòng kiểm tra hộp thư!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
+
                             return;
                         }
                     }
@@ -253,6 +253,9 @@ namespace WpfApp1.LoginlSignUp
                     {
                         MessageBox.Show($"Không thể kiểm tra trạng thái email xác thực. Chi tiết lỗi: {result}", "Lỗi",
                             MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBoxResult resultt = CustomMessageBox.Show($"Không thể kiểm tra trạng thái email xác thực.Chi tiết lỗi: { result}",
+                        "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
+
                         return;
                     }
                 }
@@ -277,8 +280,8 @@ namespace WpfApp1.LoginlSignUp
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi: " + ex.Message, "Lỗi",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBoxResult resultt = CustomMessageBox.Show("Lỗi: " + ex.Message, "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
+
             }
         }
 
@@ -311,16 +314,16 @@ namespace WpfApp1.LoginlSignUp
                     }
                     else
                     {
-                        MessageBox.Show($"Đăng nhập Firebase thất bại. Chi tiết lỗi: {result}", "Lỗi",
-                            MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBoxResult resultt = CustomMessageBox.Show($"Đăng nhập Firebase thất bại. Chi tiết lỗi: {result}", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
+
                         return (null, null);
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi khi đăng nhập Firebase: {ex.Message}", "Lỗi",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBoxResult resultt = CustomMessageBox.Show($"Lỗi khi đăng nhập Firebase: {ex.Message}", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
+
                 return (null, null);
             }
         }

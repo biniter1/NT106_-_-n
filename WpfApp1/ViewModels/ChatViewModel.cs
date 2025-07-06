@@ -24,7 +24,7 @@ using ToastNotifications.Messages;
 using System.Collections.Generic; // Added for List<IDisposable> and Dictionary<string, IDisposable>
 using System.Threading.Tasks;
 using WpfApp1.Services;
-using WpfApp1.Views; // Added for Task
+using WpfApp1.Views; // Added for Task and CustomMessageBox
 
 namespace WpfApp1.ViewModels
 {
@@ -187,12 +187,7 @@ namespace WpfApp1.ViewModels
             {
                 try
                 {
-
-                    
-
                     string recipientSafeEmail = EscapeEmail(recipient.Email);
-                    
-
                     var iceSignal = IceCandidateSignal.FromWebRtcCandidate(candidate);
                     await firebaseClient
                         .Child("ice_candidates")
@@ -203,7 +198,6 @@ namespace WpfApp1.ViewModels
                 catch (Exception ex) { Debug.WriteLine($"Error sending ICE candidate: {ex.Message}"); }
             };
 
-            
             ListenForCallUpdates(callSignal);
 
             _currentCallService.OnSdpOfferReady += async (sdpOffer) =>
@@ -227,7 +221,7 @@ namespace WpfApp1.ViewModels
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Error sending call signal: {ex.Message}");
-                    MessageBox.Show("Không thể thực hiện cuộc gọi. Vui lòng thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    CustomMessageBox.Show("Không thể thực hiện cuộc gọi. Vui lòng thử lại.", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                     _callWindow.Close();
                 }
             };
@@ -352,7 +346,7 @@ namespace WpfApp1.ViewModels
                 if (firebaseClient == null)
                 {
                     Debug.WriteLine("FirebaseClient is null in LoadMessagesForContact. Cannot load messages.");
-                    MessageBox.Show("Lỗi: Không thể kết nối đến máy chủ chat. Vui lòng thử lại.", "Lỗi kết nối", MessageBoxButton.OK, MessageBoxImage.Error);
+                    CustomMessageBox.Show("Lỗi: Không thể kết nối đến máy chủ chat. Vui lòng thử lại.", "Lỗi kết nối", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                     return;
                 }
 
@@ -511,7 +505,7 @@ namespace WpfApp1.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"Lỗi trong LoadMessagesForContact: {ex.Message}");
-                MessageBox.Show($"Không thể tải tin nhắn: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show($"Không thể tải tin nhắn: {ex.Message}", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -637,7 +631,7 @@ namespace WpfApp1.ViewModels
         {
             if (SelectedContact == null)
             {
-                MessageBox.Show("Vui lòng chọn một liên hệ trước khi gửi tệp tin.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                CustomMessageBox.Show("Vui lòng chọn một liên hệ trước khi gửi tệp tin.", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
                 return;
             }
 
@@ -716,7 +710,7 @@ namespace WpfApp1.ViewModels
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Error uploading file: {ex.Message}");
-                    MessageBox.Show($"Không thể tải lên tệp tin: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    CustomMessageBox.Show($"Không thể tải lên tệp tin: {ex.Message}", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                 }
             }
         }
@@ -1049,7 +1043,7 @@ namespace WpfApp1.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error opening image viewer: {ex.Message}");
-                MessageBox.Show($"Không thể mở ảnh: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show($"Không thể mở ảnh: {ex.Message}", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -1082,8 +1076,7 @@ namespace WpfApp1.ViewModels
         {
             if (fileItem == null || string.IsNullOrEmpty(fileItem.DownloadUrl))
             {
-                MessageBox.Show("Không có liên kết tải xuống cho tệp này.", "Thông báo",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                CustomMessageBox.Show("Không có liên kết tải xuống cho tệp này.", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
                 return;
             }
 
@@ -1125,8 +1118,7 @@ namespace WpfApp1.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error downloading file: {ex.Message}");
-                MessageBox.Show($"Không thể tải xuống tệp tin: {ex.Message}", "Lỗi",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show($"Không thể tải xuống tệp tin: {ex.Message}", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
             finally
             {
@@ -1139,8 +1131,7 @@ namespace WpfApp1.ViewModels
         {
             if (message == null || (string.IsNullOrEmpty(message.Content) && !message.IsImage && !message.IsVideo))
             {
-                MessageBox.Show("Không có tệp tin để tải xuống.", "Thông báo",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                CustomMessageBox.Show("Không có tệp tin để tải xuống.", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
                 return;
             }
 
@@ -1194,8 +1185,7 @@ namespace WpfApp1.ViewModels
 
             if (string.IsNullOrEmpty(url))
             {
-                MessageBox.Show("Không tìm thấy đường dẫn tải xuống cho tệp này.", "Thông báo",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                CustomMessageBox.Show("Không tìm thấy đường dẫn tải xuống cho tệp này.", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
                 return;
             }
 
@@ -1218,8 +1208,7 @@ namespace WpfApp1.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error downloading file: {ex.Message}");
-                MessageBox.Show($"Không thể tải xuống tệp tin: {ex.Message}", "Lỗi",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show($"Không thể tải xuống tệp tin: {ex.Message}", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
             finally
             {
@@ -1271,7 +1260,7 @@ namespace WpfApp1.ViewModels
                             Application.Current.Dispatcher.Invoke(() =>
                             {
                                 Debug.WriteLine($"Error playing video: {ex.Message}");
-                                MessageBox.Show($"Không thể phát video: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                                CustomMessageBox.Show($"Không thể phát video: {ex.Message}", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                                 Mouse.OverrideCursor = null;
                             });
                         }
@@ -1281,14 +1270,14 @@ namespace WpfApp1.ViewModels
                 {
                     Mouse.OverrideCursor = null;
                     Debug.WriteLine($"Error setting up video playback: {ex.Message}");
-                    MessageBox.Show($"Không thể chuẩn bị phát video: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    CustomMessageBox.Show($"Không thể chuẩn bị phát video: {ex.Message}", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                 }
             }
             catch (Exception ex)
             {
                 Mouse.OverrideCursor = null;
                 Debug.WriteLine($"Error preparing video playback: {ex.Message}");
-                MessageBox.Show($"Không thể chuẩn bị phát video: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show($"Không thể chuẩn bị phát video: {ex.Message}", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -1309,7 +1298,6 @@ namespace WpfApp1.ViewModels
 
                 _viewedImageHistory.Add(logEntry);
 
-
                 string directory = Path.GetDirectoryName(_imageHistoryFilePath);
                 if (!Directory.Exists(directory))
                 {
@@ -1325,17 +1313,18 @@ namespace WpfApp1.ViewModels
                 Debug.WriteLine($"Error logging viewed video: {ex.Message}");
             }
         }
+
         [RelayCommand]
         private async Task DeleteContactAsync(Contact contactToDelete)
         {
             if (contactToDelete == null) return;
 
             // Hiển thị hộp thoại xác nhận trước khi xóa
-            var result = MessageBox.Show(
+            var result = CustomMessageBox.Show(
                 $"Bạn có chắc chắn muốn xóa liên hệ '{contactToDelete.Name}' không? Toàn bộ lịch sử trò chuyện sẽ bị xóa vĩnh viễn và không thể khôi phục.",
                 "Xác nhận xóa",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+                CustomMessageBoxWindow.MessageButtons.YesNo,
+                CustomMessageBoxWindow.MessageIcon.Warning);
 
             if (result == MessageBoxResult.No) return;
 
@@ -1372,7 +1361,7 @@ namespace WpfApp1.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"Lỗi khi xóa liên hệ: {ex.Message}");
-                MessageBox.Show("Đã xảy ra lỗi trong quá trình xóa liên hệ.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show("Đã xảy ra lỗi trong quá trình xóa liên hệ.", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
             finally
             {

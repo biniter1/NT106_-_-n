@@ -17,11 +17,11 @@ namespace WpfApp1.Views
     public class SelectableFriend : INotifyPropertyChanged
     {
         private bool _isSelected;
-        
+
         public string Email { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string AvatarUrl { get; set; } = string.Empty;
-        
+
         public bool IsSelected
         {
             get => _isSelected;
@@ -95,10 +95,10 @@ namespace WpfApp1.Views
         {
             InitializeComponent();
             DataContext = this;
-            
+
             // Load friends data
             _ = LoadFriendsAsync();
-            
+
             // Set focus to group name textbox after window loads
             Loaded += (s, e) => GroupNameTextBox.Focus();
         }
@@ -109,7 +109,7 @@ namespace WpfApp1.Views
             {
                 var friendListVM = new FriendListViewModel();
                 var friends = await friendListVM.LoadFriendsAsync(SharedData.Instance.userdata.Email);
-                
+
                 _availableFriends.Clear();
                 foreach (var friend in friends)
                 {
@@ -120,29 +120,31 @@ namespace WpfApp1.Views
                         AvatarUrl = friend.AvatarUrl
                     });
                 }
-                
+
                 // Initially show all friends
                 AvailableFriends = new ObservableCollection<SelectableFriend>(_availableFriends);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Không thể tải danh sách bạn bè: {ex.Message}", "Lỗi", 
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show($"Không thể tải danh sách bạn bè: {ex.Message}",
+                                    "Lỗi",
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Warning);
             }
         }
 
         private void SearchFriendsTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             var searchText = SearchFriendsTextBox.Text?.ToLower() ?? string.Empty;
-            
+
             if (string.IsNullOrWhiteSpace(searchText))
             {
                 AvailableFriends = new ObservableCollection<SelectableFriend>(_availableFriends);
             }
             else
             {
-                var filtered = _availableFriends.Where(f => 
-                    f.Name.ToLower().Contains(searchText) || 
+                var filtered = _availableFriends.Where(f =>
+                    f.Name.ToLower().Contains(searchText) ||
                     f.Email.ToLower().Contains(searchText)).ToList();
                 AvailableFriends = new ObservableCollection<SelectableFriend>(filtered);
             }
@@ -187,13 +189,15 @@ namespace WpfApp1.Views
                     AvatarImage.Source = bitmap;
                     AvatarImage.Visibility = Visibility.Visible;
                     AvatarPlaceholder.Visibility = Visibility.Collapsed;
-                    
+
                     SelectedAvatarPath = openFileDialog.FileName;
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Không thể tải ảnh: {ex.Message}", "Lỗi", 
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    CustomMessageBox.Show($"Không thể tải ảnh: {ex.Message}",
+                                        "Lỗi",
+                                        CustomMessageBoxWindow.MessageButtons.OK,
+                                        CustomMessageBoxWindow.MessageIcon.Error);
                 }
             }
         }

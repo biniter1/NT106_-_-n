@@ -11,6 +11,10 @@
 
   <ItemGroup>
     <None Remove="Assets\chat.png" />
+    <None Remove="Assets\Icons\error.png" />
+    <None Remove="Assets\Icons\info.png" />
+    <None Remove="Assets\Icons\question.png" />
+    <None Remove="Assets\Icons\warning.png" />
     <None Remove="Assets\setting.png" />
   </ItemGroup>
 
@@ -29,6 +33,10 @@
 
   <ItemGroup>
     <Resource Include="Assets\chat.png" />
+    <Resource Include="Assets\Icons\error.png" />
+    <Resource Include="Assets\Icons\info.png" />
+    <Resource Include="Assets\Icons\question.png" />
+    <Resource Include="Assets\Icons\warning.png" />
     <Resource Include="Assets\setting.png" />
   </ItemGroup>
 
