@@ -13,7 +13,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using WpfApp1.Models;
+using WpfApp1.Models; 
+using WpfApp1.Views; 
 
 namespace WpfApp1.LoginlSignUp
 {
@@ -25,54 +26,56 @@ namespace WpfApp1.LoginlSignUp
         public fResetPassword()
         {
             InitializeComponent();
-            LocalizationManager.LanguageChanged += OnLanguageChanged;
+            
         }
+
         private void OnLanguageChanged(object sender, EventArgs e)
         {
-            // Force the UI to refresh bindings
             InvalidateVisual();
-            // Optionally, update specific bindings
             UpdateBindings();
         }
         private void UpdateBindings()
         {
-            // Update bindings for controls that use localized strings
             foreach (var element in LogicalTreeHelper.GetChildren(this))
             {
                 if (element is FrameworkElement fe)
                 {
                     fe.GetBindingExpression(FrameworkElement.DataContextProperty)?.UpdateTarget();
-                    // Update other bindings as needed
                 }
             }
         }
+
         private async void btnSubmit_Click(object sender, RoutedEventArgs e)
         {
-            string code = GenerateOtpCode();
-            await FirestoreHelper.database.Collection("otp_codes").Document(txtEmail.Text).SetAsync(new
-            {
-                otp = code,
-                createdAt = Google.Cloud.Firestore.Timestamp.GetCurrentTimestamp()
-            });
             if (String.IsNullOrEmpty(txtEmail.Text))
             {
-                MessageBox.Show("Vui loi nhap email", "Loi");
+                // THAY THẾ 1
+                CustomMessageBox.Show("Vui lòng nhập địa chỉ email.", "Thông tin trống", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return;
             }
+
             try
             {
+                string code = GenerateOtpCode();
+                await FirestoreHelper.database.Collection("otp_codes").Document(txtEmail.Text).SetAsync(new
+                {
+                    otp = code,
+                    createdAt = Google.Cloud.Firestore.Timestamp.GetCurrentTimestamp()
+                });
+
                 SendOtpEmail(txtEmail.Text, code);
+                CustomMessageBox.Show($"Một mã OTP đã được gửi đến địa chỉ {txtEmail.Text}. Vui lòng kiểm tra hộp thư của bạn.", "Thành Công", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Success);
+
                 this.Hide();
                 LoginlSignUp.fCode f = new fCode(code, txtEmail.Text);
                 f.Show();
-
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Đã xảy ra lỗi: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show("Đã xảy ra lỗi: " + ex.Message, "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
-
         }
+
         public static string GenerateOtpCode()
         {
             Random rand = new Random();

@@ -15,6 +15,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Newtonsoft.Json;
+using WpfApp1.Views;
 using static System.Net.WebRequestMethods;
 using WpfApp1.Models;
 
@@ -91,7 +92,7 @@ namespace WpfApp1.LoginlSignUp
         {
             if (!ValidateForm())
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ thông tin!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show("Vui lòng nhập đầy đủ thông tin!", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return;
             }
 
@@ -121,7 +122,7 @@ namespace WpfApp1.LoginlSignUp
                     if (!signUpResponse.IsSuccessStatusCode)
                     {
                         string error = signUpJson.error.message;
-                        MessageBox.Show("Lỗi đăng ký: " + error, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                        CustomMessageBox.Show("Lỗi đăng ký: " + error, "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                         return;
                     }
 
@@ -142,8 +143,7 @@ namespace WpfApp1.LoginlSignUp
 
                     if (verifyResponse.IsSuccessStatusCode)
                     {
-                        MessageBox.Show("Email xác thực đã được gửi thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
-
+                        CustomMessageBox.Show("Email xác thực đã được gửi thành công!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
                         // Mở form xác thực tiếp theo nếu muốn
                         fOtp emailForm = new fOtp(idToken, data.Email, data);
                         this.Hide();
@@ -152,13 +152,13 @@ namespace WpfApp1.LoginlSignUp
                     else
                     {
                         string error = verifyJson.error.message;
-                        MessageBox.Show("Lỗi gửi email xác thực: " + error, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                        CustomMessageBox.Show("Lỗi gửi email xác thực: " + error, "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Đã xảy ra lỗi: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show("Đã xảy ra lỗi: " + ex.Message, "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
         public User GetWriteData()
@@ -201,52 +201,52 @@ namespace WpfApp1.LoginlSignUp
         {
             if (string.IsNullOrWhiteSpace(txtFirstName.Text) || string.IsNullOrWhiteSpace(txtLastName.Text))
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ họ và tên!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show("Vui lòng nhập đầy đủ họ và tên!", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(txtEmail.Text) || !IsValidEmail(txtEmail.Text))
             {
-                MessageBox.Show("Vui lòng nhập địa chỉ email hợp lệ!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show("Vui lòng nhập địa chỉ email hợp lệ!", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(txtUsername.Text) || txtUsername.Text.Length < 6)
             {
-                MessageBox.Show("Tên đăng nhập phải có ít nhất 6 ký tự!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show("Tên đăng nhập phải có ít nhất 6 ký tự!", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(txtPassword.Password) || txtPassword.Password.Length < 6)
             {
-                MessageBox.Show("Mật khẩu phải có ít nhất 6 ký tự!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show("Mật khẩu phải có ít nhất 6 ký tự!", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return false;
             }
 
             if (txtPassword.Password != txtConfirmPassword.Password)
             {
-                MessageBox.Show("Xác nhận mật khẩu không khớp!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show("Xác nhận mật khẩu không khớp!", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(txtPhone.Text) || !IsValidPhoneNumber(txtPhone.Text))
             {
-                MessageBox.Show("Vui lòng nhập số điện thoại hợp lệ!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show("Vui lòng nhập số điện thoại hợp lệ!", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return false;
             }
             if (dpBirthDate.SelectedDate == null || dpBirthDate.SelectedDate > System.DateTime.Now.AddYears(-10))
             {
-                MessageBox.Show("Vui lòng chọn ngày sinh hợp lệ (trên 10 tuổi)!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show("Vui lòng chọn ngày sinh hợp lệ (trên 10 tuổi)!", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return false;
             }
             if (string.IsNullOrWhiteSpace(txtAddress.Text))
             {
-                MessageBox.Show("Vui lòng nhập địa chỉ!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show("Vui lòng nhập địa chỉ!", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return false;
             }
             if (chkTerms.IsChecked != true)
             {
-                MessageBox.Show("Vui lòng đồng ý với điều khoản và điều kiện!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show("Vui lòng đồng ý với điều khoản và điều kiện!", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return false;
             }
 

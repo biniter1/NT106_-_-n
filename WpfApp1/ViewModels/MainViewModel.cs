@@ -50,7 +50,6 @@ namespace WpfApp1.ViewModels
         public event EventHandler<IncomingCallEventArgs> IncomingCallReceived;
         public MainViewModel(FirebaseClient firebaseClient)
         {
-
             _firebaseClient = firebaseClient;
 
             ChatVm = new ChatViewModel(_firebaseClient);
@@ -63,7 +62,7 @@ namespace WpfApp1.ViewModels
             MatchingChatVm.MatchFound += OnMatchFound;
 
             AIChatVm = new AIChatViewModel();
-            IsAIChatVisible = false; 
+            IsAIChatVisible = false;
 
             CurrentViewModel = ChatVm;
             _notificationService = new NotificationService(firebaseClient);
@@ -86,10 +85,10 @@ namespace WpfApp1.ViewModels
             if (ChatVm != null)
             {
                 ChatVm.NewMessageNotificationRequested += OnNewMessageNotificationFromChat;
-
             }
             ListenForIncomingCalls();
         }
+
         private string EscapeEmail(string email)
         {
             if (string.IsNullOrEmpty(email)) return string.Empty;
@@ -101,6 +100,7 @@ namespace WpfApp1.ViewModels
                         .Replace(']', '_')
                         .Replace('/', '_');
         }
+
         private void ListenForIncomingCalls()
         {
             var currentUser = SharedData.Instance.userdata;
@@ -114,7 +114,6 @@ namespace WpfApp1.ViewModels
                 .AsObservable<CallSignal>()
                 .Subscribe(callEvent =>
                 {
-
                     if (callEvent.EventType == FirebaseEventType.InsertOrUpdate && callEvent.Object != null)
                     {
                         var call = callEvent.Object;
@@ -129,6 +128,7 @@ namespace WpfApp1.ViewModels
                     Debug.WriteLine($"Error listening for calls: {ex.Message}");
                 });
         }
+
         public void OpenChat(string chatID)
         {
             if (string.IsNullOrEmpty(chatID)) return;
@@ -147,6 +147,7 @@ namespace WpfApp1.ViewModels
                 Debug.WriteLine($"Contact with ChatID {chatID} not found in the current contact list.");
             }
         }
+
         private void OnNewMessageNotificationFromChat(object sender, NewMessageEventArgs e)
         {
             ShowNotificationRequested?.Invoke(this, e);
@@ -164,8 +165,12 @@ namespace WpfApp1.ViewModels
         {
             IsAIChatVisible = !IsAIChatVisible;
         }
-        [RelayCommand] private void ShowChat() => CurrentViewModel = ChatVm;
-        [RelayCommand] private void ShowFriendList() => CurrentViewModel = FriendListVm;
+
+        [RelayCommand]
+        private void ShowChat() => CurrentViewModel = ChatVm;
+
+        [RelayCommand]
+        private void ShowFriendList() => CurrentViewModel = FriendListVm;
 
         [RelayCommand]
         private void ShowAddFriendPopup()
@@ -181,9 +186,11 @@ namespace WpfApp1.ViewModels
 
         private void OnMatchFound(string roomId, string opponentId)
         {
-            MessageBox.Show($"Đã ghép cặp thành công với {opponentId}! Vào phòng chat: {roomId}");
+            CustomMessageBox.Show($"Đã ghép cặp thành công với {opponentId}! Vào phòng chat: {roomId}",
+                                "Thành công", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
             CurrentViewModel = ChatVm;
         }
+
         [RelayCommand]
         private void ShowSettingsPopup()
         {
@@ -206,6 +213,7 @@ namespace WpfApp1.ViewModels
         {
             CurrentViewModel = SettingsVm;
         }
+
         [RelayCommand]
         private void ShowCreateGroupPopup()
         {
@@ -217,6 +225,7 @@ namespace WpfApp1.ViewModels
 
             createGroupWindow.ShowDialog();
         }
+
         public void Cleanup()
         {
             _notificationListener?.Dispose();

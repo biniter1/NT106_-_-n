@@ -13,6 +13,7 @@ using Firebase.Database.Query;
 using Microsoft.Win32;
 using System.Text;
 using System.IO;
+using WpfApp1.Views; // Added for CustomMessageBox
 
 namespace WpfApp1.ViewModels
 {
@@ -65,19 +66,13 @@ namespace WpfApp1.ViewModels
             EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
         }
 
-        //public SettingsViewModel()
-        //{
-        //    InitializeSettings();
-        //    EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
-        //}
-
         private void InitializeSettings()
         {
             _selectedTheme = "Light";
             _enableNotifications = true;
             _showDesktopNotifications = true;
             _notifyWhenOffline = false;
-            _selectedLanguage = Properties.Settings.Default.SelectedLanguage ;
+            _selectedLanguage = Properties.Settings.Default.SelectedLanguage;
             _currentView = "AccountInfo";
             _userAvatarUrl = SharedData.Instance.userdata.AvatarUrl ?? "";
             var savedLanguage = Properties.Settings.Default.SelectedLanguage;
@@ -138,7 +133,10 @@ namespace WpfApp1.ViewModels
         private void Logout()
         {
             _chatViewModel?.Cleanup();
-            MessageBox.Show(GetLocalizedString("LogoutSuccessMessage"));
+            CustomMessageBox.Show(GetLocalizedString("LogoutSuccessMessage"),
+                                GetLocalizedString("Success"),
+                                CustomMessageBoxWindow.MessageButtons.OK,
+                                CustomMessageBoxWindow.MessageIcon.Information);
             var loginWindow = new fLogin();
             loginWindow.PerformLogout();
             foreach (Window window in Application.Current.Windows)
@@ -172,13 +170,18 @@ namespace WpfApp1.ViewModels
                 bool? result = editProfileWindow.ShowDialog();
                 if (result == true)
                 {
-                    MessageBox.Show(GetLocalizedString("ProfileUpdatedMessage") ?? "Profile updated successfully!");
+                    CustomMessageBox.Show(GetLocalizedString("ProfileUpdatedMessage") ?? "Profile updated successfully!",
+                                        GetLocalizedString("Success"),
+                                        CustomMessageBoxWindow.MessageButtons.OK,
+                                        CustomMessageBoxWindow.MessageIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error opening edit profile: {ex.Message}", "Error",
-                               MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show($"Error opening edit profile: {ex.Message}",
+                                    GetLocalizedString("Error"),
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -196,8 +199,11 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void SaveSettings()
         {
-            MessageBox.Show(GetLocalizedString("SettingsSavedMessage") +
-                           $" Theme={SelectedTheme}, Notifications={EnableNotifications}, Desktop Notifications={ShowDesktopNotifications}, Notify Offline={NotifyWhenOffline}, Language={SelectedLanguage}");
+            CustomMessageBox.Show(GetLocalizedString("SettingsSavedMessage") +
+                                $" Theme={SelectedTheme}, Notifications={EnableNotifications}, Desktop Notifications={ShowDesktopNotifications}, Notify Offline={NotifyWhenOffline}, Language={SelectedLanguage}",
+                                GetLocalizedString("Success"),
+                                CustomMessageBoxWindow.MessageButtons.OK,
+                                CustomMessageBoxWindow.MessageIcon.Information);
         }
 
         [RelayCommand]
@@ -208,10 +214,10 @@ namespace WpfApp1.ViewModels
                 string userEmail = SharedData.Instance.userdata.Email;
                 if (string.IsNullOrEmpty(userEmail))
                 {
-                    MessageBox.Show(GetLocalizedString("ExportDataError_UserNotFound"),
-                                    GetLocalizedString("Error"),
-                                    MessageBoxButton.OK,
-                                    MessageBoxImage.Error);
+                    CustomMessageBox.Show(GetLocalizedString("ExportDataError_UserNotFound"),
+                                        GetLocalizedString("Error"),
+                                        CustomMessageBoxWindow.MessageButtons.OK,
+                                        CustomMessageBoxWindow.MessageIcon.Error);
                     return;
                 }
 
@@ -219,10 +225,10 @@ namespace WpfApp1.ViewModels
                 var contacts = await _chatViewModel.GetContactsAsync(userEmail);
                 if (contacts == null || contacts.Count == 0)
                 {
-                    MessageBox.Show(GetLocalizedString("NoContactsFoundForExport"),
-                                    GetLocalizedString("Info"),
-                                    MessageBoxButton.OK,
-                                    MessageBoxImage.Information);
+                    CustomMessageBox.Show(GetLocalizedString("NoContactsFoundForExport"),
+                                        GetLocalizedString("Info"),
+                                        CustomMessageBoxWindow.MessageButtons.OK,
+                                        CustomMessageBoxWindow.MessageIcon.Information);
                     return;
                 }
 
@@ -295,18 +301,18 @@ namespace WpfApp1.ViewModels
                         }
 
                         File.WriteAllText(saveFileDialog.FileName, stringBuilder.ToString());
-                        MessageBox.Show(GetLocalizedString("ExportDataSuccess") + $" {saveFileDialog.FileName}",
-                                        GetLocalizedString("Success"),
-                                        MessageBoxButton.OK,
-                                        MessageBoxImage.Information);
+                        CustomMessageBox.Show(GetLocalizedString("ExportDataSuccess") + $" {saveFileDialog.FileName}",
+                                            GetLocalizedString("Success"),
+                                            CustomMessageBoxWindow.MessageButtons.OK,
+                                            CustomMessageBoxWindow.MessageIcon.Information);
                     }
                     catch (Exception ex)
                     {
                         Debug.WriteLine($"Error exporting data: {ex.Message}");
-                        MessageBox.Show($"{GetLocalizedString("ExportDataError")}: {ex.Message}",
-                                        GetLocalizedString("Error"),
-                                        MessageBoxButton.OK,
-                                        MessageBoxImage.Error);
+                        CustomMessageBox.Show($"{GetLocalizedString("ExportDataError")}: {ex.Message}",
+                                            GetLocalizedString("Error"),
+                                            CustomMessageBoxWindow.MessageButtons.OK,
+                                            CustomMessageBoxWindow.MessageIcon.Error);
                     }
                     finally
                     {
@@ -317,21 +323,20 @@ namespace WpfApp1.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error setting up export: {ex.Message}");
-                MessageBox.Show($"{GetLocalizedString("ExportDataError_General")}: {ex.Message}",
-                                GetLocalizedString("Error"),
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Error);
+                CustomMessageBox.Show($"{GetLocalizedString("ExportDataError_General")}: {ex.Message}",
+                                    GetLocalizedString("Error"),
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
-
 
         [RelayCommand]
         private async void DeleteData()
         {
-            var result = MessageBox.Show(GetLocalizedString("DeleteDataConfirmation"),
-                                         GetLocalizedString("Confirmation"),
-                                         MessageBoxButton.YesNo,
-                                         MessageBoxImage.Warning);
+            var result = CustomMessageBox.Show(GetLocalizedString("DeleteDataConfirmation"),
+                                            GetLocalizedString("Confirmation"),
+                                            CustomMessageBoxWindow.MessageButtons.YesNo,
+                                            CustomMessageBoxWindow.MessageIcon.Warning);
             if (result == MessageBoxResult.Yes)
             {
                 Mouse.OverrideCursor = Cursors.Wait; // Show busy cursor
@@ -340,19 +345,19 @@ namespace WpfApp1.ViewModels
                     string userEmail = SharedData.Instance.userdata.Email;
                     if (string.IsNullOrEmpty(userEmail))
                     {
-                        MessageBox.Show(GetLocalizedString("DataDeletionError_UserNotFound"),
-                                        GetLocalizedString("Error"),
-                                        MessageBoxButton.OK,
-                                        MessageBoxImage.Error);
+                        CustomMessageBox.Show(GetLocalizedString("DataDeletionError_UserNotFound"),
+                                            GetLocalizedString("Error"),
+                                            CustomMessageBoxWindow.MessageButtons.OK,
+                                            CustomMessageBoxWindow.MessageIcon.Error);
                         return;
                     }
 
                     if (_chatViewModel == null)
                     {
-                        MessageBox.Show("ChatViewModel is not initialized.",
-                                        "Error",
-                                        MessageBoxButton.OK,
-                                        MessageBoxImage.Error);
+                        CustomMessageBox.Show("ChatViewModel is not initialized.",
+                                            GetLocalizedString("Error"),
+                                            CustomMessageBoxWindow.MessageButtons.OK,
+                                            CustomMessageBoxWindow.MessageIcon.Error);
                         return;
                     }
 
@@ -360,10 +365,10 @@ namespace WpfApp1.ViewModels
                     var contacts = await _chatViewModel.GetContactsAsync(userEmail);
                     if (contacts == null || contacts.Count == 0)
                     {
-                        MessageBox.Show(GetLocalizedString("NoContactsFoundToDelete"),
-                                        GetLocalizedString("Info"),
-                                        MessageBoxButton.OK,
-                                        MessageBoxImage.Information);
+                        CustomMessageBox.Show(GetLocalizedString("NoContactsFoundToDelete"),
+                                            GetLocalizedString("Info"),
+                                            CustomMessageBoxWindow.MessageButtons.OK,
+                                            CustomMessageBoxWindow.MessageIcon.Information);
                         return;
                     }
 
@@ -395,18 +400,18 @@ namespace WpfApp1.ViewModels
                         _chatViewModel.Files.Clear();
                     }
 
-                    MessageBox.Show(GetLocalizedString("DataDeletedMessage"),
-                                    GetLocalizedString("Success"),
-                                    MessageBoxButton.OK,
-                                    MessageBoxImage.Information);
+                    CustomMessageBox.Show(GetLocalizedString("DataDeletedMessage"),
+                                        GetLocalizedString("Success"),
+                                        CustomMessageBoxWindow.MessageButtons.OK,
+                                        CustomMessageBoxWindow.MessageIcon.Information);
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Error deleting data: {ex.Message}");
-                    MessageBox.Show($"{GetLocalizedString("DataDeletionError")}: {ex.Message}",
-                                    GetLocalizedString("Error"),
-                                    MessageBoxButton.OK,
-                                    MessageBoxImage.Error);
+                    CustomMessageBox.Show($"{GetLocalizedString("DataDeletionError")}: {ex.Message}",
+                                        GetLocalizedString("Error"),
+                                        CustomMessageBoxWindow.MessageButtons.OK,
+                                        CustomMessageBoxWindow.MessageIcon.Error);
                 }
                 finally
                 {
@@ -445,10 +450,10 @@ namespace WpfApp1.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"{GetLocalizedString("FeedbackErrorMessage")}: {ex.Message}",
-                              GetLocalizedString("Error"),
-                              MessageBoxButton.OK,
-                              MessageBoxImage.Error);
+                CustomMessageBox.Show($"{GetLocalizedString("FeedbackErrorMessage")}: {ex.Message}",
+                                    GetLocalizedString("Error"),
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -467,10 +472,10 @@ namespace WpfApp1.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"{GetLocalizedString("UserGuideErrorMessage")}: {ex.Message}",
-                              GetLocalizedString("Error"),
-                              MessageBoxButton.OK,
-                              MessageBoxImage.Error);
+                CustomMessageBox.Show($"{GetLocalizedString("UserGuideErrorMessage")}: {ex.Message}",
+                                    GetLocalizedString("Error"),
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -480,11 +485,17 @@ namespace WpfApp1.ViewModels
             try
             {
                 ApplyLanguageGlobally(SelectedLanguage);
-                MessageBox.Show($"Language applied: {SelectedLanguage}");
+                CustomMessageBox.Show($"Language applied: {SelectedLanguage}",
+                                    GetLocalizedString("Success"),
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error applying language: {ex.Message}");
+                CustomMessageBox.Show($"Error applying language: {ex.Message}",
+                                    GetLocalizedString("Error"),
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -497,7 +508,10 @@ namespace WpfApp1.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error changing language: {ex.Message}");
+                CustomMessageBox.Show($"Error changing language: {ex.Message}",
+                                    GetLocalizedString("Error"),
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
