@@ -59,6 +59,21 @@
                 <MenuItem Header="Tải xuống" 
                           Command="{Binding DownloadMessageFileCommand}" 
                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="Xóa tin nhắn"
+              Command="{Binding DeleteMessageCommand}"
+              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+
+                    <MenuItem.Style>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsMine, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </MenuItem.Style>
+                </MenuItem>
             </ContextMenu>
         </ResourceDictionary>
     </UserControl.Resources>
