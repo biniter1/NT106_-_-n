@@ -25,6 +25,7 @@ using System.Collections.Generic; // Added for List<IDisposable> and Dictionary<
 using System.Threading.Tasks;
 using WpfApp1.Services;
 using WpfApp1.Views; // Added for Task and CustomMessageBox
+using NAudio.Wave;
 
 namespace WpfApp1.ViewModels
 {
@@ -54,10 +55,32 @@ namespace WpfApp1.ViewModels
             "WpfApp1", "ImageHistory.txt");
         public event EventHandler<NewMessageEventArgs> NewMessageNotificationRequested;
 
+        // --- Các biến phục vụ việc ghi âm ---
         private WebRTCService _currentCallService;
         private CallWindow _callWindow;
         private IDisposable _callStateListener;
         public event EventHandler ScrollToBottomRequested;
+
+        private WaveInEvent waveIn;
+        private WaveFileWriter writer;
+        private string tempAudioFilePath;
+
+        private bool _isRecording = false;
+        public bool IsRecording
+        {
+            get => _isRecording;
+            set
+            {
+                // SetProperty sẽ kiểm tra xem giá trị có thực sự thay đổi không
+                if (SetProperty(ref _isRecording, value))
+                {
+                    // Nếu có thay đổi, thông báo cho cả thuộc tính IsNotRecording
+                    OnPropertyChanged(nameof(IsNotRecording));
+                }
+            }
+        }
+        public bool IsNotRecording => !IsRecording;
+
         public void InitiateChatWith(Contact contactToChat)
         {
             if (contactToChat == null) return;
@@ -133,6 +156,142 @@ namespace WpfApp1.ViewModels
             EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
 
             LoadInitialData();
+            Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "WpfApp1"));
+        }
+        [RelayCommand]
+        private async Task RecordVoiceMessageAsync()
+        {
+            if (SelectedContact == null)
+            {
+                CustomMessageBox.Show("Vui lòng chọn một cuộc trò chuyện để gửi tin nhắn thoại.", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
+                return;
+            }
+
+            if (!IsRecording)
+            {
+                // --- BẮT ĐẦU GHI ÂM ---
+                try
+                {
+                    IsRecording = true;
+                    tempAudioFilePath = Path.Combine(Path.GetTempPath(), "WpfApp1", $"voice_{DateTime.Now:yyyyMMddHHmmss}.wav");
+
+                    waveIn = new WaveInEvent();
+                    waveIn.WaveFormat = new WaveFormat(16000, 1); // 16kHz, Mono
+
+                    waveIn.DataAvailable += (s, a) =>
+                    {
+                        if (writer != null)
+                        {
+                            writer.Write(a.Buffer, 0, a.BytesRecorded);
+                        }
+                    };
+
+                    waveIn.RecordingStopped += async (s, a) =>
+                    {
+                        // Dọn dẹp
+                        waveIn?.Dispose();
+                        waveIn = null;
+                        writer?.Close();
+                        writer = null;
+
+                        // Tải file lên và gửi tin nhắn
+                        await UploadAndSendVoiceMessageAsync(tempAudioFilePath);
+                        IsRecording = false;
+                    };
+
+                    writer = new WaveFileWriter(tempAudioFilePath, waveIn.WaveFormat);
+                    waveIn.StartRecording();
+                    Debug.WriteLine("Bắt đầu ghi âm...");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Lỗi khi bắt đầu ghi âm: {ex.Message}");
+                    IsRecording = false;
+                }
+            }
+            else
+            {
+                // --- DỪNG GHI ÂM ---
+                try
+                {
+                    waveIn?.StopRecording();
+                    Debug.WriteLine("Đang dừng ghi âm...");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Lỗi khi dừng ghi âm: {ex.Message}");
+                    IsRecording = false;
+                }
+            }
+        }
+
+        private async Task UploadAndSendVoiceMessageAsync(string filePath)
+        {
+            if (!File.Exists(filePath)) return;
+
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                // Lấy độ dài file âm thanh
+                var audioDuration = new WaveFileReader(filePath).TotalTime.TotalSeconds;
+
+                // Tải file lên Firebase Storage
+                string uniqueFileName = $"voice_{Path.GetFileName(filePath)}";
+                string downloadUrl = await FirebaseStorageHelper.UploadFileAsync(filePath, uniqueFileName);
+
+                if (!string.IsNullOrEmpty(downloadUrl))
+                {
+                    var newMessage = new Message
+                    {
+                        SenderId = userdata.Email,
+                        Timestamp = DateTime.UtcNow,
+                        IsMine = true,
+                        IsVoiceMessage = true,
+                        VoiceMessageUrl = downloadUrl,
+                        VoiceMessageDuration = audioDuration,
+                        Alignment = "Right"
+                    };
+
+                    await firebaseClient
+                        .Child("messages")
+                        .Child(SelectedContact.chatID)
+                        .PostAsync(newMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Lỗi khi gửi tin nhắn thoại: {ex.Message}");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+
+                // Cho hệ thống một chút thời gian để giải phóng file
+                await Task.Delay(200);
+
+                if (File.Exists(filePath))
+                {
+                    // Thử xóa file với logic retry, tối đa 5 lần
+                    for (int i = 0; i < 5; i++)
+                    {
+                        try
+                        {
+                            File.Delete(filePath);
+                            Debug.WriteLine("Xóa file tạm thành công!");
+                            break; // Nếu xóa thành công, thoát khỏi vòng lặp
+                        }
+                        catch (IOException ex)
+                        {
+                            Debug.WriteLine($"Lần {i + 1}: Không thể xóa file. Đang chờ... Lỗi: {ex.Message}");
+                            if (i < 4) // Chỉ đợi nếu chưa phải lần thử cuối cùng
+                            {
+                                // Đợi thêm một chút trước khi thử lại
+                                await Task.Delay(300);
+                            }
+                        }
+                    }
+                }
+            }
         }
         private string EscapeEmail(string email)
         {

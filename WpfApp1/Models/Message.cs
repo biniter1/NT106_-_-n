@@ -26,7 +26,10 @@ namespace WpfApp1.Models
         public bool IsVideo { get; set; }
         public string ImageUrl { get; set; }
         public string VideoUrl { get; set; }
-        public string FileUrl { get; set; } 
+        public string FileUrl { get; set; }
+        public bool IsVoiceMessage { get; set; } = false;
+        public string VoiceMessageUrl { get; set; }
+        public double VoiceMessageDuration { get; set; }
 
         public Message()
         {

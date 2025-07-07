@@ -31,6 +31,7 @@
             <SolidColorBrush x:Key="AvatarPlaceholderBackground" Color="#FFB74D"/>
             <CornerRadius x:Key="DefaultCornerRadius">10</CornerRadius>
 
+            <converters:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
             <converters:StringNullOrEmptyToVisibilityConverter x:Key="StringNullOrEmptyToVisibilityConverter"/>
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <converters:MessageBackgroundConverter x:Key="MessageBackgroundConverter"/>
@@ -312,6 +313,21 @@
                                                           CommandParameter="{Binding ImageUrl}" />
                                         </Image.InputBindings>
                                     </Image>
+                                    <local:VoiceMessageView 
+                AudioUrl="{Binding VoiceMessageUrl}" 
+                Duration="{Binding VoiceMessageDuration}"
+                HorizontalAlignment="Left">
+                                        <local:VoiceMessageView.Style>
+                                            <Style TargetType="local:VoiceMessageView">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsVoiceMessage}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </local:VoiceMessageView.Style>
+                                    </local:VoiceMessageView>
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -319,6 +335,7 @@
                 </ItemsControl>
             </ScrollViewer>
 
+            <!-- Phần Grid chứa các nút input (chỉ hiển thị phần cần sửa) -->
             <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10" Background="{StaticResource WhiteBrush}">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -326,27 +343,29 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
+                    <!-- Nút đính kèm file -->
                     <Button Grid.Column="0" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource AttachFileTooltip}" Command="{Binding SelectFileCommand}">
                         <TextBlock Text="📎" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Button>
 
                     <!-- Nút chọn emoji -->
-                    <Button Grid.Column="1" Background="White" BorderThickness="0" >
+                    <Button Grid.Column="1" Background="White" BorderThickness="0">
                         <emoji:Picker 
-                          Background="Transparent"
-                          FontSize="30" 
-                          Picked="Picker_Picked"/>
+              Background="Transparent"
+              FontSize="30" 
+              Picked="Picker_Picked"/>
                     </Button>
 
-
+                    <!-- Ô nhập tin nhắn -->
                     <Border Grid.Column="2" CornerRadius="15" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="{StaticResource WhiteBrush}" Margin="0,0,10,0">
                         <TextBox Text="{Binding NewMessageText, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" Padding="12,4" FontSize="14" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}">
                             <TextBox.InputBindings>
                                 <KeyBinding Key="Enter"
-                        Command="{Binding SendMessageCommand}"
-                        CommandParameter="{Binding SelectedContact}"/>
+                    Command="{Binding SendMessageCommand}"
+                    CommandParameter="{Binding SelectedContact}"/>
                             </TextBox.InputBindings>
                             <TextBox.Style>
                                 <Style TargetType="TextBox">
@@ -365,7 +384,16 @@
                         </TextBox>
                     </Border>
 
-                    <Button Grid.Column="3" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource SendTooltip}" Command="{Binding SendMessageCommand}" CommandParameter="{Binding SelectedContact}">
+                    <!-- Nút ghi âm tin nhắn thoại -->
+                    <Button Grid.Column="3" Width="40" Height="40" Background="Transparent" BorderThickness="0"
+            ToolTip="Ghi âm tin nhắn thoại"
+            Command="{Binding RecordVoiceMessageCommand}">
+                        <TextBlock Text="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="20"
+            Foreground="{Binding IsRecording, Converter={StaticResource BooleanToColorConverter}, ConverterParameter=Crimson;Gray}"/>
+                    </Button>
+
+                    <!-- Nút gửi tin nhắn -->
+                    <Button Grid.Column="4" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource SendTooltip}" Command="{Binding SendMessageCommand}" CommandParameter="{Binding SelectedContact}">
                         <TextBlock Text="" Margin="0,15,0,0" FontFamily="Segoe Fluent Icons" FontSize="20" Foreground="{StaticResource PrimaryBrush}">
                             <TextBlock.RenderTransform>
                                 <RotateTransform Angle="-45"/>
