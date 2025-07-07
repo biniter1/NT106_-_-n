@@ -13,6 +13,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Emoji.Wpf;
+using WpfApp1.ViewModels;
 namespace WpfApp1.Views
 {
     /// <summary>
@@ -24,7 +25,28 @@ namespace WpfApp1.Views
         {
             InitializeComponent();
             LocalizationManager.LanguageChanged += OnLanguageChanged;
+            this.DataContextChanged += ChatView_DataContextChanged;
 
+        }
+        private void ChatView_DataContextChanged(object sender, System.Windows.DependencyPropertyChangedEventArgs e)
+        {
+            // Kiểm tra nếu ViewModel cũ tồn tại thì hủy đăng ký
+            if (e.OldValue is ChatViewModel oldViewModel)
+            {
+                oldViewModel.ScrollToBottomRequested -= OnScrollToBottomRequested;
+            }
+
+            // Kiểm tra nếu ViewModel mới tồn tại thì đăng ký sự kiện
+            if (e.NewValue is ChatViewModel newViewModel)
+            {
+                newViewModel.ScrollToBottomRequested += OnScrollToBottomRequested;
+            }
+        }
+
+        private void OnScrollToBottomRequested(object sender, EventArgs e)
+        {
+            // Hành động cuộn ScrollViewer xuống dưới cùng
+            MessagesScrollViewer.ScrollToBottom();
         }
         private void OnLanguageChanged(object sender, EventArgs e)
         {

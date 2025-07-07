@@ -334,6 +334,11 @@
 
                     <Border Grid.Column="2" CornerRadius="15" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="{StaticResource WhiteBrush}" Margin="0,0,10,0">
                         <TextBox Text="{Binding NewMessageText, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" Padding="12,4" FontSize="14" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                        Command="{Binding SendMessageCommand}"
+                        CommandParameter="{Binding SelectedContact}"/>
+                            </TextBox.InputBindings>
                             <TextBox.Style>
                                 <Style TargetType="TextBox">
                                     <Setter Property="Template">
