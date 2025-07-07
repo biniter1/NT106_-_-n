@@ -6,7 +6,7 @@ namespace WpfApp1.Models
 {
 
     [FirestoreData]
-    public class Contact : ObservableObject
+    public partial class Contact : ObservableObject
     {
 
         private bool _isOnline;
@@ -42,6 +42,9 @@ namespace WpfApp1.Models
 
         [FirestoreProperty]
         public bool IsLoadingAvatar { get; set; }
+
+        [ObservableProperty]
+        private bool _hasUnreadMessages;
 
     }
 }

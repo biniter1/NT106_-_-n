@@ -62,7 +62,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy &quot;C:\Users\GIA BAO\.nuget\packages\microsoft.mixedreality.webrtc\2.0.2\runtimes\win10-x64\native\mrwebrtc.dll&quot; &quot;$(TargetDir)&quot; /Y /I" />
+    <Exec Command="xcopy &quot;C:\Users\DELL\.nuget\packages\microsoft.mixedreality.webrtc\2.0.2\runtimes\win10-x64\native\mrwebrtc.dll&quot; &quot;$(TargetDir)&quot; /Y /I" />
   </Target>
 
 </Project>
