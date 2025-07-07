@@ -88,6 +88,7 @@ namespace WpfApp1.ViewModels
 
             if (value != null)
             {
+                value.HasUnreadMessages = false;
                 LoadMessagesForContact(value);
             }
             else
@@ -349,8 +350,6 @@ namespace WpfApp1.ViewModels
                     CustomMessageBox.Show("Lỗi: Không thể kết nối đến máy chủ chat. Vui lòng thử lại.", "Lỗi kết nối", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                     return;
                 }
-
-                // Check if this is a group chat
                 bool isGroupChat = roomId.StartsWith("group_");
 
                 var messagesQuery = await firebaseClient
@@ -395,7 +394,6 @@ namespace WpfApp1.ViewModels
                         }
                     });
                 }
-
                 messageSubscription = firebaseClient
                     .Child("messages")
                     .Child(roomId)
@@ -433,22 +431,27 @@ namespace WpfApp1.ViewModels
                                     Messages.Insert(insertIndex, message);
                                     Debug.WriteLine($"Đã thêm tin nhắn mới: {message.Id} tại vị trí {insertIndex}");
                                     ScrollToBottomRequested?.Invoke(this, EventArgs.Empty);
-                                    // <<< THAY ĐỔI BẮT ĐẦU TẠI ĐÂY >>>
                                     if (!message.IsMine)
                                     {
+                                        if (SelectedContact == null || SelectedContact.chatID != roomId)
+                                        {
+                                            var contactToUpdate = Contacts.FirstOrDefault(c => c.chatID == roomId);
+                                            if (contactToUpdate != null)
+                                            {
+                                                contactToUpdate.HasUnreadMessages = true;
+                                            }
+                                        }
                                         bool isCurrentChatSelected = (SelectedContact?.chatID == roomId);
                                         bool isAppActive = Application.Current.MainWindow?.IsActive ?? false;
                                         bool shouldNotify = !isAppActive || !isCurrentChatSelected;
 
                                         if (shouldNotify)
                                         {
-                                            // 1. Chuẩn bị nội dung cho thông báo
                                             string titleForNotification = GetSenderDisplayName(message.SenderId) ?? message.SenderId;
                                             string messageForNotification = message.Content;
 
                                             if (isGroupChat)
                                             {
-                                                // Trong group chat, Title là tên nhóm, Message là "Người gửi: Nội dung"
                                                 var contactInList = Contacts.FirstOrDefault(c => c.chatID == roomId);
                                                 titleForNotification = contactInList?.Name ?? "Nhóm chat";
                                                 messageForNotification = $"{GetSenderDisplayName(message.SenderId)}: {message.Content}";
@@ -473,7 +476,6 @@ namespace WpfApp1.ViewModels
                                                     : $"{GetLocalizedString("Notification_NewFile")} \"{message.Content}\"";
                                             }
 
-                                            // 2. Kích hoạt event với dữ liệu đã chuẩn bị
                                             NewMessageNotificationRequested?.Invoke(
                                                 this,
                                                 new NewMessageEventArgs(titleForNotification, messageForNotification, roomId)
@@ -481,7 +483,6 @@ namespace WpfApp1.ViewModels
                                             Debug.WriteLine($"ĐÃ KÍCH HOẠT EVENT THÔNG BÁO: Title='{titleForNotification}', Message='{messageForNotification}', ChatID='{roomId}'");
                                         }
                                     }
-                                    // <<< THAY ĐỔI KẾT THÚC TẠI ĐÂY >>>
                                 }
                             }
                             else if (messageEvent.EventType == FirebaseEventType.Delete)
