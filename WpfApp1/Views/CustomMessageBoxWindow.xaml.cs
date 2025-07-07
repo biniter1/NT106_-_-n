@@ -90,6 +90,12 @@ namespace WpfApp1
         {
             this.Result = MessageBoxResult.No;
             this.DialogResult = false;
+
+        }
+        private void btnClose_Click(object sender, RoutedEventArgs e)
+        {
+            this.Result = MessageBoxResult.Cancel; // Hoặc có thể là No tùy theo logic
+            this.DialogResult = false; // Đóng window
         }
     }
 }

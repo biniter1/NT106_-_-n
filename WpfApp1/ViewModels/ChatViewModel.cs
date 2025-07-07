@@ -57,7 +57,7 @@ namespace WpfApp1.ViewModels
         private WebRTCService _currentCallService;
         private CallWindow _callWindow;
         private IDisposable _callStateListener;
-
+        public event EventHandler ScrollToBottomRequested;
         public void InitiateChatWith(Contact contactToChat)
         {
             if (contactToChat == null) return;
@@ -432,7 +432,7 @@ namespace WpfApp1.ViewModels
                                     if (insertIndex < 0) insertIndex = Messages.Count;
                                     Messages.Insert(insertIndex, message);
                                     Debug.WriteLine($"Đã thêm tin nhắn mới: {message.Id} tại vị trí {insertIndex}");
-
+                                    ScrollToBottomRequested?.Invoke(this, EventArgs.Empty);
                                     // <<< THAY ĐỔI BẮT ĐẦU TẠI ĐÂY >>>
                                     if (!message.IsMine)
                                     {
