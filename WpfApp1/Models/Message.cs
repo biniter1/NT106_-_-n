@@ -30,7 +30,10 @@ namespace WpfApp1.Models
         public bool IsVoiceMessage { get; set; } = false;
         public string VoiceMessageUrl { get; set; }
         public double VoiceMessageDuration { get; set; }
-
+        public bool IsReply { get; set; } = false;
+        public string ReplyToMessageId { get; set; }
+        public string ReplyToMessageContent { get; set; }
+        public string ReplyToSenderName { get; set; }
         public Message()
         {
             // Gán mặc định

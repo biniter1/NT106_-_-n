@@ -26,6 +26,8 @@ using System.Threading.Tasks;
 using WpfApp1.Services;
 using WpfApp1.Views; // Added for Task and CustomMessageBox
 using NAudio.Wave;
+using System.Windows.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace WpfApp1.ViewModels
 {
@@ -66,15 +68,41 @@ namespace WpfApp1.ViewModels
         private string tempAudioFilePath;
 
         private bool _isRecording = false;
+
+        // --- Biến phục vụ việc hiển thị trạng thái đang gõ ---
+        private DispatcherTimer typingTimer;
+        private IDisposable typingStatusSubscription;
+
+        [ObservableProperty]
+        private string _typingStatusText;
+
+        //--- Biến phục vụ việc trả lời tin nhắn ---
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsReplying))]
+        private Message _messageToReplyTo;
+
+        public bool IsReplying => MessageToReplyTo != null;
+
+        [RelayCommand]
+        private void ReplyToMessage(Message message)
+        {
+            if (message == null) return;
+            MessageToReplyTo = message;
+        }
+        [RelayCommand]
+        private void CancelReply()
+        {
+            MessageToReplyTo = null;
+        }
+
         public bool IsRecording
         {
             get => _isRecording;
             set
             {
-                // SetProperty sẽ kiểm tra xem giá trị có thực sự thay đổi không
+                
                 if (SetProperty(ref _isRecording, value))
                 {
-                    // Nếu có thay đổi, thông báo cho cả thuộc tính IsNotRecording
                     OnPropertyChanged(nameof(IsNotRecording));
                 }
             }
@@ -84,24 +112,18 @@ namespace WpfApp1.ViewModels
         public void InitiateChatWith(Contact contactToChat)
         {
             if (contactToChat == null) return;
-
-            // Sử dụng chatID làm khóa chính để tìm kiếm vì nó là duy nhất cho một cặp người dùng
             var existingContact = Contacts.FirstOrDefault(c => c.chatID == contactToChat.chatID);
 
             if (existingContact != null)
             {
-                // Nếu đã có trong danh sách chat, chỉ cần chọn (focus) vào nó
                 SelectedContact = existingContact;
             }
             else
             {
-                // Nếu chưa có, thêm mới vào danh sách
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Contacts.Insert(0, contactToChat); // Thêm vào đầu danh sách cho dễ thấy
+                    Contacts.Insert(0, contactToChat);
                 });
-
-                // Và chọn (focus) vào contact vừa thêm
                 SelectedContact = contactToChat;
             }
         }
@@ -109,16 +131,72 @@ namespace WpfApp1.ViewModels
         {
             SendMessageCommand.NotifyCanExecuteChanged();
 
+            // Hủy đăng ký lắng nghe trạng thái gõ của phòng chat cũ
+            typingStatusSubscription?.Dispose();
+            TypingStatusText = string.Empty; // Xóa trạng thái cũ khi chuyển contact
+
             if (value != null)
             {
                 value.HasUnreadMessages = false;
                 LoadMessagesForContact(value);
+
+                // Bắt đầu lắng nghe trạng thái gõ của phòng chat mới
+                var roomId = value.chatID;
+                typingStatusSubscription = firebaseClient
+                    .Child("typing_status")
+                    .Child(roomId)
+                    .AsObservable<Dictionary<string, bool>>()
+                    .Subscribe(typingUsersDict =>
+                    {
+                        if (typingUsersDict.Object == null || typingUsersDict.Object.Count == 0)
+                        {
+                            TypingStatusText = string.Empty;
+                            return;
+                        }
+
+                        var escapedCurrentUserEmail = EscapeEmail(userdata.Email);
+
+                        // ===================== LOGIC MỚI ĐỂ TÌM TÊN NGƯỜI DÙNG =====================
+                        var otherTypingUsersNames = new List<string>();
+
+                        // Duyệt qua từng key (email đã mã hóa) nhận được từ Firebase
+                        foreach (var emailKey in typingUsersDict.Object.Keys)
+                        {
+                            // Bỏ qua chính mình
+                            if (emailKey == escapedCurrentUserEmail) continue;
+
+                            // Tìm trong danh bạ xem contact nào có email sau khi mã hóa khớp với key
+                            var typingContact = Contacts.FirstOrDefault(c => EscapeEmail(c.Email) == emailKey);
+
+                            if (typingContact != null)
+                            {
+                                // Nếu tìm thấy, thêm tên của họ vào danh sách
+                                otherTypingUsersNames.Add(typingContact.Name);
+                            }
+                        }
+                        // ========================================================================
+
+                        // Hiển thị trạng thái dựa trên danh sách tên tìm được
+                        if (otherTypingUsersNames.Count == 0)
+                        {
+                            TypingStatusText = string.Empty;
+                        }
+                        else if (otherTypingUsersNames.Count == 1)
+                        {
+                            TypingStatusText = $"{otherTypingUsersNames[0]} đang nhập...";
+                        }
+                        else
+                        {
+                            TypingStatusText = $"{otherTypingUsersNames.Count} người đang nhập...";
+                        }
+
+                        Debug.WriteLine($"--> [UI UPDATE] TypingStatusText set to: '{TypingStatusText}'");
+                    });
             }
             else
             {
                 Messages.Clear();
                 Files.Clear();
-
                 if (messageSubscription != null)
                 {
                     messageSubscription.Dispose();
@@ -130,10 +208,88 @@ namespace WpfApp1.ViewModels
         partial void OnNewMessageTextChanged(string value)
         {
             SendMessageCommand.NotifyCanExecuteChanged();
-        }
 
+            
+            typingTimer.Stop();
+            typingTimer.Start();
+
+            // Gửi tín hiệu "đang gõ"
+            UpdateTypingStatus(true);
+
+        }
+        private async void UpdateTypingStatus(bool isTyping)
+        {
+            // === CÁC DÒNG LOG CHẨN ĐOÁN ===
+            Debug.WriteLine("--- Checking conditions for UpdateTypingStatus ---");
+
+            if (SelectedContact == null)
+            {
+                Debug.WriteLine("-> FAILED: SelectedContact is null. Cannot send typing status.");
+                return;
+            }
+            if (string.IsNullOrEmpty(SelectedContact.chatID))
+            {
+                Debug.WriteLine("-> FAILED: SelectedContact.chatID is null or empty.");
+                return;
+            }
+            if (userdata == null)
+            {
+                Debug.WriteLine("-> FAILED: userdata is null.");
+                return;
+            }
+            if (string.IsNullOrEmpty(userdata.Email))
+            {
+                Debug.WriteLine("-> FAILED: userdata.Email is null or empty.");
+                return;
+            }
+            // ===================================
+
+            // Nếu tất cả điều kiện đều qua, sẽ in ra dòng này
+            Debug.WriteLine("-> PASSED: All conditions met. Proceeding to send status.");
+            Debug.WriteLine($"-> Firebase Client State: {(firebaseClient == null ? "IS NULL" : "Exists")}");
+
+            var escapedUserEmail = EscapeEmail(userdata.Email);
+            if (string.IsNullOrEmpty(escapedUserEmail)) return;
+
+            var typingRef = firebaseClient
+                .Child("typing_status")
+                .Child(SelectedContact.chatID)
+                .Child(escapedUserEmail);
+
+            try
+            {
+                if (isTyping)
+                {
+                    Debug.WriteLine("-> Executing PutAsync(true)...");
+                    await typingRef.PutAsync(true);
+                    Debug.WriteLine("-> SUCCESS: PutAsync(true) completed without error.");
+                }
+                else
+                {
+                    Debug.WriteLine("-> Executing DeleteAsync()...");
+                    await typingRef.DeleteAsync();
+                    Debug.WriteLine("-> SUCCESS: DeleteAsync() completed without error.");
+                }
+            }
+            catch (Exception ex)
+            {
+                // In ra lỗi một cách không thể bỏ qua
+                Debug.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Debug.WriteLine("!!!! FIREBASE EXCEPTION CAUGHT IN UpdateTypingStatus !!!!");
+                Debug.WriteLine($"!!!! Exception Type: {ex.GetType().Name}");
+                Debug.WriteLine($"!!!! Exception Message: {ex.Message}");
+                Debug.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            }
+        }
         public ChatViewModel(FirebaseClient fbClient)
         {
+            //--- Khởi tạo bộ đếm thời gian cho trạng thái đang gõ ---
+            typingTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(2)
+            };
+            typingTimer.Tick += TypingTimer_Tick;
+
             Messages = new ObservableCollection<Message>();
             Contacts = new ObservableCollection<Contact>();
             Files = new ObservableCollection<FileItem>();
@@ -158,6 +314,13 @@ namespace WpfApp1.ViewModels
             LoadInitialData();
             Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "WpfApp1"));
         }
+
+        private void TypingTimer_Tick(object sender, EventArgs e)
+        {
+            typingTimer.Stop();
+            UpdateTypingStatus(false); // Gửi tín hiệu "dừng gõ"
+        }
+
         [RelayCommand]
         private async Task RecordVoiceMessageAsync()
         {
@@ -283,9 +446,8 @@ namespace WpfApp1.ViewModels
                         catch (IOException ex)
                         {
                             Debug.WriteLine($"Lần {i + 1}: Không thể xóa file. Đang chờ... Lỗi: {ex.Message}");
-                            if (i < 4) // Chỉ đợi nếu chưa phải lần thử cuối cùng
+                            if (i < 4) 
                             {
-                                // Đợi thêm một chút trước khi thử lại
                                 await Task.Delay(300);
                             }
                         }
@@ -772,12 +934,28 @@ namespace WpfApp1.ViewModels
                     Timestamp = DateTime.UtcNow,
                     IsMine = true,
                 };
+
+                if (IsReplying)
+                {
+                    newMessage.IsReply = true;
+                    newMessage.ReplyToMessageId = MessageToReplyTo.Id;
+                    newMessage.ReplyToMessageContent = MessageToReplyTo.Content;
+                    // Lấy tên người gửi của tin nhắn gốc
+                    newMessage.ReplyToSenderName = MessageToReplyTo.IsMine
+                        ? "Bạn"
+                        : GetSenderDisplayName(MessageToReplyTo.SenderId);
+                }
+
                 await firebaseClient
                     .Child("messages")
                     .Child(contact.chatID)
                     .PostAsync(newMessage);
 
                 NewMessageText = string.Empty;
+                CancelReply();
+
+                typingTimer.Stop();
+                UpdateTypingStatus(false);
             }
         }
 
