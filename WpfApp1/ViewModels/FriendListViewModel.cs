@@ -790,6 +790,7 @@ namespace WpfApp1.ViewModels
         {
             if (string.IsNullOrEmpty(email)) return string.Empty;
             return email.Replace('.', '_')
+                         .Replace('@', '_')
                          .Replace('#', '_')
                          .Replace('$', '_')
                          .Replace('[', '_')

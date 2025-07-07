@@ -1384,6 +1384,43 @@ namespace WpfApp1.ViewModels
             var db = FirestoreHelper.database;
             Debug.WriteLine($"Đang xóa entry: users/{ownerEmail}/contacts/{contactEmailToDelete}");
             await db.Collection("users").Document(ownerEmail).Collection("contacts").Document(contactEmailToDelete).DeleteAsync();
+        }            
+
+        [RelayCommand]
+        private async Task DeleteMessageAsync(Message messageToDelete)
+        {
+            if (messageToDelete == null) return;
+                       
+            if (!messageToDelete.IsMine)
+            {
+                CustomMessageBox.Show("Bạn không thể xóa tin nhắn của người khác.", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
+                return;
+            }
+                       
+            var result = CustomMessageBox.Show(
+                "Bạn có chắc chắn muốn xóa tin nhắn này không? Hành động này không thể hoàn tác.",
+                "Xác nhận xóa",
+                CustomMessageBoxWindow.MessageButtons.YesNo,
+                CustomMessageBoxWindow.MessageIcon.Warning);
+
+            if (result == MessageBoxResult.No) return;
+
+            try
+            {
+                // Xóa tin nhắn trực tiếp trên Firebase Realtime Database
+                await firebaseClient
+                    .Child("messages")
+                    .Child(SelectedContact.chatID)
+                    .Child(messageToDelete.Id)
+                    .DeleteAsync();
+
+                Debug.WriteLine($"Yêu cầu xóa tin nhắn {messageToDelete.Id} đã được gửi thành công.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Lỗi khi xóa tin nhắn trên server: {ex.Message}");
+                CustomMessageBox.Show("Đã có lỗi xảy ra trong quá trình xóa tin nhắn.", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
+            }
         }
     }
 }
