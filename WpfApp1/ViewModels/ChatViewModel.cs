@@ -73,8 +73,6 @@ namespace WpfApp1.ViewModels
         private DispatcherTimer typingTimer;
         private IDisposable typingStatusSubscription;
 
-        [ObservableProperty]
-        private string _typingStatusText;
 
         //--- Biến phục vụ việc trả lời tin nhắn ---
         [ObservableProperty]
@@ -128,70 +126,99 @@ namespace WpfApp1.ViewModels
                 SelectedContact = contactToChat;
             }
         }
+        private void ListenForTypingStatus(string roomId)
+        {
+            if (string.IsNullOrEmpty(roomId)) return;
+
+            // Hủy đăng ký lắng nghe cũ nếu có
+            typingStatusSubscription?.Dispose();
+
+            typingStatusSubscription = firebaseClient
+                .Child("typing_status")
+                .Child(roomId)
+                .AsObservable<Dictionary<string, bool>>()
+                .Subscribe(typingUsersDict =>
+                {
+                    var currentUser = SharedData.Instance.userdata;
+                    if (currentUser == null) return;
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var typingUsers = typingUsersDict.Object ?? new Dictionary<string, bool>();
+                        var escapedCurrentUserEmail = EscapeEmail(currentUser.Email);
+
+                        // Duyệt qua tất cả contact trong phòng chat này
+                        // (Giả sử phòng chat 1-1 chỉ có 2 người)
+                        if (SelectedContact != null && SelectedContact.chatID == roomId)
+                        {
+                            // Tìm email của người còn lại
+                            var otherUserEmail = typingUsers.Keys
+                                .FirstOrDefault(emailKey => emailKey != escapedCurrentUserEmail);
+
+                            if (!string.IsNullOrEmpty(otherUserEmail))
+                            {
+                                // Nếu có người khác đang gõ, đặt IsTyping = true
+                                SelectedContact.IsTyping = true;
+                            }
+                            else
+                            {
+                                // Nếu không có ai khác đang gõ, đặt IsTyping = false
+                                SelectedContact.IsTyping = false;
+                            }
+                        }
+
+                        // Cập nhật lại cho tất cả các contact khác về trạng thái false
+                        foreach (var contact in Contacts)
+                        {
+                            if (contact.chatID != roomId)
+                            {
+                                contact.IsTyping = false;
+                            }
+                        }
+                    });
+                }, ex =>
+                {
+                    Debug.WriteLine($"[TYPING] Lỗi khi lắng nghe trạng thái gõ phím: {ex.Message}");
+                    if (SelectedContact != null)
+                    {
+                        SelectedContact.IsTyping = false;
+                    }
+                });
+
+            allMessageSubscriptions.Add(typingStatusSubscription); // Quản lý subscription
+        }
         partial void OnSelectedContactChanged(Contact value)
         {
-            SendMessageCommand.NotifyCanExecuteChanged();
-            StartVideoCallCommand.NotifyCanExecuteChanged();
-            StartVoiceCallCommand.NotifyCanExecuteChanged();
-
+            // Hủy đăng ký lắng nghe cũ
             typingStatusSubscription?.Dispose();
-            TypingStatusText = string.Empty; 
 
             if (value != null)
             {
+                // Reset trạng thái gõ phím của contact cũ
+                foreach (var contact in Contacts)
+                {
+                    if (contact != value)
+                    {
+                        contact.IsTyping = false;
+                    }
+                }
+
+                // Đăng ký lắng nghe cho contact mới được chọn
+                ListenForTypingStatus(value.chatID);
+
+                // Các logic khác giữ nguyên
                 value.HasUnreadMessages = false;
                 LoadMessagesForContact(value);
-
-                var roomId = value.chatID;
-                typingStatusSubscription = firebaseClient
-                    .Child("typing_status")
-                    .Child(roomId)
-                    .AsObservable<Dictionary<string, bool>>()
-                    .Subscribe(typingUsersDict =>
-                    {
-                        if (typingUsersDict.Object == null || typingUsersDict.Object.Count == 0)
-                        {
-                            TypingStatusText = string.Empty;
-                            return;
-                        }
-
-                        var escapedCurrentUserEmail = EscapeEmail(userdata.Email);
-                        var otherTypingUsersNames = new List<string>();
-                        foreach (var emailKey in typingUsersDict.Object.Keys)
-                        {
-                            if (emailKey == escapedCurrentUserEmail) continue;
-                            var typingContact = Contacts.FirstOrDefault(c => EscapeEmail(c.Email) == emailKey);
-
-                            if (typingContact != null)
-                            {
-                                otherTypingUsersNames.Add(typingContact.Name);
-                            }
-                        }
-                        if (otherTypingUsersNames.Count == 0)
-                        {
-                            TypingStatusText = string.Empty;
-                        }
-                        else if (otherTypingUsersNames.Count == 1)
-                        {
-                            TypingStatusText = $"{otherTypingUsersNames[0]} đang nhập...";
-                        }
-                        else
-                        {
-                            TypingStatusText = $"{otherTypingUsersNames.Count} người đang nhập...";
-                        }
-
-                        Debug.WriteLine($"--> [UI UPDATE] TypingStatusText set to: '{TypingStatusText}'");
-                    });
+                SendMessageCommand.NotifyCanExecuteChanged();
+                StartVideoCallCommand.NotifyCanExecuteChanged();
+                StartVoiceCallCommand.NotifyCanExecuteChanged();
             }
             else
             {
                 Messages.Clear();
                 Files.Clear();
-                if (messageSubscription != null)
-                {
-                    messageSubscription.Dispose();
-                    messageSubscription = null;
-                }
+                messageSubscription?.Dispose();
+                messageSubscription = null;
             }
         }
 
@@ -713,11 +740,11 @@ namespace WpfApp1.ViewModels
             }
             if (contact.InteractionIsBlocked)
             {
-                string message = contact.IsBlockedByMe
-                    ? $"Bạn đã chặn {contact.Name}. Hãy bỏ chặn để tiếp tục trò chuyện."
+                string message = contact.IsBlockedByMe 
+                    ? $"Bạn đã chặn {contact.Name}. Hãy bỏ chặn để tiếp tục trò chuyện." 
                     : $"Bạn không thể nhắn tin cho {contact.Name} vì người này đã chặn bạn.";
                 Messages.Add(new Message { Content = message, IsSystemMessage = true });
-                return;
+                return; 
             }
             if (contact.IsBlockedByMe)
             {

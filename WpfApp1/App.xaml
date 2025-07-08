@@ -35,6 +35,7 @@
             <converters:LanguageConverter x:Key="LanguageConverter"/>
             <converters:AvatarUrlConverter x:Key="AvatarUrlConverter"/>
             <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+            <converters:NameToInitialsConverter x:Key="NameToInitialsConverter"/>
             <!-- Thêm converter này -->
 
             <!-- ScrollBar Brushes -->
