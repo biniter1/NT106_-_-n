@@ -1,8 +1,12 @@
-﻿using System;
-
+﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using CommunityToolkit.Mvvm.ComponentModel;
 namespace WpfApp1.Models
+
 {
-    public class Message
+    public partial class Message : ObservableObject
     {
         //ID MESSAGE
         public string Id { get; set; }
@@ -41,6 +45,26 @@ namespace WpfApp1.Models
             // Gán mặc định
             Timestamp = DateTime.UtcNow;
             IsMine = false;
+        }
+
+        [JsonProperty("likedBy")]
+        [ObservableProperty]
+        private Dictionary<string, bool> _likedBy = new Dictionary<string, bool>();
+
+        partial void OnLikedByChanged(Dictionary<string, bool> value)
+        {
+            OnPropertyChanged(nameof(LikeCount));
+            OnPropertyChanged(nameof(HasLikes));
+        }
+        
+        [JsonIgnore]
+        public int LikeCount => LikedBy?.Values.Count(isLiked => isLiked) ?? 0; 
+
+        [JsonIgnore]
+        public bool HasLikes => LikeCount > 0;
+        public new void OnPropertyChanged(string propertyName)
+        {
+            base.OnPropertyChanged(propertyName);
         }
     }
 }
