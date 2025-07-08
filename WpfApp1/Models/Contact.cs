@@ -46,5 +46,15 @@ namespace WpfApp1.Models
         [ObservableProperty]
         private bool _hasUnreadMessages;
 
+
+        //[ObservableProperty]
+        //private bool _isBlocked;
+
+        [ObservableProperty]
+        private bool _isBlockedByMe;
+
+        [ObservableProperty]
+        private bool _isBlockingMe;
+        public bool InteractionIsBlocked => IsBlockedByMe || IsBlockingMe;
     }
 }

@@ -81,6 +81,7 @@ namespace WpfApp1.ViewModels
         [NotifyPropertyChangedFor(nameof(IsReplying))]
         private Message _messageToReplyTo;
 
+        private HashSet<string> BlockedUsers { get; set; } = new HashSet<string>();
         public bool IsReplying => MessageToReplyTo != null;
 
         [RelayCommand]
@@ -130,17 +131,17 @@ namespace WpfApp1.ViewModels
         partial void OnSelectedContactChanged(Contact value)
         {
             SendMessageCommand.NotifyCanExecuteChanged();
+            StartVideoCallCommand.NotifyCanExecuteChanged();
+            StartVoiceCallCommand.NotifyCanExecuteChanged();
 
-            // Hủy đăng ký lắng nghe trạng thái gõ của phòng chat cũ
             typingStatusSubscription?.Dispose();
-            TypingStatusText = string.Empty; // Xóa trạng thái cũ khi chuyển contact
+            TypingStatusText = string.Empty; 
 
             if (value != null)
             {
                 value.HasUnreadMessages = false;
                 LoadMessagesForContact(value);
 
-                // Bắt đầu lắng nghe trạng thái gõ của phòng chat mới
                 var roomId = value.chatID;
                 typingStatusSubscription = firebaseClient
                     .Child("typing_status")
@@ -155,28 +156,17 @@ namespace WpfApp1.ViewModels
                         }
 
                         var escapedCurrentUserEmail = EscapeEmail(userdata.Email);
-
-                        // ===================== LOGIC MỚI ĐỂ TÌM TÊN NGƯỜI DÙNG =====================
                         var otherTypingUsersNames = new List<string>();
-
-                        // Duyệt qua từng key (email đã mã hóa) nhận được từ Firebase
                         foreach (var emailKey in typingUsersDict.Object.Keys)
                         {
-                            // Bỏ qua chính mình
                             if (emailKey == escapedCurrentUserEmail) continue;
-
-                            // Tìm trong danh bạ xem contact nào có email sau khi mã hóa khớp với key
                             var typingContact = Contacts.FirstOrDefault(c => EscapeEmail(c.Email) == emailKey);
 
                             if (typingContact != null)
                             {
-                                // Nếu tìm thấy, thêm tên của họ vào danh sách
                                 otherTypingUsersNames.Add(typingContact.Name);
                             }
                         }
-                        // ========================================================================
-
-                        // Hiển thị trạng thái dựa trên danh sách tên tìm được
                         if (otherTypingUsersNames.Count == 0)
                         {
                             TypingStatusText = string.Empty;
@@ -209,17 +199,16 @@ namespace WpfApp1.ViewModels
         {
             SendMessageCommand.NotifyCanExecuteChanged();
 
-            
-            typingTimer.Stop();
-            typingTimer.Start();
+            if (typingTimer != null)
+            {
+                typingTimer.Stop();
+                typingTimer.Start();
+            }
 
-            // Gửi tín hiệu "đang gõ"
             UpdateTypingStatus(true);
-
         }
         private async void UpdateTypingStatus(bool isTyping)
         {
-            // === CÁC DÒNG LOG CHẨN ĐOÁN ===
             Debug.WriteLine("--- Checking conditions for UpdateTypingStatus ---");
 
             if (SelectedContact == null)
@@ -242,9 +231,6 @@ namespace WpfApp1.ViewModels
                 Debug.WriteLine("-> FAILED: userdata.Email is null or empty.");
                 return;
             }
-            // ===================================
-
-            // Nếu tất cả điều kiện đều qua, sẽ in ra dòng này
             Debug.WriteLine("-> PASSED: All conditions met. Proceeding to send status.");
             Debug.WriteLine($"-> Firebase Client State: {(firebaseClient == null ? "IS NULL" : "Exists")}");
 
@@ -273,7 +259,6 @@ namespace WpfApp1.ViewModels
             }
             catch (Exception ex)
             {
-                // In ra lỗi một cách không thể bỏ qua
                 Debug.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                 Debug.WriteLine("!!!! FIREBASE EXCEPTION CAUGHT IN UpdateTypingStatus !!!!");
                 Debug.WriteLine($"!!!! Exception Type: {ex.GetType().Name}");
@@ -283,38 +268,111 @@ namespace WpfApp1.ViewModels
         }
         public ChatViewModel(FirebaseClient fbClient)
         {
-            //--- Khởi tạo bộ đếm thời gian cho trạng thái đang gõ ---
+            if (fbClient == null)
+            {
+                Debug.WriteLine("FATAL: FirebaseClient is null in ChatViewModel constructor.");
+                throw new ArgumentNullException(nameof(fbClient), "FirebaseClient cannot be null.");
+            }
+            // Khởi tạo collections
+            Messages = new ObservableCollection<Message>();
+            Contacts = new ObservableCollection<Contact>();
+            Files = new ObservableCollection<FileItem>();
+
+            // Khởi tạo các giá trị ban đầu
+            firebaseClient = fbClient;
+            SelectedContact = null;
+            NewMessageText = string.Empty;
+
+            // Khởi tạo timer cho trạng thái "đang gõ"
             typingTimer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromSeconds(2)
             };
             typingTimer.Tick += TypingTimer_Tick;
 
-            Messages = new ObservableCollection<Message>();
-            Contacts = new ObservableCollection<Contact>();
-            Files = new ObservableCollection<FileItem>();
-
-            SelectedContact = null;
-            NewMessageText = string.Empty;
-
-            firebaseClient = fbClient;
-            userdata = SharedData.Instance.userdata;
-
-            if (userdata != null && !string.IsNullOrEmpty(userdata.Email))
-            {
-                SetCurrentUserGlobalStatus(true);
-            }
-            else
-            {
-                Debug.WriteLine("ChatViewModel Constructor: Userdata not available yet. Initial online status set skipped. This might be a problem if login state is crucial.");
-            }
-
+            // Đăng ký sự kiện
             EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
 
+            // Tải dữ liệu ban đầu
             LoadInitialData();
+
+            // Tạo thư mục tạm
             Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "WpfApp1"));
+            userdata = SharedData.Instance.userdata;
         }
 
+        [RelayCommand]
+        private async Task BlockContact(Contact contact)
+        {
+            
+            if (contact == null)
+            {
+                CustomMessageBox.Show("Không có người liên hệ được chọn để chặn.", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
+                return;
+            }
+            var currentUser = SharedData.Instance.userdata;
+            
+            if (currentUser == null)
+            {
+                CustomMessageBox.Show("Không có người dùng hiện tại để thực hiện hành động này.", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
+                return;
+            }
+
+            var result = CustomMessageBox.Show($"Bạn có chắc chắn muốn chặn '{contact.Name}' không?", "Xác nhận chặn", CustomMessageBoxWindow.MessageButtons.YesNo, CustomMessageBoxWindow.MessageIcon.Warning);
+            if (result == MessageBoxResult.No) return;
+
+            try
+            {
+                var db = FirestoreHelper.database;
+                var blockedUserRef = db.Collection("users").Document(currentUser.Email).Collection("blockedUsers").Document(contact.Email);
+                await blockedUserRef.SetAsync(new { email = contact.Email, blockedAt = Timestamp.GetCurrentTimestamp() });
+
+                BlockedUsers.Add(contact.Email);
+                contact.IsBlockedByMe = true;
+
+                SendMessageCommand.NotifyCanExecuteChanged();
+                StartVideoCallCommand.NotifyCanExecuteChanged();
+                StartVoiceCallCommand.NotifyCanExecuteChanged();
+
+                OnSelectedContactChanged(contact);
+                CustomMessageBox.Show($"Đã chặn {contact.Name}.", "Thành công", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Lỗi khi chặn người dùng: {ex.Message}");
+                MessageBox.Show("Đã xảy ra lỗi. Vui lòng thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        private async Task UnblockContactAsync(Contact contact)
+        {
+            if (contact == null) return;
+            var currentUser = SharedData.Instance.userdata;
+            if (currentUser == null) return;
+
+            try
+            {
+                var db = FirestoreHelper.database;
+                var blockedUserRef = db.Collection("users").Document(currentUser.Email).Collection("blockedUsers").Document(contact.Email);
+                await blockedUserRef.DeleteAsync();
+
+                BlockedUsers.Remove(contact.Email);
+                contact.IsBlockedByMe = false;
+
+                SendMessageCommand.NotifyCanExecuteChanged();
+                StartVideoCallCommand.NotifyCanExecuteChanged();
+                StartVoiceCallCommand.NotifyCanExecuteChanged();
+
+                OnSelectedContactChanged(contact);
+                CustomMessageBox.Show($"Đã bỏ chặn {contact.Name}.", "Thành công", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Lỗi khi bỏ chặn người dùng: {ex.Message}");
+                MessageBox.Show("Đã xảy ra lỗi. Vui lòng thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
         private void TypingTimer_Tick(object sender, EventArgs e)
         {
             typingTimer.Stop();
@@ -605,7 +663,7 @@ namespace WpfApp1.ViewModels
 
         private bool CanStartCall(Contact recipient)
         {
-            return recipient != null;
+            return recipient != null && !recipient.InteractionIsBlocked;
         }
         [RelayCommand]
         private async void OnAvatarUpdated(string newAvatarUrl)
@@ -652,6 +710,19 @@ namespace WpfApp1.ViewModels
             {
                 messageSubscription.Dispose();
                 messageSubscription = null;
+            }
+            if (contact.InteractionIsBlocked)
+            {
+                string message = contact.IsBlockedByMe
+                    ? $"Bạn đã chặn {contact.Name}. Hãy bỏ chặn để tiếp tục trò chuyện."
+                    : $"Bạn không thể nhắn tin cho {contact.Name} vì người này đã chặn bạn.";
+                Messages.Add(new Message { Content = message, IsSystemMessage = true });
+                return;
+            }
+            if (contact.IsBlockedByMe)
+            {
+                Messages.Add(new Message { Content = $"Bạn đã chặn {contact.Name}. Hãy bỏ chặn để tiếp tục trò chuyện.", IsSystemMessage = true });
+                return;
             }
 
             if (contact == null || string.IsNullOrEmpty(contact.chatID))
@@ -726,6 +797,14 @@ namespace WpfApp1.ViewModels
                             if (messageEvent.EventType == FirebaseEventType.InsertOrUpdate && messageEvent.Object != null)
                             {
                                 var message = messageEvent.Object;
+                                bool isSenderBlocked = BlockedUsers.Contains(message.SenderId);
+                                Debug.WriteLine($"[BLOCK CHECK] Received message from: {message.SenderId}. Is this user in block list? {isSenderBlocked}");
+                                if (!message.IsMine && BlockedUsers.Contains(message.SenderId))
+                                {
+                                    Debug.WriteLine($"Ignoring message from blocked user: {message.SenderId}");
+                                    return;
+                                }
+
                                 message.Id = messageEvent.Key;
                                 message.IsMine = message.SenderId == SharedData.Instance.userdata?.Email;
                                 message.Alignment = message.IsMine ? "Right" : "Left";
@@ -738,7 +817,6 @@ namespace WpfApp1.ViewModels
                                         message.SenderDisplayName = senderName;
                                     }
                                 }
-
                                 int existingIndex = Messages.IndexOf(Messages.FirstOrDefault(m => m.Id == message.Id));
                                 if (existingIndex >= 0)
                                 {
@@ -934,7 +1012,11 @@ namespace WpfApp1.ViewModels
                     Timestamp = DateTime.UtcNow,
                     IsMine = true,
                 };
-
+                if (contact.IsBlockedByMe)
+                {
+                    CustomMessageBox.Show("Bạn đã chặn người này, không thể gửi tin nhắn.", "Chặn", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
+                    return;
+                }
                 if (IsReplying)
                 {
                     newMessage.IsReply = true;
@@ -961,7 +1043,7 @@ namespace WpfApp1.ViewModels
 
         private bool CanSendMessage()
         {
-            return !string.IsNullOrWhiteSpace(NewMessageText) && SelectedContact != null;
+            return !string.IsNullOrWhiteSpace(NewMessageText) && SelectedContact != null && !SelectedContact.InteractionIsBlocked;
         }
 
         [RelayCommand]
@@ -1083,43 +1165,38 @@ namespace WpfApp1.ViewModels
             return $"{(Math.Sign(byteCount) * num)}{suf[place]}";
         }
 
-        public async Task<List<Contact>> GetContactsAsync(string email)
+        public async Task<List<Contact>> GetContactsAsync(string currentUserEmail)
         {
-            if (string.IsNullOrEmpty(email))
-            {
-                Debug.WriteLine("Email is null or empty!");
-                return new List<Contact>();
-            }
+            if (string.IsNullOrEmpty(currentUserEmail)) return new List<Contact>();
 
             try
             {
                 var db = FirestoreHelper.database;
-                if (db == null)
-                {
-                    Debug.WriteLine("Firestore database is not initialized!");
-                    return new List<Contact>();
-                }
-
-                var userDocRef = db.Collection("users").Document(email);
-                var contactsCollectionRef = userDocRef.Collection("contacts");
-                var contactsSnapshot = await contactsCollectionRef.GetSnapshotAsync();
-
+                var contactsSnapshot = await db.Collection("users").Document(currentUserEmail).Collection("contacts").GetSnapshotAsync();
                 var contacts = new List<Contact>();
 
                 foreach (var contactDoc in contactsSnapshot.Documents)
                 {
                     var contact = contactDoc.ConvertTo<Contact>();
-                    contact.IsLoadingAvatar = true;
-                    contact.AvatarUrl = await FirebaseStorageHelper.GetAvatarUrlAsync(contact.Email);
-                    if (string.IsNullOrEmpty(contact.AvatarUrl))
+                    // Gán trạng thái chặn từ danh sách đã được tải ở LoadInitialData
+                    contact.IsBlockedByMe = BlockedUsers.Contains(contact.Email);
+
+                    var theirBlockedListRef = db.Collection("users").Document(contact.Email).Collection("blockedUsers").Document(currentUserEmail);
+                    var theirBlockSnapshot = await theirBlockedListRef.GetSnapshotAsync();
+                    contact.IsBlockingMe = theirBlockSnapshot.Exists;
+
+                    if (contact.IsBlockingMe)
                     {
-                        contact.AvatarUrl = "/Assets/DefaultAvatar.png";
+                        Debug.WriteLine($"[BLOCK CHECK] User '{contact.Name}' is blocking you.");
                     }
+
+                    contact.IsLoadingAvatar = true;
+                    contact.AvatarUrl = await FirebaseStorageHelper.GetAvatarUrlAsync(contact.Email) ?? "/Assets/DefaultAvatar.png";
                     contact.IsLoadingAvatar = false;
+
                     contacts.Add(contact);
                 }
-
-                Debug.WriteLine($"Loaded {contacts.Count} contacts for user {email}");
+                Debug.WriteLine($"Loaded {contacts.Count} contacts for user {currentUserEmail}");
                 return contacts;
             }
             catch (Exception ex)
@@ -1132,37 +1209,51 @@ namespace WpfApp1.ViewModels
         private async void LoadInitialData()
         {
             Contacts.Clear();
-            Debug.WriteLine($"Loading contacts for user: {SharedData.Instance.userdata?.Email}");
-
-            List<Contact> contacts = await GetContactsAsync(SharedData.Instance.userdata?.Email);
-            if (contacts.Count == 0)
+            var currentUser = SharedData.Instance.userdata;
+            if (currentUser == null || string.IsNullOrEmpty(currentUser.Email))
             {
-                Debug.WriteLine("No contacts found for the user.");
-                SelectedContact = null;
-                Messages.Clear();
-                Files.Clear();
+                Debug.WriteLine("[FATAL] LoadInitialData: Current user data is not available. Aborting data load.");
                 return;
             }
 
-            foreach (var contact in contacts)
-            {
-                Contacts.Add(contact);
-            }
+            Debug.WriteLine($"Loading all data for user: {currentUser.Email}");
+            await LoadBlockedUsersAsync(currentUser.Email);
+            List<Contact> contacts = await GetContactsAsync(currentUser.Email);
 
-            if (Contacts.Any())
+            if (contacts.Any())
             {
+                foreach (var contact in contacts)
+                {
+                    Contacts.Add(contact);
+                }
                 SelectedContact = Contacts[0];
-                Debug.WriteLine($"Set SelectedContact to: {SelectedContact?.Name}");
             }
             else
             {
-                SelectedContact = null;
-                Messages.Clear();
-                Files.Clear();
+                Debug.WriteLine("No contacts found for the user.");
             }
 
+            SetCurrentUserGlobalStatus(true);
             StartListeningToContactsPresence();
         }
+        private async Task LoadBlockedUsersAsync(string currentUserEmail)
+        {
+            if (string.IsNullOrEmpty(currentUserEmail)) return;
+            try
+            {
+                var db = FirestoreHelper.database;
+                var blockedUsersSnapshot = await db.Collection("users").Document(currentUserEmail).Collection("blockedUsers").GetSnapshotAsync();
+
+                var blockedEmailList = blockedUsersSnapshot.Documents.Select(d => d.Id).ToList();
+                BlockedUsers = new HashSet<string>(blockedEmailList);
+                Debug.WriteLine($"[BLOCK] Loaded {BlockedUsers.Count} blocked user(s): [{string.Join(", ", BlockedUsers)}]");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[BLOCK] Error loading blocked users list: {ex.Message}");
+            }
+        }
+
         private async void SetCurrentUserGlobalStatus(bool isOnline)
         {
             if (userdata == null || string.IsNullOrEmpty(userdata.Email))
@@ -1325,8 +1416,12 @@ namespace WpfApp1.ViewModels
             }
             allMessageSubscriptions.Clear();
 
-            messageSubscription?.Dispose();
-            messageSubscription = null;
+            if (messageSubscription != null)
+            {
+                Debug.WriteLine("Disposing messageSubscription.");
+                messageSubscription.Dispose();
+                messageSubscription = null;
+            }
 
             foreach (var listener in _contactPresenceListeners.Values)
             {
@@ -1335,6 +1430,15 @@ namespace WpfApp1.ViewModels
             _contactPresenceListeners.Clear();
 
             EditProfileViewModel.AvatarUpdated -= OnAvatarUpdated;
+
+            if (firebaseClient == null)
+            {
+                Debug.WriteLine("firebaseClient is null during Cleanup.");
+            }
+            else
+            {
+                Debug.WriteLine("firebaseClient exists during Cleanup.");
+            }
 
             Debug.WriteLine("ChatViewModel cleanup complete.");
         }
@@ -1656,8 +1760,6 @@ namespace WpfApp1.ViewModels
         private async Task DeleteContactAsync(Contact contactToDelete)
         {
             if (contactToDelete == null) return;
-
-            // Hiển thị hộp thoại xác nhận trước khi xóa
             var result = CustomMessageBox.Show(
                 $"Bạn có chắc chắn muốn xóa liên hệ '{contactToDelete.Name}' không? Toàn bộ lịch sử trò chuyện sẽ bị xóa vĩnh viễn và không thể khôi phục.",
                 "Xác nhận xóa",
@@ -1673,28 +1775,17 @@ namespace WpfApp1.ViewModels
                 string currentUserEmail = SharedData.Instance.userdata.Email;
                 string contactEmail = contactToDelete.Email;
                 string chatID = contactToDelete.chatID;
-
-                // BƯỚC 3.1: Xóa lịch sử chat trong Realtime Database
                 await DeleteChatHistoryAsync(chatID);
-
-                // BƯỚC 3.2: Xóa contact khỏi danh sách của người dùng hiện tại
                 await DeleteContactEntryAsync(currentUserEmail, contactEmail);
-
-                // BƯỚC 3.3: Xóa người dùng hiện tại khỏi danh sách của contact kia
                 await DeleteContactEntryAsync(contactEmail, currentUserEmail);
-
-                // Cập nhật giao diện
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     Contacts.Remove(contactToDelete);
                     if (SelectedContact == contactToDelete)
                     {
-                        SelectedContact = null; // Xóa vùng chat nếu contact đang được chọn bị xóa
+                        SelectedContact = null;
                     }
                 });
-
-                // Có thể thêm thông báo thành công ở đây
-                // App.Current.NotificationManager.Show(new ToastNotifications.Messages.Success("Đã xóa liên hệ thành công!"));
             }
             catch (Exception ex)
             {
@@ -1706,8 +1797,6 @@ namespace WpfApp1.ViewModels
                 Mouse.OverrideCursor = null;
             }
         }
-
-        // 2. CÁC PHƯƠNG THỨC HỖ TRỢ XÓA BACKEND
         private async Task DeleteChatHistoryAsync(string chatID)
         {
             if (string.IsNullOrEmpty(chatID)) return;
@@ -1745,7 +1834,6 @@ namespace WpfApp1.ViewModels
 
             try
             {
-                // Xóa tin nhắn trực tiếp trên Firebase Realtime Database
                 await firebaseClient
                     .Child("messages")
                     .Child(SelectedContact.chatID)

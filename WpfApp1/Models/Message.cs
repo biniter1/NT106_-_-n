@@ -34,6 +34,8 @@ namespace WpfApp1.Models
         public string ReplyToMessageId { get; set; }
         public string ReplyToMessageContent { get; set; }
         public string ReplyToSenderName { get; set; }
+
+        public bool IsSystemMessage { get; set; } = false;
         public Message()
         {
             // Gán mặc định
