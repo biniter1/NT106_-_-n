@@ -23,7 +23,8 @@ namespace WpfApp1.ViewModels
 
         private readonly WebRTCService _webRTCService;
 
-
+        private int _localFramesReceived = 0;
+        private int _remoteFramesReceived = 0;
 
         public CallViewModel(WebRTCService webRTCService)
         {
@@ -35,11 +36,13 @@ namespace WpfApp1.ViewModels
 
         private void OnLocalVideoTrackReady(LocalVideoTrack track)
         {
+            Debug.WriteLine("[RENDER-DIAG] Local video track is ready. Subscribing to frames...");
             track.Argb32VideoFrameReady += OnLocalVideoFrameReady;
         }
 
         private void OnRemoteVideoTrackReady(RemoteVideoTrack track)
         {
+            Debug.WriteLine("[RENDER-DIAG] Remote video track is ready. Subscribing to frames...");
             track.Argb32VideoFrameReady += OnRemoteVideoFrameReady;
         }
 
@@ -48,6 +51,12 @@ namespace WpfApp1.ViewModels
         /// </summary>
         private void OnLocalVideoFrameReady(Argb32VideoFrame frame)
         {
+            _localFramesReceived++;
+            if (_localFramesReceived % 100 == 1) // Log mỗi 100 frame để tránh spam
+            {
+                Debug.WriteLine($"[RENDER-DIAG] Receiving LOCAL video frame #{_localFramesReceived}. Updating bitmap...");
+            }
+
             var width = (int)frame.width;
             var height = (int)frame.height;
             var stride = (int)frame.stride;
@@ -69,6 +78,11 @@ namespace WpfApp1.ViewModels
         /// </summary>
         private void OnRemoteVideoFrameReady(Argb32VideoFrame frame)
         {
+            _remoteFramesReceived++;
+            if (_remoteFramesReceived % 100 == 1) // Log mỗi 100 frame để tránh spam
+            {
+                Debug.WriteLine($"[RENDER-DIAG] Receiving REMOTE video frame #{_remoteFramesReceived}. Updating bitmap...");
+            }
             var width = (int)frame.width;
             var height = (int)frame.height;
             var stride = (int)frame.stride;
