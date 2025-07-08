@@ -28,6 +28,7 @@ using WpfApp1.Views; // Added for Task and CustomMessageBox
 using NAudio.Wave;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Newtonsoft.Json.Linq;
 
 namespace WpfApp1.ViewModels
 {
@@ -784,7 +785,7 @@ namespace WpfApp1.ViewModels
                         .Where(item => item.Object != null)
                         .Select(item =>
                         {
-                            var msg = item.Object;
+                            var msg = item.Object;                           
                             msg.Id = item.Key;
                             msg.IsMine = msg.SenderId == SharedData.Instance.userdata?.Email;
                             msg.Alignment = msg.IsMine ? "Right" : "Left";
@@ -831,10 +832,21 @@ namespace WpfApp1.ViewModels
                                     Debug.WriteLine($"Ignoring message from blocked user: {message.SenderId}");
                                     return;
                                 }
-
+                                                              
                                 message.Id = messageEvent.Key;
                                 message.IsMine = message.SenderId == SharedData.Instance.userdata?.Email;
                                 message.Alignment = message.IsMine ? "Right" : "Left";
+
+                                var updatedMessageData = messageEvent.Object;
+                                updatedMessageData.Id = messageEvent.Key;
+                                var existingMessage = Messages.FirstOrDefault(m => m.Id == updatedMessageData.Id);
+
+                                if (existingMessage != null)
+                                {                                   
+                                    existingMessage.LikedBy = updatedMessageData.LikedBy ?? new Dictionary<string, bool>();            
+                                    existingMessage.OnPropertyChanged(nameof(existingMessage.LikeCount));
+                                    existingMessage.OnPropertyChanged(nameof(existingMessage.HasLikes));
+                                }
 
                                 if (isGroupChat && !message.IsMine)
                                 {
@@ -1840,6 +1852,8 @@ namespace WpfApp1.ViewModels
             await db.Collection("users").Document(ownerEmail).Collection("contacts").Document(contactEmailToDelete).DeleteAsync();
         }            
 
+        // Xoa tin nhan
+
         [RelayCommand]
         private async Task DeleteMessageAsync(Message messageToDelete)
         {
@@ -1873,6 +1887,47 @@ namespace WpfApp1.ViewModels
             {
                 Debug.WriteLine($"Lỗi khi xóa tin nhắn trên server: {ex.Message}");
                 CustomMessageBox.Show("Đã có lỗi xảy ra trong quá trình xóa tin nhắn.", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
+            }
+        }
+
+        // Tha tim tin nhan
+
+        [RelayCommand]
+        private async Task ReactToMessageAsync(Message message)
+        {
+            if (message == null || string.IsNullOrEmpty(message.Id) || SelectedContact == null) return;
+
+            string currentUserEmail = SharedData.Instance.userdata.Email;
+            if (string.IsNullOrEmpty(currentUserEmail)) return;
+                        
+            string escapedCurrentUserEmail = EscapeEmail(currentUserEmail);
+
+            var currentLikes = new Dictionary<string, bool>(message.LikedBy ?? new Dictionary<string, bool>());
+
+            try
+            {
+                
+                if (currentLikes.ContainsKey(escapedCurrentUserEmail) && currentLikes[escapedCurrentUserEmail] == true)
+                {                   
+                    currentLikes[escapedCurrentUserEmail] = false;
+                    Debug.WriteLine($"Bỏ thích (set false) cho tin nhắn: {message.Id}");
+                }
+                else
+                {
+                                     currentLikes[escapedCurrentUserEmail] = true;
+                    Debug.WriteLine($"Thích (set true) cho tin nhắn: {message.Id}");
+                }
+               
+                await firebaseClient
+                    .Child("messages")
+                    .Child(SelectedContact.chatID)
+                    .Child(message.Id)
+                    .Child("likedBy")
+                    .PutAsync(currentLikes);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Lỗi khi thả tim: {ex.ToString()}");
             }
         }
     }
