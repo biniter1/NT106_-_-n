@@ -205,22 +205,19 @@
                             <Setter Property="Margin" Value="0"/>
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="Background" Value="{StaticResource WhiteBrush}"/>
-
-                            <!-- 1. Dùng Tag làm "cầu nối" để truyền DataContext (ChatViewModel) vào -->
                             <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
 
                             <Setter Property="ContextMenu">
                                 <Setter.Value>
-                                    <!-- 2. Gán DataContext của ContextMenu vào Tag của ListBoxItem -->
                                     <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
                                         <MenuItem Header="Chặn người dùng này"
-                              Command="{Binding BlockContactCommand}"
-                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                      Command="{Binding BlockContactCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                                             <MenuItem.Style>
                                                 <Style TargetType="MenuItem">
                                                     <Setter Property="Visibility" Value="Visible"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsBlockedByMe, RelativeSource={RelativeSource Self}}" Value="True">
+                                                        <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsBlockedByMe, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -229,24 +226,19 @@
                                         </MenuItem>
 
                                         <MenuItem Header="Bỏ chặn người dùng này"
-                              Command="{Binding UnblockContactCommand}"
-                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                      Command="{Binding UnblockContactCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                                             <MenuItem.Style>
                                                 <Style TargetType="MenuItem">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsBlockedByMe, RelativeSource={RelativeSource Self}}" Value="True">
+                                                        <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsBlockedByMe, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
                                                             <Setter Property="Visibility" Value="Visible"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </MenuItem.Style>
                                         </MenuItem>
-
-                                        <Separator />
-                                        <MenuItem Header="Xóa liên hệ" 
-                              Command="{Binding DeleteContactCommand}"
-                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"/>
                                     </ContextMenu>
                                 </Setter.Value>
                             </Setter>
