@@ -46,9 +46,19 @@ namespace WpfApp1.Models
         [ObservableProperty]
         private bool _hasUnreadMessages;
 
-
-        //[ObservableProperty]
-        //private bool _isBlocked;
+        private bool _isTyping;
+        public bool IsTyping // <--- Thêm "public" vào đây
+        {
+            get => _isTyping;
+            set
+            {
+                if (_isTyping != value)
+                {
+                    _isTyping = value;
+                    OnPropertyChanged(nameof(IsTyping));
+                }
+            }
+        }
 
         [ObservableProperty]
         private bool _isBlockedByMe;
