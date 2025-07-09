@@ -6,7 +6,7 @@ namespace WpfApp1.Models
 {
 
     [FirestoreData]
-    public class Contact : ObservableObject
+    public partial class Contact : ObservableObject
     {
 
         private bool _isOnline;
@@ -43,5 +43,28 @@ namespace WpfApp1.Models
         [FirestoreProperty]
         public bool IsLoadingAvatar { get; set; }
 
+        [ObservableProperty]
+        private bool _hasUnreadMessages;
+
+        private bool _isTyping;
+        public bool IsTyping // <--- Thêm "public" vào đây
+        {
+            get => _isTyping;
+            set
+            {
+                if (_isTyping != value)
+                {
+                    _isTyping = value;
+                    OnPropertyChanged(nameof(IsTyping));
+                }
+            }
+        }
+
+        [ObservableProperty]
+        private bool _isBlockedByMe;
+
+        [ObservableProperty]
+        private bool _isBlockingMe;
+        public bool InteractionIsBlocked => IsBlockedByMe || IsBlockingMe;
     }
 }

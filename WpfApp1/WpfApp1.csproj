@@ -6,34 +6,38 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="Assets\chat.png" />
+    <None Remove="Assets\Icons\error.png" />
+    <None Remove="Assets\Icons\info.png" />
+    <None Remove="Assets\Icons\question.png" />
+    <None Remove="Assets\Icons\warning.png" />
     <None Remove="Assets\setting.png" />
-    <None Remove="secret.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="secret.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.0" />
     <PackageReference Include="Emoji.Wpf" Version="0.3.4" />
     <PackageReference Include="FirebaseDatabase.net" Version="5.0.0" />
     <PackageReference Include="FirebaseStorage.net" Version="1.0.3" />
     <PackageReference Include="Google.Cloud.AIPlatform.V1" Version="3.36.0" />
     <PackageReference Include="Google.Cloud.Firestore" Version="3.10.0" />
+    <PackageReference Include="Microsoft.MixedReality.WebRTC" Version="2.0.2" />
     <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="ToastNotifications" Version="2.5.1" />
     <PackageReference Include="ToastNotifications.Messages" Version="2.5.1" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\chat.png" />
+    <Resource Include="Assets\Icons\error.png" />
+    <Resource Include="Assets\Icons\info.png" />
+    <Resource Include="Assets\Icons\question.png" />
+    <Resource Include="Assets\Icons\warning.png" />
     <Resource Include="Assets\setting.png" />
   </ItemGroup>
 
@@ -53,6 +57,13 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <None Update="Services\secret.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy &quot;C:\Users\DELL\.nuget\packages\microsoft.mixedreality.webrtc\2.0.2\runtimes\win10-x64\native\mrwebrtc.dll&quot; &quot;$(TargetDir)&quot; /Y /I" />
+  </Target>
 
 </Project>

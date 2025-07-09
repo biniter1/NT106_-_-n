@@ -28,9 +28,22 @@
             <SolidColorBrush x:Key="IconBackgroundWord" Color="#2B579A"/>
             <SolidColorBrush x:Key="IconBackgroundPpt" Color="#CD853F"/>
             <SolidColorBrush x:Key="IconBackgroundDefault" Color="#B0BEC5"/>
+            <SolidColorBrush x:Key="BlockedOverlayBrush" Color="#80E0E0E0"/>
             <SolidColorBrush x:Key="AvatarPlaceholderBackground" Color="#FFB74D"/>
+            <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#E0E0E0" />
+            <SolidColorBrush x:Key="AccentBrush" Color="RoyalBlue" />
+            <SolidColorBrush x:Key="PressedBackgroundBrush" Color="DarkGray" />
+            <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#D0D0D0"/>
+            <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="#B0B0B0"/>
+            <SolidColorBrush x:Key="ScrollBarTrackBrush" Color="Transparent"/>
+            <SolidColorBrush x:Key="Sidebar" Color="#F3F4F6"/>
+            <SolidColorBrush x:Key="SearchPlaceholderBrush" Color="#888888"/>
+            <SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="#F0F0F0"/>
+            <SolidColorBrush x:Key="SearchBoxBorderBrush" Color="#E0E0E0"/>
+            <SolidColorBrush x:Key="SearchBoxTextBrush" Color="#333333"/>
             <CornerRadius x:Key="DefaultCornerRadius">10</CornerRadius>
 
+            <converters:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
             <converters:StringNullOrEmptyToVisibilityConverter x:Key="StringNullOrEmptyToVisibilityConverter"/>
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <converters:MessageBackgroundConverter x:Key="MessageBackgroundConverter"/>
@@ -59,6 +72,24 @@
                 <MenuItem Header="Tải xuống" 
                           Command="{Binding DownloadMessageFileCommand}" 
                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="Trả lời"
+                          Command="{Binding ReplyToMessageCommand}"
+                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="Xóa tin nhắn"
+              Command="{Binding DeleteMessageCommand}"
+              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+
+                    <MenuItem.Style>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsMine, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </MenuItem.Style>
+                </MenuItem>
             </ContextMenu>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -98,12 +129,13 @@
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Margin="0,0,10,0" Background="#20000000" Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
-                                    </Border>
-                                    <Image Grid.Column="0" Width="40" Height="40" Margin="0,0,10,0" VerticalAlignment="Center" 
-                                           Source="{Binding AvatarUrl}" 
-                                           Stretch="UniformToFill">
+
+                                    <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Margin="0,0,10,0" Background="#20000000" Visibility="{Binding IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"/>
+
+                                    <Image Grid.Column="0" Width="40" Height="40" Margin="0,0,10,0" VerticalAlignment="Center" Source="{Binding AvatarUrl}" Stretch="UniformToFill">
                                         <Image.Clip>
                                             <EllipseGeometry Center="20,20" RadiusX="20" RadiusY="20"/>
                                         </Image.Clip>
@@ -118,11 +150,27 @@
                                             </Style>
                                         </Image.Style>
                                     </Image>
+
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,2"/>
                                         <TextBlock Text="{Binding LastMessage}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
-                                    <TextBlock Grid.Column="2" Text="" FontFamily="Segoe Fluent Icons" FontSize="8" VerticalAlignment="Bottom" Margin="5,0,0,5">
+
+                                    <Border Grid.ColumnSpan="3" Background="{StaticResource BlockedOverlayBrush}" CornerRadius="5"
+                                            Visibility="{Binding IsBlockedByMe, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="ĐÃ CHẶN" Foreground="Black" Opacity="0.5" FontWeight="Bold" FontSize="10"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <Ellipse Grid.Column="2" 
+                     Width="8" 
+                     Height="8" 
+                     Fill="Crimson" 
+                     Margin="5,0"
+                     VerticalAlignment="Center"
+                     Visibility="{Binding HasUnreadMessages, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                    <TextBlock Grid.Column="3" Text="" FontFamily="Segoe Fluent Icons" FontSize="8" VerticalAlignment="Bottom" Margin="5,0,0,5">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
@@ -134,6 +182,29 @@
                                             </Style>
                                         </TextBlock.Style>
                                     </TextBlock>
+                                    <Button Grid.Column="4" 
+                    Content="&#xE74D;" 
+                    FontFamily="Segoe MDL2 Assets" 
+                    FontSize="14" 
+                    Width="30" Height="30"
+                    Background="Transparent" 
+                    BorderThickness="0"
+                    Foreground="Gray"
+                    VerticalAlignment="Center"
+                    ToolTip="Xóa liên hệ này"
+                    Command="{Binding DataContext.DeleteContactCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                    CommandParameter="{Binding}">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -144,6 +215,44 @@
                             <Setter Property="Margin" Value="0"/>
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="Background" Value="{StaticResource WhiteBrush}"/>
+                            <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+
+                            <Setter Property="ContextMenu">
+                                <Setter.Value>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                                        <MenuItem Header="Chặn người dùng này"
+                      Command="{Binding BlockContactCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                            <MenuItem.Style>
+                                                <Style TargetType="MenuItem">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsBlockedByMe, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </MenuItem.Style>
+                                        </MenuItem>
+
+                                        <MenuItem Header="Bỏ chặn người dùng này"
+                      Command="{Binding UnblockContactCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                            <MenuItem.Style>
+                                                <Style TargetType="MenuItem">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsBlockedByMe, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </MenuItem.Style>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </Setter.Value>
+                            </Setter>
+
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
@@ -172,111 +281,418 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="35" Height="35" CornerRadius="17.5" Margin="0,0,10,0" Background="#20000000" Visibility="{Binding SelectedContact.IsLoadingAvatar, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
-                    </Border>
-                    <Image Width="35" Height="35" Margin="0,0,10,0" VerticalAlignment="Center" 
-                           Source="{Binding SelectedContact.AvatarUrl}" 
-                           Stretch="UniformToFill">
-                        <Image.Clip>
-                            <EllipseGeometry Center="17.5,17.5" RadiusX="17.5" RadiusY="17.5"/>
-                        </Image.Clip>
-                        <Image.Style>
-                            <Style TargetType="Image">
-                                <Setter Property="Visibility" Value="Visible"/>
+            <Border Grid.Row="0" Background="White" 
+        BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" 
+        Padding="20,12">
+                <Border.Effect>
+                    <DropShadowEffect Color="#000000" Opacity="0.05" ShadowDepth="2" BlurRadius="8"/>
+                </Border.Effect>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Avatar và thông tin liên hệ -->
+                    <Grid Grid.Column="0" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Avatar với hiệu ứng online -->
+                        <Grid Grid.Column="0" Width="48" Height="48" Margin="0,0,16,0">
+                            <Border Width="48" Height="48" CornerRadius="24" 
+                        Background="#F5F5F5" 
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="2">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#000000" Opacity="0.1" ShadowDepth="1" BlurRadius="4"/>
+                                </Border.Effect>
+
+                                <!-- Avatar content -->
+                                <TextBlock Text="{Binding SelectedContact.Name, Converter={StaticResource NameToFallbackConverter}}"
+                              FontSize="18" FontWeight="SemiBold" 
+                              Foreground="{StaticResource TextPrimaryBrush}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+
+                            <!-- Online indicator -->
+                            <Ellipse Width="14" Height="14" 
+                         HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                         Margin="0,0,-2,-2">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="#808080"/>
+                                        <Setter Property="Stroke" Value="White"/>
+                                        <Setter Property="StrokeThickness" Value="2"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedContact.IsOnline}" Value="True">
+                                                <Setter Property="Fill" Value="#4CAF50"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </Grid>
+
+                        <!-- Thông tin tên và trạng thái -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" MinWidth="200">
+                            <TextBlock Text="{Binding SelectedContact.Name, Converter={StaticResource NameToFallbackConverter}}"
+                          FontWeight="SemiBold" FontSize="16" 
+                          Foreground="{StaticResource TextPrimaryBrush}"
+                          Margin="0,0,0,2"/>
+
+                            <Grid Height="20">
+                                <StackPanel Orientation="Horizontal"
+                Visibility="{Binding SelectedContact.IsTyping, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+
+                                    <TextBlock Text="đang nhập..."
+                    FontSize="12" FontStyle="Italic" 
+                    Foreground="#2196F3"
+                    VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                                    <Canvas Width="24" Height="16" VerticalAlignment="Center">
+                                        <Ellipse x:Name="Dot1" Width="4" Height="4" Fill="#2196F3" Canvas.Left="0" Canvas.Top="6" Opacity="0.6">
+                                            <Ellipse.RenderTransform>
+                                                <TranslateTransform x:Name="Dot1Transform"/>
+                                            </Ellipse.RenderTransform>
+                                            <Ellipse.Triggers>
+                                                <EventTrigger RoutedEvent="Loaded">
+                                                    <BeginStoryboard>
+                                                        <Storyboard RepeatBehavior="Forever">
+                                                            <DoubleAnimation Storyboard.TargetName="Dot1Transform" Storyboard.TargetProperty="Y" From="0" To="-4" Duration="0:0:0.8" AutoReverse="True" BeginTime="0:0:0">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <SineEase EasingMode="EaseInOut"/>
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                            </Ellipse.Triggers>
+                                        </Ellipse>
+                                        <Ellipse x:Name="Dot2" Width="4" Height="4" Fill="#2196F3" Canvas.Left="8" Canvas.Top="6" Opacity="0.6">
+                                            <Ellipse.RenderTransform>
+                                                <TranslateTransform x:Name="Dot2Transform"/>
+                                            </Ellipse.RenderTransform>
+                                            <Ellipse.Triggers>
+                                                <EventTrigger RoutedEvent="Loaded">
+                                                    <BeginStoryboard>
+                                                        <Storyboard RepeatBehavior="Forever">
+                                                            <DoubleAnimation Storyboard.TargetName="Dot2Transform" Storyboard.TargetProperty="Y" From="0" To="-4" Duration="0:0:0.8" AutoReverse="True" BeginTime="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <SineEase EasingMode="EaseInOut"/>
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                            </Ellipse.Triggers>
+                                        </Ellipse>
+                                        <Ellipse x:Name="Dot3" Width="4" Height="4" Fill="#2196F3" Canvas.Left="16" Canvas.Top="6" Opacity="0.6">
+                                            <Ellipse.RenderTransform>
+                                                <TranslateTransform x:Name="Dot3Transform"/>
+                                            </Ellipse.RenderTransform>
+                                            <Ellipse.Triggers>
+                                                <EventTrigger RoutedEvent="Loaded">
+                                                    <BeginStoryboard>
+                                                        <Storyboard RepeatBehavior="Forever">
+                                                            <DoubleAnimation Storyboard.TargetName="Dot3Transform" Storyboard.TargetProperty="Y" From="0" To="-4" Duration="0:0:0.8" AutoReverse="True" BeginTime="0:0:0.4">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <SineEase EasingMode="EaseInOut"/>
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                            </Ellipse.Triggers>
+                                        </Ellipse>
+                                    </Canvas>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal"
+                Visibility="{Binding SelectedContact.IsTyping, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted, FallbackValue=Visible}">
+
+                                    <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,6,0">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="#808080"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedContact.IsOnline}" Value="True">
+                                                        <Setter Property="Fill" Value="#4CAF50"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+
+                                    <TextBlock FontSize="12" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="{DynamicResource OfflineStatus}"/>
+                                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedContact.IsOnline}" Value="True">
+                                                        <Setter Property="Text" Value="{DynamicResource OnlineStatus}"/>
+                                                        <Setter Property="Foreground" Value="#4CAF50"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Nút chức năng -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="IsEnabled" Value="True"/>
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedContact.IsLoadingAvatar}" Value="True">
-                                        <Setter Property="Visibility" Value="Hidden"/>
+                                    <DataTrigger Binding="{Binding SelectedContact.InteractionIsBlocked}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </Image.Style>
-                    </Image>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="{Binding SelectedContact.Name, Converter={StaticResource NameToFallbackConverter}}"
-                                   FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
-                        <TextBlock FontSize="11">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Text" Value="{DynamicResource OfflineStatus}"/>
-                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedContact.IsOnline}" Value="True">
-                                            <Setter Property="Text" Value="{DynamicResource OnlineStatus}"/>
-                                            <Setter Property="Foreground" Value="{StaticResource OnlineStatusBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+                        </StackPanel.Style>
+
+                        <!-- Video call button -->
+                        <Button FontFamily="Segoe Fluent Icons" Content="" 
+                                ToolTip="{DynamicResource VideoCallTooltip}"
+                                Command="{Binding StartVideoCallCommand}"
+                                CommandParameter="{Binding SelectedContact}"
+                                Width="40" Height="40" FontSize="18" 
+                                Background="Transparent" 
+                                Foreground="{StaticResource TextSecondaryBrush}" 
+                                BorderThickness="0" 
+                                Margin="5,0"/>
+
+                        <!-- Voice call button -->
+                        <Button FontFamily="Segoe Fluent Icons" Content="" 
+                                ToolTip="{DynamicResource VoiceCallTooltip}"
+                                Command="{Binding StartVoiceCallCommand}"
+                                CommandParameter="{Binding SelectedContact}"
+                                Width="40" Height="40" FontSize="18" 
+                                Background="Transparent" 
+                                Foreground="{StaticResource TextSecondaryBrush}" 
+                                BorderThickness="0" 
+                                Margin="5,0"/>
                     </StackPanel>
-                </StackPanel>
+                </Grid>
             </Border>
+            
 
             <ScrollViewer Grid.Row="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="10">
                 <ItemsControl ItemsSource="{Binding Messages}">
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate DataType="{x:Type models:Message}">
                             <Border MaxWidth="400" 
-                                    Background="{Binding IsMine, Converter={StaticResource MessageBackgroundConverter}}" 
-                                    CornerRadius="10" Padding="10" Margin="5" 
-                                    HorizontalAlignment="{Binding IsMine, Converter={StaticResource MessageAlignmentConverter}}" 
-                                    ContextMenu="{StaticResource FileMessageContextMenu}"
-                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
-                                <Grid>
-                                    <!-- Text message -->
-                                    <emoji:TextBlock
-                                        Text="{Binding Content}"
-                                        TextWrapping="Wrap"
-                                        FontSize="14"
-                                        Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"
-                                    />
-                                    <!-- Image message -->
+            Background="{Binding IsMine, Converter={StaticResource MessageBackgroundConverter}}" 
+            CornerRadius="10" Padding="10" Margin="5" 
+            HorizontalAlignment="{Binding IsMine, Converter={StaticResource MessageAlignmentConverter}}" 
+            ContextMenu="{StaticResource FileMessageContextMenu}"
+            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
 
-                                    <Image Source="{Binding ImageUrl}" MaxHeight="400" MaxWidth="400" 
-                                           Stretch="Uniform" Margin="0" 
-                                           Visibility="{Binding IsImage, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <Image.InputBindings>
-                                            <MouseBinding MouseAction="LeftDoubleClick" 
-                                                          Command="{Binding DataContext.ViewFullImageCommand, 
-                                                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                          CommandParameter="{Binding ImageUrl}" />
-                                        </Image.InputBindings>
-                                    </Image>
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <!-- Style mặc định cho tin nhắn của bạn và người khác -->
+                                        <Setter Property="Background" Value="{Binding IsMine, Converter={StaticResource MessageBackgroundConverter}}"/>
+                                        <Setter Property="HorizontalAlignment" Value="{Binding IsMine, Converter={StaticResource MessageAlignmentConverter}}"/>
+                                        <Style.Triggers>
+                                            <!-- Trigger cho tin nhắn hệ thống (ví dụ: thông báo đã chặn) -->
+                                            <DataTrigger Binding="{Binding IsSystemMessage}" Value="True">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                                <Setter Property="MaxWidth" Value="500"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0">
+                                        <Border Background="#10000000" Padding="8" CornerRadius="6" Margin="0,0,0,5"
+                                            Visibility="{Binding IsReply, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding ReplyToSenderName}" FontWeight="Bold" 
+                                                FontSize="11" Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"/>
+                                                <TextBlock Text="{Binding ReplyToMessageContent}" Opacity="0.8" FontSize="11"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Grid>
+                                            <emoji:TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="14"
+                                            Foreground="{Binding IsMine, Converter={StaticResource TextColorConverter}}"/>
+                                            <Image Source="{Binding ImageUrl}" MaxHeight="400" MaxWidth="400" 
+                                               Stretch="Uniform" Margin="0" 
+                                               Visibility="{Binding IsImage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <Image.InputBindings>
+                                                    <MouseBinding MouseAction="LeftDoubleClick" 
+                                                      Command="{Binding DataContext.ViewFullImageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                      CommandParameter="{Binding ImageUrl}" />
+                                                </Image.InputBindings>
+                                            </Image>
+                                            <local:VoiceMessageView AudioUrl="{Binding VoiceMessageUrl}" Duration="{Binding VoiceMessageDuration}"
+                                                 HorizontalAlignment="Left">
+                                                <local:VoiceMessageView.Style>
+                                                    <Style TargetType="local:VoiceMessageView">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsVoiceMessage}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </local:VoiceMessageView.Style>
+                                            </local:VoiceMessageView>
+                                        </Grid>
+                                    </StackPanel>
+                                    <Border Grid.Row="1"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Bottom"
+                                        Background="White"
+                                        BorderBrush="#E0E0E0"
+                                        BorderThickness="1"
+                                        CornerRadius="10"
+                                        Padding="4,2"
+                                        Margin="0,4,0,0"
+                                        Visibility="{Binding HasLikes, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="❤️" Foreground="Red" Margin="0,0,2,0" FontSize="10"/>
+                                            <TextBlock Text="{Binding LikeCount}" Foreground="Black" FontSize="11" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Button Grid.Row="0"
+                                        Content="❤️"
+                                        Width="30" Height="30" Padding="0" Cursor="Hand"
+                                        Command="{Binding DataContext.ReactToMessageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="FontSize" Value="16" />
+                                                <Setter Property="Foreground" Value="Red" />
+                                                <Setter Property="Background" Value="White" />
+                                                <Setter Property="BorderThickness" Value="1" />
+                                                <Setter Property="BorderBrush" Value="#E0E0E0" />
+
+                                                <Setter Property="VerticalAlignment" Value="Top" />
+                                                <Setter Property="HorizontalAlignment" Value="Right" />
+                                                <Setter Property="Margin" Value="0,0,-40,-30" />
+
+                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                                                 BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="15">
+                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Border, AncestorLevel=1}}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+
+                                                    <DataTrigger Binding="{Binding IsMine}" Value="True">
+                                                        <Setter Property="HorizontalAlignment" Value="Left" />
+                                                        <Setter Property="Margin" Value="-40,0,0,-30" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                 </Grid>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
+            <!--Khung review -->
+            <Border Grid.Row="2" x:Name="ReplyPreviewBorder"
+                    Background="#F0F2F5" BorderBrush="{StaticResource BorderBrush}" 
+                    BorderThickness="0,1,0,0" Padding="10,5" Margin="10,0,10,0"
+                    CornerRadius="8,8,0,0"
+                    Visibility="{Binding IsReplying, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="IsEnabled" Value="True"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedContact.IsBlockedByMe}" Value="True">
+                                <Setter Property="IsEnabled" Value="False"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-            <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10" Background="{StaticResource WhiteBrush}">
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding MessageToReplyTo.ReplyToSenderName, FallbackValue='Đang trả lời...'}" 
+                                   FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" FontSize="12"/>
+                        <TextBlock Text="{Binding MessageToReplyTo.Content}" 
+                                   TextTrimming="CharacterEllipsis" Foreground="Gray" FontSize="12"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="1" Content="&#xE711;" FontFamily="Segoe MDL2 Assets" 
+                            Width="24" Height="24" Background="Transparent" BorderThickness="0"
+                            ToolTip="Hủy trả lời"
+                            Command="{Binding CancelReplyCommand}"/>
+                </Grid>
+            </Border>
+
+            <!-- Phần Grid chứa các nút input (chỉ hiển thị phần cần sửa) -->
+            <Border Grid.Row="3" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10" Background="{StaticResource WhiteBrush}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
+                    <!-- Nút đính kèm file -->
                     <Button Grid.Column="0" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource AttachFileTooltip}" Command="{Binding SelectFileCommand}">
                         <TextBlock Text="📎" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Button>
 
                     <!-- Nút chọn emoji -->
-                    <Button Grid.Column="1" Background="White" BorderThickness="0" >
+                    <Button Grid.Column="1" Background="White" BorderThickness="0">
                         <emoji:Picker 
-                          Background="Transparent"
-                          FontSize="30" 
-                          Picked="Picker_Picked"/>
+              Background="Transparent"
+              FontSize="30" 
+              Picked="Picker_Picked"/>
                     </Button>
 
-
+                    <!-- Ô nhập tin nhắn -->
                     <Border Grid.Column="2" CornerRadius="15" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="{StaticResource WhiteBrush}" Margin="0,0,10,0">
                         <TextBox Text="{Binding NewMessageText, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" Padding="12,4" FontSize="14" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                    Command="{Binding SendMessageCommand}"
+                    CommandParameter="{Binding SelectedContact}"/>
+                            </TextBox.InputBindings>
                             <TextBox.Style>
                                 <Style TargetType="TextBox">
                                     <Setter Property="Template">
@@ -294,7 +710,16 @@
                         </TextBox>
                     </Border>
 
-                    <Button Grid.Column="3" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource SendTooltip}" Command="{Binding SendMessageCommand}" CommandParameter="{Binding SelectedContact}">
+                    <!-- Nút ghi âm tin nhắn thoại -->
+                    <Button Grid.Column="3" Width="40" Height="40" Background="Transparent" BorderThickness="0"
+            ToolTip="Ghi âm tin nhắn thoại"
+            Command="{Binding RecordVoiceMessageCommand}">
+                        <TextBlock Text="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="20"
+            Foreground="{Binding IsRecording, Converter={StaticResource BooleanToColorConverter}, ConverterParameter=Crimson;Gray}"/>
+                    </Button>
+
+                    <!-- Nút gửi tin nhắn -->
+                    <Button Grid.Column="4" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource SendTooltip}" Command="{Binding SendMessageCommand}" CommandParameter="{Binding SelectedContact}">
                         <TextBlock Text="" Margin="0,15,0,0" FontFamily="Segoe Fluent Icons" FontSize="20" Foreground="{StaticResource PrimaryBrush}">
                             <TextBlock.RenderTransform>
                                 <RotateTransform Angle="-45"/>

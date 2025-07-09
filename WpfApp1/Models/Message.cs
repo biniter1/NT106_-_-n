@@ -1,8 +1,12 @@
-﻿using System;
-
+﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using CommunityToolkit.Mvvm.ComponentModel;
 namespace WpfApp1.Models
+
 {
-    public class Message
+    public partial class Message : ObservableObject
     {
         //ID MESSAGE
         public string Id { get; set; }
@@ -26,13 +30,41 @@ namespace WpfApp1.Models
         public bool IsVideo { get; set; }
         public string ImageUrl { get; set; }
         public string VideoUrl { get; set; }
-        public string FileUrl { get; set; } 
+        public string FileUrl { get; set; }
+        public bool IsVoiceMessage { get; set; } = false;
+        public string VoiceMessageUrl { get; set; }
+        public double VoiceMessageDuration { get; set; }
+        public bool IsReply { get; set; } = false;
+        public string ReplyToMessageId { get; set; }
+        public string ReplyToMessageContent { get; set; }
+        public string ReplyToSenderName { get; set; }
 
+        public bool IsSystemMessage { get; set; } = false;
         public Message()
         {
             // Gán mặc định
             Timestamp = DateTime.UtcNow;
             IsMine = false;
+        }
+
+        [JsonProperty("likedBy")]
+        [ObservableProperty]
+        private Dictionary<string, bool> _likedBy = new Dictionary<string, bool>();
+
+        partial void OnLikedByChanged(Dictionary<string, bool> value)
+        {
+            OnPropertyChanged(nameof(LikeCount));
+            OnPropertyChanged(nameof(HasLikes));
+        }
+        
+        [JsonIgnore]
+        public int LikeCount => LikedBy?.Values.Count(isLiked => isLiked) ?? 0; 
+
+        [JsonIgnore]
+        public bool HasLikes => LikeCount > 0;
+        public new void OnPropertyChanged(string propertyName)
+        {
+            base.OnPropertyChanged(propertyName);
         }
     }
 }

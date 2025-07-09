@@ -1,21 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
-using System.Windows.Threading;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using WpfApp1.Models;
+using WpfApp1.Views;
 
 namespace WpfApp1.LoginlSignUp
 {
@@ -24,8 +15,9 @@ namespace WpfApp1.LoginlSignUp
     /// </summary>
     public partial class fOtp : Window
     {
+        // ... Toàn bộ các biến và constructor của bạn giữ nguyên ...
         private string verificationId;
-        private DispatcherTimer countdownTimer;
+        private System.Windows.Threading.DispatcherTimer countdownTimer;
         private TimeSpan timeRemaining;
         private string phoneNumber;
         private User userData;
@@ -35,33 +27,15 @@ namespace WpfApp1.LoginlSignUp
         public fOtp(string token, string email, User data)
         {
             InitializeComponent();
-            LocalizationManager.LanguageChanged += OnLanguageChanged;
+            // LocalizationManager.LanguageChanged += OnLanguageChanged;
             idToken = token;
             userEmail = email;
             userData = data;
-
             EmailTextBlock.Text = $"Chúng tôi đã gửi một email xác thực đến: {userEmail}";
+        }
 
-        }
-        private void OnLanguageChanged(object sender, EventArgs e)
-        {
-            // Force the UI to refresh bindings
-            InvalidateVisual();
-            // Optionally, update specific bindings
-            UpdateBindings();
-        }
-        private void UpdateBindings()
-        {
-            // Update bindings for controls that use localized strings
-            foreach (var element in LogicalTreeHelper.GetChildren(this))
-            {
-                if (element is FrameworkElement fe)
-                {
-                    fe.GetBindingExpression(FrameworkElement.DataContextProperty)?.UpdateTarget();
-                    // Update other bindings as needed
-                }
-            }
-        }
+        // ... OnLanguageChanged và UpdateBindings giữ nguyên ...
+
         private async void CheckVerifyButton_Click(object sender, RoutedEventArgs e)
         {
             StatusTextBlock.Text = "";
@@ -70,29 +44,24 @@ namespace WpfApp1.LoginlSignUp
                 using (HttpClient client = new HttpClient())
                 {
                     string url = $"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={apiKey}";
-
                     var payload = new { idToken = idToken };
                     var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
-
                     HttpResponseMessage response = await client.PostAsync(url, content);
                     string result = await response.Content.ReadAsStringAsync();
-
                     dynamic json = JsonConvert.DeserializeObject(result);
 
                     if (json.users != null && json.users[0].emailVerified == true)
                     {
-                        // ✅ Ghi dữ liệu vào Firestore
                         var db = FirestoreHelper.database;
                         var docRef = db.Collection("users").Document(userData.Email);
                         await docRef.SetAsync(userData);
 
-                        MessageBox.Show("Email đã xác minh và thông tin đã lưu!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+                        // THAY THẾ 1
+                        CustomMessageBox.Show("Email đã xác minh và thông tin đã lưu!", "Thành công", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Success);
 
-                        // Mở MainWindow
                         fLogin main = new fLogin();
                         this.Close();
                         main.Show();
-                        
                     }
                     else
                     {
@@ -102,7 +71,8 @@ namespace WpfApp1.LoginlSignUp
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi kiểm tra xác minh: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                // THAY THẾ 2
+                CustomMessageBox.Show("Lỗi kiểm tra xác minh: " + ex.Message, "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -116,16 +86,22 @@ namespace WpfApp1.LoginlSignUp
                     var payload = new { idToken = idToken };
                     var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
                     HttpResponseMessage response = await client.PostAsync(url, content);
-                    if (response != null)
+                    if (response != null && response.IsSuccessStatusCode) // Nên kiểm tra IsSuccessStatusCode
                     {
-                        MessageBox.Show("Da gui lai email thanh cong");
+                        // THAY THẾ 3
+                        CustomMessageBox.Show("Đã gửi lại email thành công", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
                     }
-                    else MessageBox.Show("Khong gui duoc");
+                    else
+                    {
+                        // THAY THẾ 4
+                        CustomMessageBox.Show("Không gửi được email. Vui lòng thử lại.", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("loi" + ex);
+                // THAY THẾ 5
+                CustomMessageBox.Show("Lỗi: " + ex.Message, "Lỗi hệ thống", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
     }

@@ -1,25 +1,20 @@
-﻿using System.Collections.Specialized;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Media;
-using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Linq; // Thêm using này
+using Firebase.Database.Query;
+using Firebase.Database.Streaming;
+using ToastNotifications.Core;
 using WpfApp1.Models;
+using WpfApp1.Services;
 using WpfApp1.ViewModels;
 using WpfApp1.Views;
-using ToastNotifications.Messages;
-using ToastNotifications;
-using ToastNotifications.Lifetime;
-using ToastNotifications.Core;
+using static WpfApp1.ViewModels.MainViewModel;
+
 namespace WpfApp1
 {
     /// <summary>
@@ -28,7 +23,6 @@ namespace WpfApp1
     public partial class MainWindow : Window
     {
         string CurrentEmail;
-        private System.Timers.Timer _notificationTimer; // Lưu trữ timer để có thể dispose
 
         public MainWindow(string email)
         {
@@ -37,6 +31,97 @@ namespace WpfApp1
             Loaded += MainWindow_Loaded;
             this.Closing += MainWindow_Closing;
             LocalizationManager.LanguageChanged += OnLanguageChanged;
+        }
+
+        private string EscapeEmail(string email)
+        {
+            if (string.IsNullOrEmpty(email)) return string.Empty;
+            return email.Replace('.', '_').Replace('@', '_').Replace('#', '_').Replace('$', '_').Replace('[', '_').Replace(']', '_').Replace('/', '_');
+        }
+
+        private async void HandleCallResponse(CallSignal call, bool accepted)
+        {
+            string calleeSafeEmail = EscapeEmail(call.CalleeId);
+            await App.AppFirebaseClient.Child("calls").Child(calleeSafeEmail).Child(call.CallId).DeleteAsync();
+
+            if (accepted)
+            {
+                var webRtcService = new WebRTCService(App.AppFirebaseClient, call);
+                var callViewModel = new CallViewModel(webRtcService);
+                var callWindow = new CallWindow(callViewModel);
+
+                await webRtcService.InitializeAsync();
+                await webRtcService.AddAudioTrackAsync();
+                if (call.CallType == "Video")
+                {
+                    await webRtcService.AddVideoTrackAsync();
+                }
+                webRtcService.OnIceCandidateReady += async (candidate) =>
+                {
+                    try
+                    {
+                        string callerSafeEmail = EscapeEmail(call.CalleeId);
+                        var iceSignal = IceCandidateSignal.FromWebRtcCandidate(candidate);
+                        await App.AppFirebaseClient
+                            .Child("ice_candidates")
+                            .Child(callerSafeEmail) // Gửi về cho người gọi
+                            .Child(call.CallId)
+                            .PostAsync(iceSignal);
+                    }
+                    catch (Exception ex) { Debug.WriteLine($"Error sending ICE candidate: {ex.Message}"); }
+                };
+                ListenForRemoteIceCandidates(webRtcService, call.CallerId, call.CallId);
+
+                webRtcService.OnSdpAnswerReady += async (sdpAnswer) =>
+                {
+                    call.Status = "Accepted";
+                    call.SdpAnswer = sdpAnswer;
+                    try
+                    {
+                        string callerSafeEmail = EscapeEmail(call.CallerId);
+                        await App.AppFirebaseClient
+                            .Child("calls")
+                            .Child(callerSafeEmail)
+                            .Child(call.CallId)
+                            .PutAsync(call);
+
+                        Debug.WriteLine("Sent SDP Answer back to caller.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error sending SDP Answer: {ex.Message}");
+                        callWindow.Close();
+                    }
+                };
+
+                await webRtcService.HandleOfferAsync(call.SdpOffer);
+                callWindow.Show();
+            }
+            else
+            {
+                call.Status = "Declined";
+                string callerSafeEmail = call.CallerId.Replace('.', '_');
+                await App.AppFirebaseClient.Child("calls").Child(callerSafeEmail).Child(call.CallId).PutAsync(call);
+            }
+        }
+
+        private void ListenForRemoteIceCandidates(WebRTCService service, string remoteUserEmail, string callId)
+        {
+            string currentUserSafeEmail = EscapeEmail(SharedData.Instance.userdata.Email);
+            App.AppFirebaseClient
+                .Child("ice_candidates")
+                .Child(currentUserSafeEmail) // Lắng nghe trên kênh của mình
+                .Child(callId)
+                .AsObservable<IceCandidateSignal>()
+                .Subscribe(iceEvent =>
+                {
+                    if (iceEvent.EventType == FirebaseEventType.InsertOrUpdate && iceEvent.Object != null)
+                    {
+                        Debug.WriteLine("Received remote ICE candidate.");
+                        var remoteCandidate = iceEvent.Object.ToWebRtcCandidate();
+                        service.AddIceCandidateAsync(remoteCandidate);
+                    }
+                });
         }
 
         private void OnLanguageChanged(object sender, EventArgs e)
@@ -62,8 +147,10 @@ namespace WpfApp1
 
             if (App.AppFirebaseClient == null)
             {
-                MessageBox.Show("Lỗi khởi tạo Firebase: FirebaseClient chưa được thiết lập. Vui lòng đăng nhập lại.",
-                    "Lỗi Firebase", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show("Lỗi khởi tạo Firebase: FirebaseClient chưa được thiết lập. Vui lòng đăng nhập lại.",
+                                    "Lỗi Firebase",
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
                 Application.Current.Shutdown();
                 return;
             }
@@ -71,14 +158,55 @@ namespace WpfApp1
             var mainViewModel = new MainViewModel(App.AppFirebaseClient);
             this.DataContext = mainViewModel;
 
-            if (mainViewModel.ChatVm != null)
+            mainViewModel.ShowNotificationRequested += MainViewModel_ShowNotificationRequested;
+            NotificationWindow.NotificationClicked += OnNotificationClicked;
+
+            mainViewModel.IncomingCallReceived += MainViewModel_IncomingCallReceived;
+        }
+
+        private void MainViewModel_IncomingCallReceived(object sender, IncomingCallEventArgs e)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                Debug.WriteLine("Đã đăng ký sự kiện OnNewMessageNotificationRequested từ ChatViewModel.");
-            }
-            else
+                var callWindow = new IncomingCallWindow(e.Call);
+
+                // Đăng ký sự kiện chấp nhận/từ chối từ cửa sổ popup
+                callWindow.CallAccepted += (acceptedCall) => HandleCallResponse(acceptedCall, true);
+                callWindow.CallDeclined += (declinedCall) => HandleCallResponse(declinedCall, false);
+
+                callWindow.Show();
+            });
+        }
+
+        private void OnNotificationClicked(string chatID)
+        {
+            // Đảm bảo chạy trên luồng UI
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                Debug.WriteLine("ChatViewModel (ChatVm) trong MainViewModel là null. Không thể đăng ký thông báo.");
-            }
+                // Lấy MainViewModel từ DataContext
+                if (this.DataContext is MainViewModel mainVm)
+                {
+                    // Gọi phương thức mới để mở chat
+                    mainVm.OpenChat(chatID);
+                }
+
+                // Đưa cửa sổ chính lên phía trước
+                if (this.WindowState == WindowState.Minimized)
+                {
+                    this.WindowState = WindowState.Normal;
+                }
+                this.Activate();
+                this.Focus();
+            });
+        }
+
+        // Xử lý khi nhận được yêu cầu hiển thị thông báo
+        private void MainViewModel_ShowNotificationRequested(object sender, NewMessageEventArgs e)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                ShowDesktopNotification(e.Title, e.Message, e.ChatID);
+            });
         }
 
         public async Task LoadDataCurrentUser(string email)
@@ -86,8 +214,10 @@ namespace WpfApp1
             var db = FirestoreHelper.database;
             if (db == null)
             {
-                MessageBox.Show("Firestore database is not initialized!", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show("Firestore database is not initialized!",
+                                    "Error",
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
                 return;
             }
 
@@ -104,15 +234,19 @@ namespace WpfApp1
                 else
                 {
                     Debug.WriteLine($"User document not found for email: {email}");
-                    MessageBox.Show($"User not found for email: {email}", "Error",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    CustomMessageBox.Show($"User not found for email: {email}",
+                                        "Error",
+                                        CustomMessageBoxWindow.MessageButtons.OK,
+                                        CustomMessageBoxWindow.MessageIcon.Error);
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error loading user data: {ex.Message}");
-                MessageBox.Show($"Error loading user data: {ex.Message}", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show($"Error loading user data: {ex.Message}",
+                                    "Error",
+                                    CustomMessageBoxWindow.MessageButtons.OK,
+                                    CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 
@@ -122,50 +256,13 @@ namespace WpfApp1
             addFriendWin.Owner = this;
             addFriendWin.Show();
         }
-        private string GetLocalizedString(string key)
-        {
-            try
-            {
-                if (Application.Current.Resources["LocalizationDictionary"] is ResourceDictionary localizationDict)
-                {
-                    return localizationDict.Contains(key) ? localizationDict[key].ToString() : key;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting localized string: {ex.Message}");
-            }
-            return key;
-        }
-
 
         private void ShowDesktopNotification(string title, string message, string chatID)
         {
             try
             {
-                if (App.AppNotifier != null)
-                {
-                    // Tạo UserControl với nội dung thông báo động
-                    var notificationControl = new MyCustomNotificationControl(message);
-
-                    // Tạo custom notification
-                    var notification = new MyCustomNotification(
-                                    message,                       // text quản lý
-                                    notificationControl,           // UserControl hiển thị
-                                    new MessageOptions
-                                    {           // options
-                                        FreezeOnMouseEnter = true,
-                                        UnfreezeOnMouseLeave = true,
-                                        
-                                    }
-                                );
-
-                    App.AppNotifier.Notify<MyCustomNotification>(() => notification);
-                }
-                else
-                {
-                    Debug.WriteLine("AppNotifier is null. Không thể hiển thị desktop notification.");
-                }
+                Debug.WriteLine($"ShowDesktopNotification called: {title} - {message} - ChatID: {chatID}");
+                CreateNotificationWindow(title, message, chatID);
             }
             catch (Exception ex)
             {
@@ -173,41 +270,45 @@ namespace WpfApp1
             }
         }
 
-        private void PlayNotificationSound()
+        private void CreateNotificationWindow(string title, string message, string chatID)
         {
             try
             {
-                SystemSounds.Beep.Play();
+                // Truyền cả chatID vào constructor
+                var notificationWindow = new NotificationWindow(title, message, chatID);
+                notificationWindow.Show();
+                Debug.WriteLine("NotificationWindow created and shown");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Lỗi khi phát âm thanh thông báo: {ex.Message}");
+                Debug.WriteLine($"Error creating notification window: {ex.Message}");
             }
         }
-
 
         private void MainWindow_Closing(object sender, CancelEventArgs e)
         {
             try
             {
-                // Dispose timer khi đóng window
-                _notificationTimer?.Dispose();
-                _notificationTimer = null;
+                NotificationWindow.NotificationClicked -= OnNotificationClicked;
+
+                NotificationWindow.CloseAllNotifications();
 
                 if (this.DataContext is MainViewModel mainVM)
                 {
-                    System.Diagnostics.Debug.WriteLine("MainWindow_Closing: Calling MainViewModel.Cleanup().");
+                    mainVM.ShowNotificationRequested -= MainViewModel_ShowNotificationRequested;
+                    mainVM.IncomingCallReceived -= MainViewModel_IncomingCallReceived;
                     mainVM.Cleanup();
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("MainWindow_Closing: MainViewModel not found in DataContext. Cleanup might be incomplete.");
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error during window closing: {ex.Message}");
             }
+        }
+
+        private void CloseAllNotifications()
+        {
+            NotificationWindow.CloseAllNotifications();
         }
     }
 }
