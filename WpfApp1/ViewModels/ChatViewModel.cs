@@ -27,9 +27,9 @@ using WpfApp1.Services;
 using WpfApp1.Views; // Added for Task and CustomMessageBox
 using NAudio.Wave;
 using System.Windows.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+
 
 namespace WpfApp1.ViewModels
 {
