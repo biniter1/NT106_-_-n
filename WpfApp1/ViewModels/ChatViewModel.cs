@@ -84,7 +84,7 @@ namespace WpfApp1.ViewModels
         private HashSet<string> BlockedUsers { get; set; } = new HashSet<string>();
 
         private readonly WebSocketService _webSocketService;
-        private const string ServerUrl = "ws://127.0.0.1:8000";
+        private const string ServerUrl = "wss://4c371f7c-1468-4144-8fad-643e1de15ce3-00-1pjwz03f8muu9.pike.replit.dev";
 
 
         public bool IsReplying => MessageToReplyTo != null;
