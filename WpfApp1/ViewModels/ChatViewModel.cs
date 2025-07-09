@@ -28,6 +28,8 @@ using WpfApp1.Views; // Added for Task and CustomMessageBox
 using NAudio.Wave;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 namespace WpfApp1.ViewModels
 {
@@ -48,7 +50,7 @@ namespace WpfApp1.ViewModels
         private Contact _selectedContact;
 
         public User userdata;
-
+ 
         private List<IDisposable> allMessageSubscriptions = new List<IDisposable>();
         private Dictionary<string, IDisposable> _contactPresenceListeners = new Dictionary<string, IDisposable>();
         private List<string> _viewedImageHistory = new List<string>();
@@ -80,6 +82,11 @@ namespace WpfApp1.ViewModels
         private Message _messageToReplyTo;
 
         private HashSet<string> BlockedUsers { get; set; } = new HashSet<string>();
+
+        private readonly WebSocketService _webSocketService;
+        private const string ServerUrl = "ws://127.0.0.1:8000";
+
+
         public bool IsReplying => MessageToReplyTo != null;
 
         [RelayCommand]
@@ -326,8 +333,89 @@ namespace WpfApp1.ViewModels
             // Tạo thư mục tạm
             Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "WpfApp1"));
             userdata = SharedData.Instance.userdata;
-        }
 
+            _webSocketService = new WebSocketService();
+            _webSocketService.MessageReceived += OnWebSocketMessageReceived;
+
+            // Kết nối WebSocket khi ViewModel được tạo
+            ConnectWebSocket();
+        }
+        private async void ConnectWebSocket()
+        {
+            var currentUser = SharedData.Instance.userdata;
+            if (currentUser != null && !string.IsNullOrEmpty(currentUser.Email))
+            {
+                string safeUserId = EscapeEmail(currentUser.Email);
+                Debug.WriteLine($"[WebSocket] Attempting to connect for user: {safeUserId}...");
+                await _webSocketService.ConnectAsync(ServerUrl, safeUserId);
+                Debug.WriteLine($"[WebSocket] Connection status: {_webSocketService.IsConnected}"); // Quan trọng!
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Debug.WriteLine("[WebSocket] Notifying call commands to re-evaluate CanExecute.");
+                    StartVideoCallCommand.NotifyCanExecuteChanged();
+                    StartVoiceCallCommand.NotifyCanExecuteChanged();
+                });
+            }
+        }
+        private void OnWebSocketMessageReceived(string message)
+        {
+            var jsonMessage = JObject.Parse(message);
+            string type = jsonMessage["type"]?.ToString();
+
+            Application.Current.Dispatcher.Invoke(async () =>
+            {
+                switch (type)
+                {
+                    case "incoming_call":
+                        try
+                        {
+                            Debug.WriteLine("[INCOMING CALL] Received signal. Processing...");
+
+                            var callSignal = jsonMessage["data"].ToObject<CallSignal>();
+
+                            // Kiểm tra xem deserialize có thành công không
+                            if (callSignal == null)
+                            {
+                                Debug.WriteLine("[INCOMING CALL] FAILED: Deserialization resulted in a null CallSignal object.");
+                                return; // Dừng lại nếu không phân tích được
+                            }
+                            Debug.WriteLine($"[INCOMING CALL] Deserialized signal for Caller: {callSignal.CallerName}");
+
+                            var incomingCallWin = new IncomingCallWindow(callSignal);
+                            Debug.WriteLine("[INCOMING CALL] Created IncomingCallWindow instance.");
+
+                            incomingCallWin.CallAccepted += (acceptedCall) => HandleCallResponse(acceptedCall, true);
+                            incomingCallWin.CallDeclined += (declinedCall) => HandleCallResponse(declinedCall, false);
+
+                            incomingCallWin.Show();
+                            Debug.WriteLine("[INCOMING CALL] Window shown successfully!");
+                        }
+                        catch (Exception ex)
+                        {
+                            // Đặt breakpoint ở đây để xem chi tiết lỗi 'ex'
+                            Debug.WriteLine($"!!!!!!!!!!!! LỖI KHI XỬ LÝ INCOMING_CALL: {ex.ToString()}");
+                            MessageBox.Show($"Lỗi hiển thị cuộc gọi đến: {ex.Message}");
+                        }
+                        break;
+                    case "answer":
+                        if (_currentCallService != null) await _currentCallService.HandleAnswerAsync(jsonMessage["sdp"].ToString());
+                        break;
+                    case "ice-candidate":
+                        if (_currentCallService != null)
+                        {
+                            var candidate = jsonMessage["data"].ToObject<IceCandidateSignal>();
+                            await _currentCallService.AddIceCandidateAsync(candidate.ToWebRtcCandidate());
+                        }
+                        break;
+                    case "call_declined":
+                        MessageBox.Show("Người nhận đã từ chối cuộc gọi.");
+                        _callWindow?.Close();
+                        _currentCallService?.HangUp();
+                        break;
+                }
+            });
+        }
         [RelayCommand]
         private async Task BlockContact(Contact contact)
         {
@@ -564,9 +652,7 @@ namespace WpfApp1.ViewModels
         }
         private async Task StartCallAsync(Contact recipient, string callType)
         {
-            if (recipient == null) return;
             var currentUser = SharedData.Instance.userdata;
-            if (currentUser == null) return;
 
             var callSignal = new CallSignal
             {
@@ -576,11 +662,10 @@ namespace WpfApp1.ViewModels
                 CallerAvatarUrl = currentUser.AvatarUrl,
                 CalleeId = recipient.Email,
                 CallType = callType,
-                Status = "Ringing",
-                Timestamp = DateTime.UtcNow
+                Status = "Ringing"
             };
 
-            _currentCallService = new WebRTCService(firebaseClient, callSignal);
+            _currentCallService = new WebRTCService(null, callSignal);
             var callViewModel = new CallViewModel(_currentCallService);
             _callWindow = new CallWindow(callViewModel);
 
@@ -590,107 +675,65 @@ namespace WpfApp1.ViewModels
             {
                 await _currentCallService.AddVideoTrackAsync();
             }
-            _currentCallService.OnIceCandidateReady += async (candidate) =>
-            {
-                try
-                {
-                    string recipientSafeEmail = EscapeEmail(recipient.Email);
-                    var iceSignal = IceCandidateSignal.FromWebRtcCandidate(candidate);
-                    await firebaseClient
-                        .Child("ice_candidates")
-                        .Child(recipientSafeEmail) // Gửi đến người nhận
-                        .Child(callSignal.CallId)
-                        .PostAsync(iceSignal);
-                }
-                catch (Exception ex) { Debug.WriteLine($"Error sending ICE candidate: {ex.Message}"); }
+
+            _currentCallService.OnSdpOfferReady += async (sdpOffer) => {
+                callSignal.SdpOffer = sdpOffer;
+                var callMessage = new { type = "incoming_call", target = EscapeEmail(recipient.Email), data = callSignal };
+                await _webSocketService.SendAsync(JsonConvert.SerializeObject(callMessage));
             };
 
-            ListenForCallUpdates(callSignal);
-
-            _currentCallService.OnSdpOfferReady += async (sdpOffer) =>
-            {
-                callSignal.SdpOffer = sdpOffer;
-                try
-                {
-                    string recipientSafeEmail = EscapeEmail(recipient.Email);
-                    string firebasePath = $"calls/{recipientSafeEmail}/{callSignal.CallId}";
-
-                    // === LOG GỠ LỖI 1 ===
-                    Debug.WriteLine($"[CALLER] Attempting to send call signal to path: {firebasePath}");
-                    await firebaseClient
-                        .Child("calls")
-                        .Child(recipientSafeEmail)
-                        .Child(callSignal.CallId)
-                        .PutAsync(callSignal);
-
-                    Debug.WriteLine($"Call signal with SDP Offer sent to {recipient.Email}.");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error sending call signal: {ex.Message}");
-                    CustomMessageBox.Show("Không thể thực hiện cuộc gọi. Vui lòng thử lại.", "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
-                    _callWindow.Close();
-                }
+            _currentCallService.OnIceCandidateReady += async (candidate) => {
+                var iceMessage = new { type = "ice-candidate", target = EscapeEmail(recipient.Email), data = IceCandidateSignal.FromWebRtcCandidate(candidate) };
+                await _webSocketService.SendAsync(JsonConvert.SerializeObject(iceMessage));
             };
 
             await _currentCallService.CreateOfferAsync();
             _callWindow.Show();
         }
-        private void ListenForCallUpdates(CallSignal call)
+        private async void HandleCallResponse(CallSignal call, bool accepted)
         {
-            string currentUserSafeEmail = EscapeEmail(SharedData.Instance.userdata.Email);
+            if (accepted)
+            {
+                _currentCallService = new WebRTCService(null, call);
+                var callViewModel = new CallViewModel(_currentCallService);
+                _callWindow = new CallWindow(callViewModel);
 
-            // Lắng nghe thay đổi trạng thái chính (Answer)
-            _callStateListener = firebaseClient
-                .Child("calls")
-                .Child(currentUserSafeEmail) // Lắng nghe trên kênh của chính mình
-                .Child(call.CallId)
-                .AsObservable<CallSignal>()
-                .Subscribe(async callEvent =>
+                await _currentCallService.InitializeAsync();
+                await _currentCallService.AddAudioTrackAsync();
+                if (call.CallType == "Video")
                 {
-                    if (callEvent.EventType == FirebaseEventType.InsertOrUpdate && callEvent.Object != null)
-                    {
-                        var updatedCall = callEvent.Object;
-                        if (updatedCall.Status == "Accepted" && !string.IsNullOrEmpty(updatedCall.SdpAnswer))
-                        {
-                            Debug.WriteLine("Call accepted and SDP Answer received.");
-                            await _currentCallService.HandleAnswerAsync(updatedCall.SdpAnswer);
+                    await _currentCallService.AddVideoTrackAsync();
+                }
 
-                            // Sau khi nhận Answer, bắt đầu lắng nghe ICE của người nhận
-                            ListenForRemoteIceCandidates(call.CalleeId, call.CallId);
-                        }
-                        else if (updatedCall.Status == "Declined" || updatedCall.Status == "Ended")
-                        {
-                            Debug.WriteLine("Call was declined or has ended.");
-                            _currentCallService?.HangUp();
-                            _callWindow?.Close();
-                            _callStateListener?.Dispose();
-                        }
-                    }
-                });
+                _currentCallService.OnSdpAnswerReady += async (sdpAnswer) => {
+                    var answerMessage = new { type = "answer", target = EscapeEmail(call.CallerId), sdp = sdpAnswer };
+                    await _webSocketService.SendAsync(JsonConvert.SerializeObject(answerMessage));
+                };
+
+                _currentCallService.OnIceCandidateReady += async (candidate) => {
+                    var iceMessage = new { type = "ice-candidate", target = EscapeEmail(call.CallerId), data = IceCandidateSignal.FromWebRtcCandidate(candidate) };
+                    await _webSocketService.SendAsync(JsonConvert.SerializeObject(iceMessage));
+                };
+
+                await _currentCallService.HandleOfferAsync(call.SdpOffer);
+                _callWindow.Show();
+            }
+            else
+            {
+                var declineMessage = new { type = "call_declined", target = EscapeEmail(call.CallerId) };
+                await _webSocketService.SendAsync(JsonConvert.SerializeObject(declineMessage));
+            }
         }
-        private void ListenForRemoteIceCandidates(string remoteUserEmail, string callId)
-        {
-            string currentUserSafeEmail = EscapeEmail(SharedData.Instance.userdata.Email);
-            firebaseClient
-                .Child("ice_candidates")
-                .Child(currentUserSafeEmail) // Lắng nghe trên kênh của mình
-                .Child(callId)
-                .AsObservable<IceCandidateSignal>()
-                .Subscribe(iceEvent =>
-                {
-                    if (iceEvent.EventType == FirebaseEventType.InsertOrUpdate && iceEvent.Object != null)
-                    {
-                        Debug.WriteLine("Received remote ICE candidate.");
-                        var remoteCandidate = iceEvent.Object.ToWebRtcCandidate();
-                        _currentCallService.AddIceCandidateAsync(remoteCandidate);
-                    }
-                });
-        }
+
+
 
         private bool CanStartCall(Contact recipient)
         {
-            return recipient != null && !recipient.InteractionIsBlocked;
+            bool isRecipientValid = recipient != null;
+            bool isInteractionAllowed = recipient != null && !recipient.InteractionIsBlocked;
+            bool isConnected = _webSocketService.IsConnected;
+            Debug.WriteLine($"[CanStartCall] Recipient: {isRecipientValid}, Interaction: {isInteractionAllowed}, WebSocket: {isConnected}");
+            return isRecipientValid && isInteractionAllowed && isConnected;
         }
         [RelayCommand]
         private async void OnAvatarUpdated(string newAvatarUrl)
@@ -1436,6 +1479,7 @@ namespace WpfApp1.ViewModels
 
         public void Cleanup()
         {
+            _webSocketService.DisconnectAsync().Wait();
             SetCurrentUserGlobalStatus(false);
             foreach (var subscription in allMessageSubscriptions)
             {

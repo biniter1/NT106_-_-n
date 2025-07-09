@@ -450,112 +450,39 @@
                     </Grid>
 
                     <!-- Nút chức năng -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="IsEnabled" Value="True"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedContact.InteractionIsBlocked}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+
                         <!-- Video call button -->
-                        <Button FontFamily="Segoe Fluent Icons" Content="" 
-                    ToolTip="{DynamicResource VideoCallTooltip}"
-                    Command="{Binding StartVideoCallCommand}"
-                    CommandParameter="{Binding SelectedContact}"
-                    Width="44" Height="44" FontSize="16" 
-                    Background="Transparent" 
-                    Foreground="{StaticResource TextSecondaryBrush}" 
-                    BorderThickness="0" 
-                    Margin="4,0"
-                    Cursor="Hand">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="22">
-                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="Background" Value="#F0F0F0"/>
-                                                        <Setter Property="Foreground" Value="#2196F3"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsPressed" Value="True">
-                                                        <Setter Property="Background" Value="#E0E0E0"/>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                        <Button FontFamily="Segoe Fluent Icons" Content="" 
+                                ToolTip="{DynamicResource VideoCallTooltip}"
+                                Command="{Binding StartVideoCallCommand}"
+                                CommandParameter="{Binding SelectedContact}"
+                                Width="40" Height="40" FontSize="18" 
+                                Background="Transparent" 
+                                Foreground="{StaticResource TextSecondaryBrush}" 
+                                BorderThickness="0" 
+                                Margin="5,0"/>
 
                         <!-- Voice call button -->
-                        <Button FontFamily="Segoe Fluent Icons" Content="" 
-                    ToolTip="{DynamicResource VoiceCallTooltip}"
-                    Command="{Binding StartVoiceCallCommand}"
-                    CommandParameter="{Binding SelectedContact}"
-                    Width="44" Height="44" FontSize="16"
-                    Background="Transparent" 
-                    Foreground="{StaticResource TextSecondaryBrush}" 
-                    BorderThickness="0" 
-                    Margin="4,0"
-                    Cursor="Hand">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="22">
-                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsPressed" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource PressedBackgroundBrush}"/>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-
-                        <!-- More options button -->
-                        <Button FontFamily="Segoe Fluent Icons" Content="" 
-                    ToolTip="More options"
-                    Width="44" Height="44" FontSize="16"
-                    Background="Transparent" 
-                    Foreground="{StaticResource TextSecondaryBrush}" 
-                    BorderThickness="0" 
-                    Margin="4,0"
-                    Cursor="Hand">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="22">
-                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsPressed" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource PressedBackgroundBrush}"/>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                        <Button FontFamily="Segoe Fluent Icons" Content="" 
+                                ToolTip="{DynamicResource VoiceCallTooltip}"
+                                Command="{Binding StartVoiceCallCommand}"
+                                CommandParameter="{Binding SelectedContact}"
+                                Width="40" Height="40" FontSize="18" 
+                                Background="Transparent" 
+                                Foreground="{StaticResource TextSecondaryBrush}" 
+                                BorderThickness="0" 
+                                Margin="5,0"/>
                     </StackPanel>
                 </Grid>
             </Border>

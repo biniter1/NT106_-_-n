@@ -38,11 +38,11 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="#2C3E50" CornerRadius="15" BorderBrush="#34495E" BorderThickness="1">
+    <Border Background="#2C3E50" CornerRadius="15" BorderBrush="#34495E" BorderThickness="1" Margin="0,0,0,-43">
         <Border.Effect>
             <DropShadowEffect ShadowDepth="0" Color="Black" Opacity="0.4" BlurRadius="20"/>
         </Border.Effect>
-        <Grid>
+        <Grid Margin="0,0,0,9">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
@@ -61,16 +61,21 @@
 
             <!-- Các nút hành động -->
             <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
-                <Button x:Name="DeclineButton" Content="" ToolTip="Từ chối"
-                        Background="#E74C3C" Style="{StaticResource CallButtonStyle}" Margin="0,0,40,0"
-                        Click="DeclineButton_Click">
+                <Button x:Name="DeclineButton" Content="&#xE717;" ToolTip="Từ chối"
+                        Background="#E74C3C" Style="{StaticResource CallButtonStyle}"
+                        Click="DeclineButton_Click" Height="63" Width="59">
                     <Button.RenderTransform>
-                        <RotateTransform Angle="135"/>
+                        <TransformGroup>
+                            <ScaleTransform/>
+                            <SkewTransform/>
+                            <RotateTransform Angle="360.874"/>
+                            <TranslateTransform/>
+                        </TransformGroup>
                     </Button.RenderTransform>
                 </Button>
-                <Button x:Name="AcceptButton" Content="" ToolTip="Chấp nhận"
+                <Button x:Name="AcceptButton" Content="&#xE717;" ToolTip="Chấp nhận"
                         Background="#2ECC71" Style="{StaticResource CallButtonStyle}"
-                        Click="AcceptButton_Click"/>
+                        Click="AcceptButton_Click" Width="63"/>
             </StackPanel>
         </Grid>
     </Border>
