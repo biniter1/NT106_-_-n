@@ -132,19 +132,25 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void Logout()
         {
+            // Bước 1: (Tùy chọn) Dọn dẹp các dữ liệu cần thiết
             _chatViewModel?.Cleanup();
-            CustomMessageBox.Show(GetLocalizedString("LogoutSuccessMessage"),
-                                GetLocalizedString("Success"),
-                                CustomMessageBoxWindow.MessageButtons.OK,
-                                CustomMessageBoxWindow.MessageIcon.Information);
+            // SharedData.Instance.ClearUserData(); // Ví dụ: Xóa dữ liệu người dùng
+
+            // Bước 2: Tạo và hiển thị cửa sổ Đăng nhập mới
             var loginWindow = new fLogin();
-            loginWindow.PerformLogout();
-            foreach (Window window in Application.Current.Windows)
+            loginWindow.Show();
+
+            // Bước 3: Đóng tất cả các cửa sổ khác
+            // Dùng ToList() để tạo một bản sao của danh sách các cửa sổ.
+            // Điều này rất quan trọng để tránh lỗi khi vừa duyệt qua vừa thay đổi danh sách.
+            var windowsToClose = Application.Current.Windows.OfType<Window>().ToList();
+
+            foreach (var window in windowsToClose)
             {
-                if (window.DataContext == this)
+                // Chỉ đóng những cửa sổ không phải là cửa sổ đăng nhập mới
+                if (window != loginWindow)
                 {
                     window.Close();
-                    break;
                 }
             }
         }
