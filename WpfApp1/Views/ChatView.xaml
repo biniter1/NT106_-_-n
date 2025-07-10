@@ -118,9 +118,11 @@
                             Width="40" Height="40" FontSize="30" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5" DockPanel.Dock="Right" HorizontalAlignment="Right" />
                 </DockPanel>
                 <Border Grid.Row="1" CornerRadius="15" Background="{StaticResource LightGrayBrush}" BorderBrush="{StaticResource BorderBrush}" Padding="5,5" BorderThickness="1">
-                    <TextBox x:Name="SearchContact" Style="{StaticResource SearchBoxPlaceholderStyle}" />
+                    <TextBox x:Name="SearchContact"
+                     Text="{Binding ContactSearchText, UpdateSourceTrigger=PropertyChanged}"
+                     Style="{StaticResource SearchBoxPlaceholderStyle}" />
                 </Border>
-                <ListBox Grid.Row="2" x:Name="ContactListBox" ItemsSource="{Binding Contacts}" SelectedItem="{Binding SelectedContact, Mode=TwoWay}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
+                <ListBox Grid.Row="2" x:Name="ContactListBox" ItemsSource="{Binding ContactsView}" SelectedItem="{Binding SelectedContact, Mode=TwoWay}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type models:Contact}">
                             <Border Padding="8" Margin="0,0,0,5" CornerRadius="5">
@@ -489,7 +491,7 @@
             
 
             <ScrollViewer Grid.Row="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="10">
-                <ItemsControl ItemsSource="{Binding Messages}">
+                <ItemsControl ItemsSource="{Binding MessagesView}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type models:Message}">
                             <Border MaxWidth="400" 
@@ -734,13 +736,35 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <DockPanel Grid.Row="0" Margin="0,10,0,10">
                     <TextBlock Text="{DynamicResource DirectoryTitle}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}"/>
                     <Button Content="⋮" FontSize="25" Width="30" Height="30" ToolTip="{DynamicResource MoreOptionsTooltip}" VerticalAlignment="Center" Background="Transparent" BorderThickness="0" HorizontalAlignment="Right" />
                 </DockPanel>
-                <ListBox Grid.Row="1" x:Name="FileListBox" ItemsSource="{Binding Files}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
+                <Border Grid.Row="1" CornerRadius="15" Background="{StaticResource WhiteBrush}" BorderBrush="{StaticResource BorderBrush}" Padding="5" BorderThickness="1" Margin="0,0,0,10">
+                    <TextBox Text="{Binding MessageSearchText, UpdateSourceTrigger=PropertyChanged}" 
+                     Foreground="{StaticResource SearchBoxTextBrush}" 
+                     Background="Transparent" BorderThickness="0">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TextBox">
+                                            <Grid>
+                                                <TextBlock Text="Tìm kiếm trong cuộc trò chuyện..." IsHitTestVisible="False" VerticalAlignment="Center" Margin="5,0" Foreground="{StaticResource SearchPlaceholderBrush}"
+                                                   Visibility="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}"/>
+                                                <ScrollViewer x:Name="PART_ContentHost"/>
+                                            </Grid>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+                </Border>
+                <ListBox Grid.Row="2" x:Name="FileListBox" ItemsSource="{Binding Files}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type models:FileItem}">
                             <Grid Margin="0,0,0,8">

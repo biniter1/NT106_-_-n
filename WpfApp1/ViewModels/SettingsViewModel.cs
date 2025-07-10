@@ -132,19 +132,21 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void Logout()
         {
+            
             _chatViewModel?.Cleanup();
-            CustomMessageBox.Show(GetLocalizedString("LogoutSuccessMessage"),
-                                GetLocalizedString("Success"),
-                                CustomMessageBoxWindow.MessageButtons.OK,
-                                CustomMessageBoxWindow.MessageIcon.Information);
+           
             var loginWindow = new fLogin();
-            loginWindow.PerformLogout();
-            foreach (Window window in Application.Current.Windows)
+            loginWindow.Show();
+
+            
+            var windowsToClose = Application.Current.Windows.OfType<Window>().ToList();
+
+            foreach (var window in windowsToClose)
             {
-                if (window.DataContext == this)
+                // Chỉ đóng những cửa sổ không phải là cửa sổ đăng nhập mới
+                if (window != loginWindow)
                 {
                     window.Close();
-                    break;
                 }
             }
         }

@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Xác minh Email" Height="490" Width="480"
+        Icon="pack://application:,,,/Assets/chat.png"
         WindowStartupLocation="CenterScreen"
         FontFamily="Segoe UI"
         Background="#F5F5F5">

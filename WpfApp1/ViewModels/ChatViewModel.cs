@@ -29,6 +29,8 @@ using NAudio.Wave;
 using System.Windows.Threading;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using System.ComponentModel;
+using System.Windows.Data;
 
 
 namespace WpfApp1.ViewModels
@@ -88,6 +90,18 @@ namespace WpfApp1.ViewModels
 
 
         public bool IsReplying => MessageToReplyTo != null;
+
+        //--Tìm kiếm contact
+        public ICollectionView ContactsView { get; private set; }
+
+        [ObservableProperty]
+        private string _contactSearchText;
+
+        //--Tìm kiếm tin nhắn
+        public ICollectionView MessagesView { get; private set; }
+
+        [ObservableProperty]
+        private string _messageSearchText;
 
         [RelayCommand]
         private void ReplyToMessage(Message message)
@@ -339,6 +353,50 @@ namespace WpfApp1.ViewModels
 
             // Kết nối WebSocket khi ViewModel được tạo
             ConnectWebSocket();
+
+            ContactsView = CollectionViewSource.GetDefaultView(Contacts);
+            ContactsView.Filter = FilterContacts;
+        }
+        partial void OnContactSearchTextChanged(string value)
+        {
+            ContactsView?.Refresh();
+        }
+        partial void OnMessageSearchTextChanged(string value)
+        {
+            MessagesView?.Refresh();
+        }
+        private bool FilterMessages(object obj)
+        {
+            if (string.IsNullOrWhiteSpace(MessageSearchText))
+                return true; // Hiển thị tất cả nếu ô tìm kiếm trống
+
+            if (obj is Message message)
+            {
+                // Bỏ qua tin nhắn hệ thống
+                if (message.IsSystemMessage) return false;
+
+                // Kiểm tra nội dung tin nhắn
+                if (message.Content != null && message.Content.Contains(MessageSearchText, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        // Logic chính để lọc danh sách contact
+        private bool FilterContacts(object obj)
+        {
+            if (string.IsNullOrWhiteSpace(ContactSearchText))
+                return true; // Nếu ô tìm kiếm trống, hiển thị tất cả
+
+            if (obj is Contact contact)
+            {
+                // Trả về true nếu tên contact chứa nội dung tìm kiếm (không phân biệt hoa thường)
+                return contact.Name.Contains(ContactSearchText, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return false;
         }
         private async void ConnectWebSocket()
         {
@@ -856,6 +914,12 @@ namespace WpfApp1.ViewModels
                         }
                     });
                 }
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MessagesView = CollectionViewSource.GetDefaultView(Messages);
+                    MessagesView.Filter = FilterMessages;
+                    OnPropertyChanged(nameof(MessagesView)); // Thông báo cho UI cập nhật
+                });
                 messageSubscription = firebaseClient
                     .Child("messages")
                     .Child(roomId)

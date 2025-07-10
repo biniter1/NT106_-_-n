@@ -299,6 +299,7 @@ namespace WpfApp1
                     mainVM.IncomingCallReceived -= MainViewModel_IncomingCallReceived;
                     mainVM.Cleanup();
                 }
+                Application.Current.Shutdown();
             }
             catch (Exception ex)
             {

@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:WpfApp1.LoginlSignUp"
         mc:Ignorable="d"
         Title="{DynamicResource LoginTitle}" Height="500" Width="800"
+        Icon="pack://application:,,,/Assets/chat.png"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"

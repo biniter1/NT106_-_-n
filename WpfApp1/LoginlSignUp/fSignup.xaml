@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WpfApp1.LoginlSignUp"
+        Icon="pack://application:,,,/Assets/chat.png"
         mc:Ignorable="d"
         Title="Đăng ký tài khoản" Height="830" Width="800"
         WindowStartupLocation="CenterScreen"

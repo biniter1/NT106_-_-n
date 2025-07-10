@@ -38,11 +38,15 @@ namespace WpfApp1.Services
             var config = new PeerConnectionConfiguration
             {
                 IceServers = new List<IceServer> {
-                    new IceServer { Urls = { "stun:stun.l.google.com:19302" } },
+                    new IceServer { Urls = {"stun:stun.l.google.com:19302" } },
+                    new IceServer { Urls = {"stun:openrelay.metered.ca:80" } },
 
-                    //new IceServer {
-                    //    Urls = { "turn:openrelay.metered.ca:80" },
-                    //}
+                    new IceServer
+                    {
+                        Urls = { "turn:openrelay.metered.ca:80" },
+                        TurnUserName = "openrelayproject",
+                        TurnPassword = "openrelayproject"
+                    }
                 }
             };
 
