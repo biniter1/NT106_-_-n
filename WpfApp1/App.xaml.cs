@@ -19,6 +19,7 @@ namespace WpfApp1
         public static FirebaseClient AppFirebaseClient { get; private set; }
         public static Notifier AppNotifier { get; private set; }
 
+        public static bool IsLoggingOut = false;
         protected override void OnStartup(StartupEventArgs e)
         {
             System.Diagnostics.Debug.WriteLine("Starting application...");
