@@ -29,6 +29,8 @@ using NAudio.Wave;
 using System.Windows.Threading;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using System.ComponentModel;
+using System.Windows.Data;
 
 
 namespace WpfApp1.ViewModels
@@ -88,6 +90,12 @@ namespace WpfApp1.ViewModels
 
 
         public bool IsReplying => MessageToReplyTo != null;
+
+        //--Tìm kiếm contact
+        public ICollectionView ContactsView { get; private set; }
+
+        [ObservableProperty]
+        private string _contactSearchText;
 
         [RelayCommand]
         private void ReplyToMessage(Message message)
@@ -339,6 +347,28 @@ namespace WpfApp1.ViewModels
 
             // Kết nối WebSocket khi ViewModel được tạo
             ConnectWebSocket();
+
+            ContactsView = CollectionViewSource.GetDefaultView(Contacts);
+            ContactsView.Filter = FilterContacts;
+        }
+        partial void OnContactSearchTextChanged(string value)
+        {
+            ContactsView?.Refresh();
+        }
+
+        // Logic chính để lọc danh sách contact
+        private bool FilterContacts(object obj)
+        {
+            if (string.IsNullOrWhiteSpace(ContactSearchText))
+                return true; // Nếu ô tìm kiếm trống, hiển thị tất cả
+
+            if (obj is Contact contact)
+            {
+                // Trả về true nếu tên contact chứa nội dung tìm kiếm (không phân biệt hoa thường)
+                return contact.Name.Contains(ContactSearchText, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return false;
         }
         private async void ConnectWebSocket()
         {

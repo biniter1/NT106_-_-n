@@ -118,9 +118,11 @@
                             Width="40" Height="40" FontSize="30" Background="Transparent" Foreground="Gray" BorderThickness="0" Margin="5" DockPanel.Dock="Right" HorizontalAlignment="Right" />
                 </DockPanel>
                 <Border Grid.Row="1" CornerRadius="15" Background="{StaticResource LightGrayBrush}" BorderBrush="{StaticResource BorderBrush}" Padding="5,5" BorderThickness="1">
-                    <TextBox x:Name="SearchContact" Style="{StaticResource SearchBoxPlaceholderStyle}" />
+                    <TextBox x:Name="SearchContact"
+                     Text="{Binding ContactSearchText, UpdateSourceTrigger=PropertyChanged}"
+                     Style="{StaticResource SearchBoxPlaceholderStyle}" />
                 </Border>
-                <ListBox Grid.Row="2" x:Name="ContactListBox" ItemsSource="{Binding Contacts}" SelectedItem="{Binding SelectedContact, Mode=TwoWay}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
+                <ListBox Grid.Row="2" x:Name="ContactListBox" ItemsSource="{Binding ContactsView}" SelectedItem="{Binding SelectedContact, Mode=TwoWay}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type models:Contact}">
                             <Border Padding="8" Margin="0,0,0,5" CornerRadius="5">
