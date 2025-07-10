@@ -97,6 +97,12 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private string _contactSearchText;
 
+        //--Tìm kiếm tin nhắn
+        public ICollectionView MessagesView { get; private set; }
+
+        [ObservableProperty]
+        private string _messageSearchText;
+
         [RelayCommand]
         private void ReplyToMessage(Message message)
         {
@@ -355,7 +361,29 @@ namespace WpfApp1.ViewModels
         {
             ContactsView?.Refresh();
         }
+        partial void OnMessageSearchTextChanged(string value)
+        {
+            MessagesView?.Refresh();
+        }
+        private bool FilterMessages(object obj)
+        {
+            if (string.IsNullOrWhiteSpace(MessageSearchText))
+                return true; // Hiển thị tất cả nếu ô tìm kiếm trống
 
+            if (obj is Message message)
+            {
+                // Bỏ qua tin nhắn hệ thống
+                if (message.IsSystemMessage) return false;
+
+                // Kiểm tra nội dung tin nhắn
+                if (message.Content != null && message.Content.Contains(MessageSearchText, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
         // Logic chính để lọc danh sách contact
         private bool FilterContacts(object obj)
         {
@@ -886,6 +914,12 @@ namespace WpfApp1.ViewModels
                         }
                     });
                 }
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MessagesView = CollectionViewSource.GetDefaultView(Messages);
+                    MessagesView.Filter = FilterMessages;
+                    OnPropertyChanged(nameof(MessagesView)); // Thông báo cho UI cập nhật
+                });
                 messageSubscription = firebaseClient
                     .Child("messages")
                     .Child(roomId)
