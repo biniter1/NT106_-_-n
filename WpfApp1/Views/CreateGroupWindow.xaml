@@ -372,20 +372,6 @@
                               Margin="0,5,0,0"/>
                 </StackPanel>
 
-                <!-- Group Type -->
-                <StackPanel Margin="0,0,0,30">
-                    <TextBlock Text="Loại nhóm" 
-                              FontSize="14" 
-                              FontWeight="SemiBold" 
-                              Foreground="#333"
-                              Margin="0,0,0,8"/>
-                    <ComboBox x:Name="GroupTypeComboBox" 
-                             Style="{StaticResource ComboBoxStyle}"
-                             SelectedIndex="0">
-                        <ComboBoxItem Content="Nhóm riêng tư"/>
-                        <ComboBoxItem Content="Nhóm công khai" IsEnabled="False"/>
-                    </ComboBox>
-                </StackPanel>
 
                 <!-- Action Buttons -->
                 <Grid Margin="0,0,0,20">

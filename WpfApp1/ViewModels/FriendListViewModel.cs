@@ -189,14 +189,14 @@ namespace WpfApp1.ViewModels
             var userDocRef = db.Collection("users").Document(email);
 
             // Kiểm tra xem người dùng có tồn tại không
-            var userDocSnapshot = await userDocRef.GetSnapshotAsync();
+/*            var userDocSnapshot = await userDocRef.GetSnapshotAsync();
             if (!userDocSnapshot.Exists)
             {
                 CustomMessageBox.Show($"User {email} does not exist.", "Lỗi",
                                     CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                 return;
             }
-
+*/
             // Thêm contact vào subcollection 'contacts' của người dùng
             var contactDocRef = userDocRef.Collection("contacts").Document(contact.chatID); // Dùng chat id làm document ID
 
