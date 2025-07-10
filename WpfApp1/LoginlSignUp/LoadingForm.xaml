@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{DynamicResource LoadingTitle}" Height="150" Width="300"
         WindowStyle="None" Background="#F0F0F0"
+        Icon="pack://application:,,,/Assets/chat.png"
         WindowStartupLocation="CenterScreen"
         AllowsTransparency="True">
     <Window.Resources>

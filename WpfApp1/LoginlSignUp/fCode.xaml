@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:WpfApp1.LoginlSignUp"
         mc:Ignorable="d"
         Title="Xác thực OTP" Height="524" Width="400"
+        Icon="pack://application:,,,/Assets/chat.png"
         WindowStartupLocation="CenterScreen"
         Background="White"
         ResizeMode="NoResize">
