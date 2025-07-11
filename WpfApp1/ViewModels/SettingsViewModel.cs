@@ -57,6 +57,7 @@ namespace WpfApp1.ViewModels
 
         public ObservableCollection<string> Themes { get; } = new ObservableCollection<string> { "Light", "Dark" };
         public ObservableCollection<string> Languages { get; } = new ObservableCollection<string> { "Tiếng Việt", "English", "日本語" };
+        private readonly MainViewModel _mainViewModel;
 
         public SettingsViewModel(ChatViewModel chatViewModel, FirebaseClient firebaseClient)
         {
@@ -64,6 +65,7 @@ namespace WpfApp1.ViewModels
             _firebaseClient = firebaseClient;
             InitializeSettings();
             EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
+            
         }
 
         private void InitializeSettings()
@@ -132,23 +134,26 @@ namespace WpfApp1.ViewModels
         [RelayCommand]
         private void Logout()
         {
-            
-            _chatViewModel?.Cleanup();
-           
+            AppState.IsLoggingOut = true;
+
+            // Xóa refresh token ngay lập tức (quan trọng!)
             var loginWindow = new fLogin();
-            loginWindow.Show();
+            loginWindow.ClearRefreshToken();
 
-            
+            _chatViewModel?.Cleanup();
+
+            // Đóng tất cả cửa sổ trừ login
             var windowsToClose = Application.Current.Windows.OfType<Window>().ToList();
-
             foreach (var window in windowsToClose)
             {
-                // Chỉ đóng những cửa sổ không phải là cửa sổ đăng nhập mới
                 if (window != loginWindow)
                 {
                     window.Close();
                 }
             }
+
+            loginWindow.Show();
+            AppState.IsLoggingOut = false;
         }
 
         [RelayCommand]

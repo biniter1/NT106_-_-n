@@ -103,6 +103,14 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private string _messageSearchText;
 
+        //-- Biến để lưu tin nhắn ghim của cuộc trò chuyện hiện tại
+        [ObservableProperty]
+        private Message _pinnedMessage;
+
+        // Biến để lưu ID tin nhắn ghim của cuộc trò chuyện hiện tại
+        private string _currentPinnedMessageId;
+        private IDisposable _pinnedMessageListener;
+
         [RelayCommand]
         private void ReplyToMessage(Message message)
         {
@@ -114,7 +122,81 @@ namespace WpfApp1.ViewModels
         {
             MessageToReplyTo = null;
         }
+        [RelayCommand]
+        private async Task TogglePinMessageAsync(Message message)
+        {
+            if (message == null || SelectedContact == null) return;
 
+            try
+            {
+                var chatMetadataRef = firebaseClient.Child("chat_metadata").Child(SelectedContact.chatID);
+
+                // Nếu tin nhắn này đang được ghim -> Bỏ ghim
+                if (_currentPinnedMessageId == message.Id)
+                {
+                    await chatMetadataRef.Child("pinnedMessageId").DeleteAsync();
+                    Debug.WriteLine($"Đã bỏ ghim tin nhắn {message.Id}");
+                }
+                // Ngược lại -> Ghim tin nhắn này
+                else
+                {
+                    await chatMetadataRef.Child("pinnedMessageId").PutAsync($"\"{message.Id}\""); // Firebase cần chuỗi trong dấu ngoặc kép
+                    Debug.WriteLine($"Đã ghim tin nhắn {message.Id}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Lỗi khi ghim/bỏ ghim tin nhắn: {ex.Message}");
+            }
+        }
+        // Thay thế hoàn toàn phương thức cũ
+        private void ListenForPinnedMessage(string chatID)
+        {
+            _pinnedMessageListener?.Dispose();
+            PinnedMessage = null;
+            _currentPinnedMessageId = null;
+
+            if (string.IsNullOrEmpty(chatID)) return;
+
+            _pinnedMessageListener = firebaseClient
+                .Child("chat_metadata")
+                .Child(chatID)
+                .Child("pinnedMessageId")
+                .AsObservable<string>()
+                .Subscribe(pinnedIdEvent =>
+                {
+                    string newPinnedId = null;
+                    if (pinnedIdEvent.EventType == FirebaseEventType.InsertOrUpdate)
+                    {
+                        newPinnedId = pinnedIdEvent.Object;
+                    }
+
+                    _currentPinnedMessageId = newPinnedId;
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        // Cập nhật lại trạng thái "IsPinned" cho tất cả tin nhắn
+                        Message foundMessage = null;
+                        foreach (var msg in Messages)
+                        {
+                            msg.IsPinned = (msg.Id == _currentPinnedMessageId);
+                            if (msg.IsPinned)
+                            {
+                                foundMessage = msg;
+                            }
+                        }
+
+                        // Gán tin nhắn đã tìm thấy vào thuộc tính PinnedMessage để UI hiển thị
+                        PinnedMessage = foundMessage;
+                        Debug.WriteLine(foundMessage != null
+                            ? $"[PIN] Đã tìm thấy và hiển thị tin nhắn ghim: {foundMessage.Id}"
+                            : "[PIN] Không tìm thấy tin nhắn ghim trong danh sách hiện tại.");
+                    });
+
+                }, ex => { Debug.WriteLine($"Lỗi lắng nghe tin nhắn ghim: {ex.Message}"); });
+
+            allMessageSubscriptions.Add(_pinnedMessageListener);
+        }
         public bool IsRecording
         {
             get => _isRecording;
@@ -223,7 +305,7 @@ namespace WpfApp1.ViewModels
                         contact.IsTyping = false;
                     }
                 }
-
+                ListenForPinnedMessage(value.chatID);
                 // Đăng ký lắng nghe cho contact mới được chọn
                 ListenForTypingStatus(value.chatID);
 
@@ -240,6 +322,8 @@ namespace WpfApp1.ViewModels
                 Files.Clear();
                 messageSubscription?.Dispose();
                 messageSubscription = null;
+                _pinnedMessageListener?.Dispose(); 
+                PinnedMessage = null;
             }
         }
 
