@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -23,7 +24,7 @@ namespace WpfApp1
     public partial class MainWindow : Window
     {
         string CurrentEmail;
-
+        
         public MainWindow(string email)
         {
             InitializeComponent();
@@ -31,6 +32,7 @@ namespace WpfApp1
             Loaded += MainWindow_Loaded;
             this.Closing += MainWindow_Closing;
             LocalizationManager.LanguageChanged += OnLanguageChanged;
+            
         }
 
         private string EscapeEmail(string email)
@@ -290,7 +292,6 @@ namespace WpfApp1
             try
             {
                 NotificationWindow.NotificationClicked -= OnNotificationClicked;
-
                 NotificationWindow.CloseAllNotifications();
 
                 if (this.DataContext is MainViewModel mainVM)
@@ -299,7 +300,11 @@ namespace WpfApp1
                     mainVM.IncomingCallReceived -= MainViewModel_IncomingCallReceived;
                     mainVM.Cleanup();
                 }
-                Application.Current.Shutdown();
+
+                if (!AppState.IsLoggingOut) // chỉ shutdown khi thật sự thoát app
+                {
+                    Application.Current.Shutdown();
+                }
             }
             catch (Exception ex)
             {

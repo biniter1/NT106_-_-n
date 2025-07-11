@@ -69,6 +69,23 @@
             </Style>
 
             <ContextMenu x:Key="FileMessageContextMenu" DataContext="{Binding Path=PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                <MenuItem Header="Ghim tin nhắn"
+              Command="{Binding TogglePinMessageCommand}"
+              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="Bỏ ghim tin nhắn"
+              Command="{Binding TogglePinMessageCommand}"
+              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                    <MenuItem.Style>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsPinned, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </MenuItem.Style>
+                </MenuItem>
                 <MenuItem Header="Tải xuống" 
                           Command="{Binding DownloadMessageFileCommand}" 
                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -281,6 +298,7 @@
         <Grid Grid.Column="1" Background="{StaticResource Chatarea}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -450,7 +468,7 @@
                             </Grid>
                         </StackPanel>
                     </Grid>
-
+                    
                     <!-- Nút chức năng -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <StackPanel.Style>
@@ -488,9 +506,25 @@
                     </StackPanel>
                 </Grid>
             </Border>
-            
 
-            <ScrollViewer Grid.Row="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="10">
+            <Border Grid.Row="1" Background="#E3F2FD" Padding="10,8" Margin="10,5,10,0"
+        Visibility="{Binding PinnedMessage, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="📌" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="Tin nhắn đã ghim" FontWeight="Bold" Foreground="#0D47A1" FontSize="12"/>
+                        <TextBlock Text="{Binding PinnedMessage.Content}" TextTrimming="CharacterEllipsis" Foreground="#1565C0" FontSize="11"/>
+                    </StackPanel>
+                    <Button Grid.Column="2" Content="&#xE711;" FontFamily="Segoe MDL2 Assets" Width="24" Height="24" Background="Transparent" BorderThickness="0"
+                ToolTip="Bỏ ghim" Command="{Binding TogglePinMessageCommand}" CommandParameter="{Binding PinnedMessage}"/>
+                </Grid>
+            </Border>
+            <ScrollViewer Grid.Row="2" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="10">
                 <ItemsControl ItemsSource="{Binding MessagesView}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type models:Message}">
@@ -628,7 +662,7 @@
                 </ItemsControl>
             </ScrollViewer>
             <!--Khung review -->
-            <Border Grid.Row="2" x:Name="ReplyPreviewBorder"
+            <Border Grid.Row="3" x:Name="ReplyPreviewBorder"
                     Background="#F0F2F5" BorderBrush="{StaticResource BorderBrush}" 
                     BorderThickness="0,1,0,0" Padding="10,5" Margin="10,0,10,0"
                     CornerRadius="8,8,0,0"
@@ -664,7 +698,7 @@
             </Border>
 
             <!-- Phần Grid chứa các nút input (chỉ hiển thị phần cần sửa) -->
-            <Border Grid.Row="3" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10" Background="{StaticResource WhiteBrush}">
+            <Border Grid.Row="4" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="10" Background="{StaticResource WhiteBrush}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -676,7 +710,7 @@
 
                     <!-- Nút đính kèm file -->
                     <Button Grid.Column="0" Width="40" Height="40" Background="Transparent" BorderThickness="0" ToolTip="{DynamicResource AttachFileTooltip}" Command="{Binding SelectFileCommand}">
-                        <TextBlock Text="📎" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <TextBlock Text="🗎" FontSize="40" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Button>
 
                     <!-- Nút chọn emoji -->

@@ -51,6 +51,10 @@ namespace WpfApp1.Models
         [ObservableProperty]
         private Dictionary<string, bool> _likedBy = new Dictionary<string, bool>();
 
+        [ObservableProperty]
+        [JsonIgnore] // Không lưu thuộc tính này vào Firebase
+        private bool _isPinned;
+
         partial void OnLikedByChanged(Dictionary<string, bool> value)
         {
             OnPropertyChanged(nameof(LikeCount));
