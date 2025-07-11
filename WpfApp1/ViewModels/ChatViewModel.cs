@@ -975,6 +975,55 @@ namespace WpfApp1.ViewModels
                                     Messages.Insert(insertIndex, message);
                                     Debug.WriteLine($"Đã thêm tin nhắn mới: {message.Id} tại vị trí {insertIndex}");
                                     ScrollToBottomRequested?.Invoke(this, EventArgs.Empty);
+
+                                    // **FIX: Thêm file vào Files collection khi có tin nhắn file mới**
+                                    if ((message.IsImage && !string.IsNullOrEmpty(message.ImageUrl)) ||
+                                        (message.IsVideo && !string.IsNullOrEmpty(message.VideoUrl)) ||
+                                        (!string.IsNullOrEmpty(message.FileUrl)))
+                                    {
+                                        string fileUrl = message.IsImage ? message.ImageUrl :
+                                                         (message.IsVideo ? message.VideoUrl : message.FileUrl);
+                                        if (!string.IsNullOrEmpty(fileUrl))
+                                        {
+                                            string fileName = message.Content;
+                                            if (message.IsImage && string.IsNullOrEmpty(fileName))
+                                                fileName = $"Image_{DateTime.Now.ToString("yyyyMMddHHmmss")}.jpg";
+                                            else if (message.IsVideo && string.IsNullOrEmpty(fileName))
+                                                fileName = $"Video_{DateTime.Now.ToString("yyyyMMddHHmmss")}.mp4";
+
+                                            string extension = Path.GetExtension(fileName);
+                                            if (string.IsNullOrEmpty(extension))
+                                            {
+                                                if (message.IsImage)
+                                                    extension = ".jpg";
+                                                else if (message.IsVideo)
+                                                    extension = ".mp4";
+                                            }
+
+                                            bool isVideo = message.IsVideo || IsVideoFile(extension);
+
+                                            var fileItem = new FileItem
+                                            {
+                                                IconPathOrType = string.IsNullOrEmpty(extension) ?
+                                                                 (message.IsImage ? "jpg" : (isVideo ? "mp4" : "txt")) :
+                                                                 extension.TrimStart('.'),
+                                                FileName = fileName,
+                                                FileInfo = $"{(message.IsImage ? "Image" : (isVideo ? "Video" : "File"))} • {message.Timestamp:dd/MM/yyyy}",
+                                                FilePathOrUrl = fileUrl,
+                                                DownloadUrl = fileUrl,
+                                                FileExtension = extension,
+                                                IsVideo = isVideo
+                                            };
+
+                                            // Kiểm tra xem file đã tồn tại chưa trước khi thêm
+                                            if (!Files.Any(f => f.DownloadUrl == fileUrl))
+                                            {
+                                                Files.Add(fileItem);
+                                                Debug.WriteLine($"Đã thêm file mới vào Files collection: {fileName}");
+                                            }
+                                        }
+                                    }
+
                                     if (!message.IsMine)
                                     {
                                         if (SelectedContact == null || SelectedContact.chatID != roomId)

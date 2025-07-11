@@ -25,7 +25,20 @@
             <SolidColorBrush x:Key="SuccessColor" Color="#10B981"/>
             <SolidColorBrush x:Key="DangerColor" Color="#EF4444"/>
             <SolidColorBrush x:Key="TextOfflineColor" Color="#94A3B8"/>
+
+            <!-- String Resources -->
+            <system:String x:Key="FriendListOnlineStatus">Trực tuyến</system:String>
             <system:String x:Key="FriendListOfflineStatus">Ngoại tuyến</system:String>
+            <system:String x:Key="FriendListGroupChat">Nhóm chat</system:String>
+            <system:String x:Key="SendMessageButton">Gửi tin nhắn</system:String>
+            <system:String x:Key="UnfriendButton">Hủy kết bạn</system:String>
+            <system:String x:Key="LeaveGroupButton">Rời nhóm</system:String>
+            <system:String x:Key="FriendRequestDescription">muốn kết bạn với bạn</system:String>
+            <system:String x:Key="FriendListAcceptRequestTooltip">Chấp nhận lời mời kết bạn</system:String>
+            <system:String x:Key="FriendListDeclineRequestTooltip">Từ chối lời mời kết bạn</system:String>
+            <system:String x:Key="ContactsTitle">Danh bạ</system:String>
+            <system:String x:Key="SelectContactPrompt">Chọn một liên hệ để bắt đầu cuộc trò chuyện</system:String>
+            <system:String x:Key="FriendRequestsTitle">Lời mời kết bạn</system:String>
 
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
@@ -293,7 +306,7 @@
                             <TextBlock FontSize="14">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="Ngoại tuyến"/>
+                                        <Setter Property="Text" Value="{StaticResource FriendListOfflineStatus}"/>
                                         <Setter Property="Foreground" Value="{StaticResource TextSecondaryColor}"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsOnline}" Value="True">
