@@ -1,0 +1,403 @@
+﻿<Window x:Class="WpfApp1.Views.GroupMemberManagementWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:WpfApp1.Converters"
+        mc:Ignorable="d"
+        Title="Quản lý thành viên nhóm"
+        Height="600" Width="800"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize">
+
+    <Window.Resources>
+        <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <!-- Rounded Button Style -->
+        <Style x:Key="RoundedButtonStyle" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Large Rounded Button Style -->
+        <Style x:Key="LargeRoundedButtonStyle" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Member Item Template -->
+        <DataTemplate x:Key="MemberItemTemplate">
+            <Border Background="White" 
+                    BorderBrush="#E0E0E0" 
+                    BorderThickness="1" 
+                    CornerRadius="8" 
+                    Margin="5"
+                    Padding="10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Avatar -->
+                    <Border Grid.Column="0" 
+                            Width="50" Height="50" 
+                            CornerRadius="25" 
+                            Background="#F0F0F0"
+                            Margin="0,0,10,0">
+                        <Image Source="{Binding AvatarUrl}" 
+                               Stretch="UniformToFill"
+                               Width="50" Height="50">
+                            <Image.Clip>
+                                <EllipseGeometry Center="25,25" RadiusX="25" RadiusY="25"/>
+                            </Image.Clip>
+                        </Image>
+                    </Border>
+
+                    <!-- Member Info -->
+                    <StackPanel Grid.Column="1" 
+                                VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="14"
+                                   Foreground="#333"/>
+                        <TextBlock Text="{Binding Email}" 
+                                   FontSize="12"
+                                   Foreground="#666"
+                                   Margin="0,2,0,0"/>
+                        <TextBlock Text="{Binding Role}" 
+                                   FontSize="11"
+                                   Foreground="#0066CC"
+                                   FontWeight="SemiBold"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <!-- Make Admin Button -->
+                    <Button Grid.Column="2"
+                            Content="Làm Admin"
+                            Background="#4CAF50"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Padding="10,5"
+                            Margin="5,0"
+                            Style="{StaticResource RoundedButtonStyle}"
+                            Visibility="{Binding CanMakeAdmin, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            Command="{Binding DataContext.MakeAdminCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}"/>
+
+                    <!-- Kick Button -->
+                    <Button Grid.Column="3"
+                            Content="Kick"
+                            Background="#F44336"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Padding="10,5"
+                            Margin="5,0"
+                            Style="{StaticResource RoundedButtonStyle}"
+                            Visibility="{Binding CanKick, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            Command="{Binding DataContext.KickMemberCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- Friend Item Template for Adding -->
+        <DataTemplate x:Key="FriendItemTemplate">
+            <Border Background="White" 
+                    BorderBrush="#E0E0E0" 
+                    BorderThickness="1" 
+                    CornerRadius="8" 
+                    Margin="5"
+                    Padding="10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Checkbox -->
+                    <CheckBox Grid.Column="0"
+                              IsChecked="{Binding IsSelected}"
+                              VerticalAlignment="Center"
+                              Margin="0,0,10,0"/>
+
+                    <!-- Avatar -->
+                    <Border Grid.Column="1" 
+                            Width="40" Height="40" 
+                            CornerRadius="20" 
+                            Background="#F0F0F0"
+                            Margin="0,0,10,0">
+                        <Image Source="{Binding AvatarUrl}" 
+                               Stretch="UniformToFill"
+                               Width="40" Height="40">
+                            <Image.Clip>
+                                <EllipseGeometry Center="20,20" RadiusX="20" RadiusY="20"/>
+                            </Image.Clip>
+                        </Image>
+                    </Border>
+
+                    <!-- Friend Info -->
+                    <StackPanel Grid.Column="2" 
+                                VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="13"
+                                   Foreground="#333"/>
+                        <TextBlock Text="{Binding Email}" 
+                                   FontSize="11"
+                                   Foreground="#666"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid Background="#F5F5F5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Background="White" 
+                BorderBrush="#E0E0E0" 
+                BorderThickness="0,0,0,1"
+                Padding="20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Group Info -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Border Width="60" Height="60" 
+                            CornerRadius="30" 
+                            Background="#F0F0F0"
+                            Margin="0,0,15,0">
+                        <Image Source="{Binding GroupAvatarUrl}" 
+                               Stretch="UniformToFill"
+                               Width="60" Height="60">
+                            <Image.Clip>
+                                <EllipseGeometry Center="30,30" RadiusX="30" RadiusY="30"/>
+                            </Image.Clip>
+                        </Image>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding GroupName}" 
+                                   FontSize="18" 
+                                   FontWeight="Bold" 
+                                   Foreground="#333"/>
+                        <TextBlock FontSize="14" 
+                                   Foreground="#666">
+                            <Run Text="{Binding MemberCount}"/>
+                            <Run Text="thành viên"/>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Close Button -->
+                <Button Grid.Column="2"
+                        Content="✕"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        FontSize="18"
+                        Foreground="#666"
+                        Width="30" Height="30"
+                        Click="CloseButton_Click"/>
+            </Grid>
+        </Border>
+
+        <!-- Tab Content -->
+        <TabControl Grid.Row="1" 
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Margin="20">
+
+            <!-- Members Tab -->
+            <TabItem Header="Thành viên hiện tại">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Search Box -->
+                    <Border Grid.Row="0" 
+                            Background="White" 
+                            BorderBrush="#E0E0E0" 
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Margin="0,0,0,10">
+                        <TextBox x:Name="SearchMembersTextBox"
+                                 Padding="10"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 Text="{Binding SearchMemberText, UpdateSourceTrigger=PropertyChanged}"
+                                 FontSize="14">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Style.Triggers>
+                                        <Trigger Property="Text" Value="">
+                                            <Setter Property="Background">
+                                                <Setter.Value>
+                                                    <VisualBrush Opacity="0.5" Stretch="None">
+                                                        <VisualBrush.Visual>
+                                                            <Label Content="Tìm kiếm thành viên..." 
+                                                                   Foreground="#999"/>
+                                                        </VisualBrush.Visual>
+                                                    </VisualBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                    </Border>
+
+                    <!-- Members List -->
+                    <ScrollViewer Grid.Row="1" 
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Members}"
+                                      ItemTemplate="{StaticResource MemberItemTemplate}"/>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+
+            <!-- Add Members Tab -->
+            <TabItem Header="Thêm thành viên">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Search Box -->
+                    <Border Grid.Row="0" 
+                            Background="White" 
+                            BorderBrush="#E0E0E0" 
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Margin="0,0,0,10">
+                        <TextBox x:Name="SearchFriendsTextBox"
+                                 Padding="10"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 Text="{Binding SearchFriendText, UpdateSourceTrigger=PropertyChanged}"
+                                 FontSize="14">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Style.Triggers>
+                                        <Trigger Property="Text" Value="">
+                                            <Setter Property="Background">
+                                                <Setter.Value>
+                                                    <VisualBrush Opacity="0.5" Stretch="None">
+                                                        <VisualBrush.Visual>
+                                                            <Label Content="Tìm kiếm bạn bè để thêm..." 
+                                                                   Foreground="#999"/>
+                                                        </VisualBrush.Visual>
+                                                    </VisualBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                    </Border>
+
+                    <!-- Friends List -->
+                    <ScrollViewer Grid.Row="1" 
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding AvailableFriends}"
+                                      ItemTemplate="{StaticResource FriendItemTemplate}"/>
+                    </ScrollViewer>
+
+                    <!-- Add Button -->
+                    <Button Grid.Row="2"
+                            Content="Thêm thành viên đã chọn"
+                            Background="#2196F3"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Padding="15,10"
+                            Margin="0,10,0,0"
+                            Style="{StaticResource LargeRoundedButtonStyle}"
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Command="{Binding AddSelectedMembersCommand}"/>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" 
+                Background="White" 
+                BorderBrush="#E0E0E0" 
+                BorderThickness="0,1,0,0"
+                Padding="20">
+            <Button Content="Đóng"
+                    Background="#757575"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Padding="20,10"
+                    Style="{StaticResource LargeRoundedButtonStyle}"
+                    FontSize="14"
+                    HorizontalAlignment="Right"
+                    Click="CloseButton_Click"/>
+        </Border>
+    </Grid>
+</Window>
