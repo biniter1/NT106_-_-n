@@ -32,6 +32,7 @@ using Newtonsoft.Json;
 using System.ComponentModel;
 using System.Windows.Data;
 using WpfApp1.Events;
+using System.Windows.Interop;
 
 namespace WpfApp1.ViewModels
 {
@@ -1000,8 +1001,8 @@ namespace WpfApp1.ViewModels
                             var msg = item.Object;                           
                             msg.Id = item.Key;
                             msg.IsMine = msg.SenderId == SharedData.Instance.userdata?.Email;
-                            msg.Alignment = msg.IsMine ? "Right" : "Left";
-                            msg.SenderDisplayName = GetSenderDisplayName(msg.SenderId);
+                            msg.Alignment = msg.IsMine ? "Right" : "Left";                        
+                            msg.SenderDisplayName = msg.IsMine ? "Bạn" : GetSenderDisplayName(msg.SenderId);
 
                             if (isGroupChat && !msg.IsMine)
                             {
@@ -1059,7 +1060,7 @@ namespace WpfApp1.ViewModels
                                 message.Id = messageEvent.Key;
                                 message.IsMine = message.SenderId == SharedData.Instance.userdata?.Email;
                                 message.Alignment = message.IsMine ? "Right" : "Left";
-                                message.SenderDisplayName = GetSenderDisplayName(message.SenderId);
+                                message.SenderDisplayName = message.IsMine ? "Bạn" : GetSenderDisplayName(message.SenderId);
 
                                 var updatedMessageData = messageEvent.Object;
                                 updatedMessageData.Id = messageEvent.Key;
