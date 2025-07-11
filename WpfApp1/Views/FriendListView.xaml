@@ -33,6 +33,8 @@
             <system:String x:Key="SendMessageButton">Gửi tin nhắn</system:String>
             <system:String x:Key="UnfriendButton">Hủy kết bạn</system:String>
             <system:String x:Key="LeaveGroupButton">Rời nhóm</system:String>
+            <system:String x:Key="ManageGroupButton">Quản lý thành viên</system:String>
+            <system:String x:Key="DeleteGroupButton">Xóa nhóm</system:String>
             <system:String x:Key="FriendRequestDescription">muốn kết bạn với bạn</system:String>
             <system:String x:Key="FriendListAcceptRequestTooltip">Chấp nhận lời mời kết bạn</system:String>
             <system:String x:Key="FriendListDeclineRequestTooltip">Từ chối lời mời kết bạn</system:String>
@@ -103,6 +105,15 @@
                 <Style.Triggers>
                     <Trigger Property="IsMouseOver" Value="True">
                         <Setter Property="Background" Value="#059669"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="WarningButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+                <Setter Property="Background" Value="#F59E0B"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#D97706"/>
                     </Trigger>
                 </Style.Triggers>
             </Style>
@@ -372,14 +383,30 @@
                                    HorizontalAlignment="Center" 
                                    Margin="0,0,0,24"/>
 
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
                             <Button Content="{StaticResource SendMessageButton}" 
                                     Style="{StaticResource ModernButtonStyle}"
                                     Command="{Binding DataContext.SendMessageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
+                        </StackPanel>
+
+                        <!-- Row 2: Admin functions -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                            <Button Content="{StaticResource ManageGroupButton}" 
+                                    Style="{StaticResource WarningButtonStyle}"
+                                    Command="{Binding DataContext.ManageGroupMembersCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                        </StackPanel>
+
+                        <!-- Row 3: Danger functions -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <Button Content="{StaticResource LeaveGroupButton}" 
                                     Style="{StaticResource DangerButtonStyle}"
                                     Command="{Binding DataContext.LeaveGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                            <Button Content="{StaticResource DeleteGroupButton}" 
+                                    Style="{StaticResource DangerButtonStyle}"
+                                    Command="{Binding DataContext.DeleteGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
                         </StackPanel>
                     </StackPanel>

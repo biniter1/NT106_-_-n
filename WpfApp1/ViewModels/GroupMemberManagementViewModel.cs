@@ -10,7 +10,8 @@ using Google.Cloud.Firestore;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Windows.Data;
-
+using WpfApp1.Events;
+using WpfApp1.Services;
 namespace WpfApp1.ViewModels
 {
     public partial class GroupMemberManagementViewModel : ObservableObject
@@ -230,6 +231,9 @@ namespace WpfApp1.ViewModels
 
                     AllMembers.Remove(member);
                     MemberCount = _group.MemberCount;
+
+                    // Notify ChatViewModel to remove this contact from the kicked user's chat list
+                    EventAggregator.Instance.Publish(new ContactRemovedEvent(_group.GroupChatId, member.Email));
 
                     // Refresh available friends list
                     await LoadAvailableFriendsAsync();

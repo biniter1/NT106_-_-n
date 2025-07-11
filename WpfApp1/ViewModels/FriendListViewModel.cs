@@ -15,7 +15,7 @@ using System.Windows.Controls;
 using System.IO;
 using WpfApp1.Services;
 using System.Diagnostics;
-
+using WpfApp1.Events;
 namespace WpfApp1.ViewModels
 {
     // Define GroupData class
@@ -145,6 +145,9 @@ namespace WpfApp1.ViewModels
                     CombinedContacts.Remove(groupVM);
                     if (SelectedContact == groupVM) SelectedContact = null;
 
+                    // Notify ChatViewModel to remove this contact from its list
+                    EventAggregator.Instance.Publish(new ContactRemovedEvent(group.GroupChatId, currentUserEmail));
+
                     CustomMessageBox.Show($"Đã rời khỏi nhóm '{groupVM.Name}' thành công.", "Thành công",
                                         CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
                 }
@@ -177,18 +180,22 @@ namespace WpfApp1.ViewModels
 
         private string GenerateGroupChatId()
         {
-            return $"group_{Guid.NewGuid():N}";
+            // Use timestamp and random GUID to ensure uniqueness
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var guid = Guid.NewGuid().ToString("N")[..8]; // Take first 8 chars
+            return $"group_{timestamp}_{guid}";
         }
 
         public static string GenerateGroupChatId(List<string> memberEmails)
         {
-            // Sort emails to ensure consistent ID generation
+            // For consistency, still support member-based ID generation but add timestamp
             var sortedEmails = memberEmails.OrderBy(e => e).ToList();
             var combinedEmails = string.Join(":", sortedEmails);
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
             using (SHA256 sha256 = SHA256.Create())
             {
-                byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes($"group:{combinedEmails}"));
+                byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes($"group:{combinedEmails}:{timestamp}"));
                 string base64 = Convert.ToBase64String(hashBytes);
                 return $"group_{base64.Replace('+', '-').Replace('/', '_').TrimEnd('=')}";
             }
@@ -246,39 +253,71 @@ namespace WpfApp1.ViewModels
             if (contactVM == null) return;
 
             var currentUser = SharedData.Instance.userdata;
-            // Tạo chatID duy nhất và nhất quán
-            var chatID = GenerateChatId(currentUser.Email, contactVM.Email);
+            string chatID;
 
-            // Tạo đối tượng Contact đại diện cho người bạn mà mình muốn chat
+            // Handle different contact types
+            if (contactVM is GroupViewModel groupVM)
+            {
+                // For groups, use GroupChatId directly
+                chatID = groupVM.GroupChatId;
+                
+                // Verify user is a member of the group
+                var group = groupVM.GetModel();
+                if (!group.MemberEmails.Contains(currentUser.Email))
+                {
+                    CustomMessageBox.Show("Bạn không phải là thành viên của nhóm này.", "Không có quyền",
+                        CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
+                    return;
+                }
+            }
+            else
+            {
+                // For friends, generate chat ID
+                chatID = GenerateChatId(currentUser.Email, contactVM.Email);
+            }
+
+            // Check if contact already exists to avoid duplicates
+            var existingContacts = await GetContactsAsync(currentUser.Email);
+            var existingContact = existingContacts.FirstOrDefault(c => c.chatID == chatID);
+
+            if (existingContact != null)
+            {
+                // Contact already exists, just open chat
+                EventAggregator.Instance.Publish(new StartChatEvent(existingContact));
+                return;
+            }
+
+            // Create new contact for current user
             var contactForCurrentUser = new Contact
             {
                 AvatarUrl = contactVM.AvatarUrl,
                 Name = contactVM.Name,
                 Email = contactVM.Email,
-                chatID = chatID, // Sử dụng chatID đã tạo
-                IsOnline = true, // Tạm thời, trạng thái online sẽ được cập nhật sau
+                chatID = chatID,
+                IsOnline = true,
             };
 
-            // Tạo đối tượng Contact đại diện cho mình trong danh sách của người bạn
-            var contactForFriend = new Contact
+            await AddContactAsync(currentUser.Email, contactForCurrentUser);
+
+            // For friend chats, also add reciprocal contact
+            if (!(contactVM is GroupViewModel))
             {
-                AvatarUrl = currentUser.AvatarUrl,
-                Name = currentUser.Name,
-                Email = currentUser.Email,
-                chatID = chatID, // Sử dụng cùng chatID
-                IsOnline = true, // Tạm thời
-            };
-            var contactsOfA = await GetContactsAsync(currentUser.Email);
-            if (!contactsOfA.Any(c => c.chatID == chatID))
-            {
-                await AddContactAsync(currentUser.Email, contactForCurrentUser);
+                var contactForFriend = new Contact
+                {
+                    AvatarUrl = currentUser.AvatarUrl,
+                    Name = currentUser.Name,
+                    Email = currentUser.Email,
+                    chatID = chatID,
+                    IsOnline = true,
+                };
+
+                var friendContacts = await GetContactsAsync(contactVM.Email);
+                if (!friendContacts.Any(c => c.chatID == chatID))
+                {
+                    await AddContactAsync(contactVM.Email, contactForFriend);
+                }
             }
 
-            var contactsOfB = await GetContactsAsync(contactVM.Email);
-            if (!contactsOfB.Any(c => c.chatID == chatID))
-            {
-                await AddContactAsync(contactVM.Email, contactForFriend);
-            }
             EventAggregator.Instance.Publish(new StartChatEvent(contactForCurrentUser));
         }
 
@@ -775,6 +814,87 @@ namespace WpfApp1.ViewModels
                 Debug.WriteLine($"Error opening member management: {ex.Message}");
                 CustomMessageBox.Show($"Lỗi khi mở quản lý thành viên: {ex.Message}", "Lỗi",
                     CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
+            }
+        }
+
+        [RelayCommand]
+        private async Task DeleteGroup(GroupViewModel groupVM)
+        {
+            if (groupVM == null) return;
+
+            var group = groupVM.GetModel();
+            var currentUserEmail = SharedData.Instance.userdata.Email;
+
+            // Check if user is the owner
+            if (group.CreatedBy != currentUserEmail)
+            {
+                CustomMessageBox.Show("Chỉ người tạo nhóm mới có thể xóa nhóm này.", "Không có quyền",
+                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
+                return;
+            }
+
+            var result = CustomMessageBox.Show(
+                $"Bạn có chắc chắn muốn xóa nhóm '{groupVM.Name}'?\n\nViệc này sẽ xóa vĩnh viễn nhóm và tất cả tin nhắn trong nhóm cho tất cả thành viên.",
+                "Xác nhận xóa nhóm",
+                CustomMessageBoxWindow.MessageButtons.YesNo,
+                CustomMessageBoxWindow.MessageIcon.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    var db = FirestoreHelper.database;
+
+                    // 1. Remove group from all members' UserGroups
+                    foreach (var memberEmail in group.MemberEmails)
+                    {
+                        try
+                        {
+                            var userGroupRef = db.Collection("UserGroups").Document(memberEmail);
+                            await userGroupRef.UpdateAsync("groups", FieldValue.ArrayRemove(group.Id));
+
+                            // Remove group contact from member's contacts
+                            await db.Collection("users").Document(memberEmail)
+                                   .Collection("contacts").Document(group.GroupChatId).DeleteAsync();
+
+                            Debug.WriteLine($"Removed group from {memberEmail}'s groups and contacts");
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Error removing group from {memberEmail}: {ex.Message}");
+                        }
+                    }
+
+                    // 2. Delete all messages in the group chat
+                    try
+                    {
+                        await firebaseClient.Child($"messages/{group.GroupChatId}").DeleteAsync();
+                        Debug.WriteLine($"Deleted messages for group chat: {group.GroupChatId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error deleting group messages: {ex.Message}");
+                    }
+
+                    // 3. Delete the group document
+                    await db.Collection("Groups").Document(group.Id).DeleteAsync();
+
+                    // 4. Notify all ChatViewModels to remove this group contact
+                    EventAggregator.Instance.Publish(new GroupDeletedEvent(group.GroupChatId));
+
+                    // 5. Remove from local UI
+                    CombinedContacts.Remove(groupVM);
+                    if (SelectedContact == groupVM) SelectedContact = null;
+
+                    CustomMessageBox.Show($"Nhóm '{groupVM.Name}' đã được xóa thành công.", "Thành công",
+                        CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error deleting group: {ex.Message}");
+                    CustomMessageBox.Show($"Lỗi khi xóa nhóm: {ex.Message}", "Lỗi",
+                        CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
+                }
             }
         }
 

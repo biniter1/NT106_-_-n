@@ -31,7 +31,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.ComponentModel;
 using System.Windows.Data;
-
+using WpfApp1.Events;
 
 namespace WpfApp1.ViewModels
 {
@@ -424,6 +424,10 @@ namespace WpfApp1.ViewModels
 
             // Đăng ký sự kiện
             EditProfileViewModel.AvatarUpdated += OnAvatarUpdated;
+            
+            // Subscribe to contact removal events
+            EventAggregator.Instance.Subscribe<ContactRemovedEvent>(OnContactRemoved);
+            EventAggregator.Instance.Subscribe<GroupDeletedEvent>(OnGroupDeleted);
 
             // Tải dữ liệu ban đầu
             LoadInitialData();
@@ -441,6 +445,110 @@ namespace WpfApp1.ViewModels
             ContactsView = CollectionViewSource.GetDefaultView(Contacts);
             ContactsView.Filter = FilterContacts;
         }
+
+        private void OnContactRemoved(ContactRemovedEvent eventArgs)
+        {
+            var currentUserEmail = SharedData.Instance.userdata?.Email;
+            
+            // Only remove contact if this event is for the current user
+            if (currentUserEmail == eventArgs.UserEmail)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var contactToRemove = Contacts.FirstOrDefault(c => c.chatID == eventArgs.ChatId);
+                    if (contactToRemove != null)
+                    {
+                        Debug.WriteLine($"Removing contact {contactToRemove.Name} from chat list due to group leave/kick");
+                        
+                        // Clear selection if this contact is currently selected
+                        if (SelectedContact == contactToRemove)
+                        {
+                            SelectedContact = null;
+                        }
+                        
+                        // Remove from contacts list
+                        Contacts.Remove(contactToRemove);
+                        
+                        // Stop any listeners for this contact
+                        if (_contactPresenceListeners.ContainsKey(contactToRemove.Email))
+                        {
+                            _contactPresenceListeners[contactToRemove.Email]?.Dispose();
+                            _contactPresenceListeners.Remove(contactToRemove.Email);
+                        }
+                    }
+                });
+            }
+        }
+
+        private void OnGroupDeleted(GroupDeletedEvent eventArgs)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                var contactToRemove = Contacts.FirstOrDefault(c => c.chatID == eventArgs.GroupChatId);
+                if (contactToRemove != null)
+                {
+                    Debug.WriteLine($"Removing group contact {contactToRemove.Name} from chat list due to group deletion");
+                    
+                    // Clear selection if this contact is currently selected
+                    if (SelectedContact == contactToRemove)
+                    {
+                        SelectedContact = null;
+                    }
+                    
+                    // Remove from contacts list
+                    Contacts.Remove(contactToRemove);
+                    
+                    // Stop any listeners for this contact
+                    if (_contactPresenceListeners.ContainsKey(contactToRemove.Email))
+                    {
+                        _contactPresenceListeners[contactToRemove.Email]?.Dispose();
+                        _contactPresenceListeners.Remove(contactToRemove.Email);
+                    }
+                }
+            });
+        }
+
+        public void Cleanup()
+        {
+            _webSocketService.DisconnectAsync().Wait();
+            SetCurrentUserGlobalStatus(false);
+            foreach (var subscription in allMessageSubscriptions)
+            {
+                subscription?.Dispose();
+            }
+            allMessageSubscriptions.Clear();
+
+            if (messageSubscription != null)
+            {
+                Debug.WriteLine("Disposing messageSubscription.");
+                messageSubscription.Dispose();
+                messageSubscription = null;
+            }
+
+            foreach (var listener in _contactPresenceListeners.Values)
+            {
+                listener?.Dispose();
+            }
+            _contactPresenceListeners.Clear();
+
+            EditProfileViewModel.AvatarUpdated -= OnAvatarUpdated;
+            
+            // Unsubscribe from events
+            EventAggregator.Instance.Unsubscribe<ContactRemovedEvent>(OnContactRemoved);
+            EventAggregator.Instance.Unsubscribe<GroupDeletedEvent>(OnGroupDeleted);
+
+            if (firebaseClient == null)
+            {
+                Debug.WriteLine("firebaseClient is null during Cleanup.");
+            }
+            else
+            {
+                Debug.WriteLine("firebaseClient exists during Cleanup.");
+            }
+
+            Debug.WriteLine("ChatViewModel cleanup complete.");
+        }
+
         partial void OnContactSearchTextChanged(string value)
         {
             ContactsView?.Refresh();
@@ -1683,43 +1791,6 @@ namespace WpfApp1.ViewModels
                     Debug.WriteLine($"[PRESENCE SETUP FAIL] Failed for {contact.Email}: {ex.Message}");
                 }
             }
-        }
-
-        public void Cleanup()
-        {
-            _webSocketService.DisconnectAsync().Wait();
-            SetCurrentUserGlobalStatus(false);
-            foreach (var subscription in allMessageSubscriptions)
-            {
-                subscription?.Dispose();
-            }
-            allMessageSubscriptions.Clear();
-
-            if (messageSubscription != null)
-            {
-                Debug.WriteLine("Disposing messageSubscription.");
-                messageSubscription.Dispose();
-                messageSubscription = null;
-            }
-
-            foreach (var listener in _contactPresenceListeners.Values)
-            {
-                listener?.Dispose();
-            }
-            _contactPresenceListeners.Clear();
-
-            EditProfileViewModel.AvatarUpdated -= OnAvatarUpdated;
-
-            if (firebaseClient == null)
-            {
-                Debug.WriteLine("firebaseClient is null during Cleanup.");
-            }
-            else
-            {
-                Debug.WriteLine("firebaseClient exists during Cleanup.");
-            }
-
-            Debug.WriteLine("ChatViewModel cleanup complete.");
         }
 
         [RelayCommand]
