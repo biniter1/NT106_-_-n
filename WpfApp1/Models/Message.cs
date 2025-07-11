@@ -14,7 +14,7 @@ namespace WpfApp1.Models
         public string SenderId { get; set; }
 
         // Tên hiển thị của người gửi
-        public string SenderDisplayName { get; set; }
+        //public string SenderDisplayName { get; set; }
 
         // Nội dung tin nhắn
         public string Content { get; set; }
@@ -51,9 +51,13 @@ namespace WpfApp1.Models
         [ObservableProperty]
         private Dictionary<string, bool> _likedBy = new Dictionary<string, bool>();
 
+        [JsonProperty("isPinned")]
         [ObservableProperty]
-        [JsonIgnore] // Không lưu thuộc tính này vào Firebase
         private bool _isPinned;
+
+        [JsonIgnore]
+        [ObservableProperty]
+        private string _senderDisplayName;
 
         partial void OnLikedByChanged(Dictionary<string, bool> value)
         {

@@ -41,6 +41,7 @@
             <SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="#F0F0F0"/>
             <SolidColorBrush x:Key="SearchBoxBorderBrush" Color="#E0E0E0"/>
             <SolidColorBrush x:Key="SearchBoxTextBrush" Color="#333333"/>
+            <SolidColorBrush x:Key="HoverColor" Color="#F1F5F9"/>
             <CornerRadius x:Key="DefaultCornerRadius">10</CornerRadius>
 
             <converters:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
@@ -53,6 +54,7 @@
             <converters:ToLowerConverter x:Key="ToLowerConverter"/>
             <converters:NameToFallbackConverter x:Key="NameToFallbackConverter"/>
             <converters:UtcToLocalTimeConverter x:Key="UtcToLocalTimeConverter"/>
+            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
 
             <Style x:Key="SearchBoxPlaceholderStyle" TargetType="TextBox">
                 <Setter Property="Template">
@@ -69,24 +71,64 @@
                 </Setter>
             </Style>
 
+            <Style x:Key="IconButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="8"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="16"/>
+                <Setter Property="Width" Value="36"/>
+                <Setter Property="Height" Value="36"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="18"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource HoverColor}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+
             <ContextMenu x:Key="FileMessageContextMenu" DataContext="{Binding Path=PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
                 <MenuItem Header="Ghim tin nhắn"
-              Command="{Binding TogglePinMessageCommand}"
-              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                <MenuItem Header="Bỏ ghim tin nhắn"
-              Command="{Binding TogglePinMessageCommand}"
-              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                          Command="{Binding PinMessageCommand}"
+                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                     <MenuItem.Style>
                         <Style TargetType="MenuItem">
-                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Setter Property="Visibility" Value="Visible" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsPinned, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Setter Property="Visibility" Value="Collapsed" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </MenuItem.Style>
                 </MenuItem>
+
+                <MenuItem Header="Bỏ ghim tin nhắn"
+                         Command="{Binding UnpinSpecificMessageCommand}"
+                         CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                    <MenuItem.Style>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsPinned, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </MenuItem.Style>
+                </MenuItem>
+                
                 <MenuItem Header="Tải xuống" 
                           Command="{Binding DownloadMessageFileCommand}" 
                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -508,23 +550,33 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Row="1" Background="#E3F2FD" Padding="10,8" Margin="10,5,10,0"
-        Visibility="{Binding PinnedMessage, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Border Grid.Row="1"
+                     x:Name="PinnedMessageBar"
+                     Background="#FFFBEB" BorderBrush="#FDE68A"
+                     BorderThickness="0,0,0,1"
+                     Padding="10,8"
+                     Visibility="{Binding PinnedMessage, Converter={StaticResource NullToVisibilityConverter}}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="📌" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                    <TextBlock Grid.Column="0" Text="📌" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="Tin nhắn đã ghim"/>
+
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="Tin nhắn đã ghim" FontWeight="Bold" Foreground="#0D47A1" FontSize="12"/>
-                        <TextBlock Text="{Binding PinnedMessage.Content}" TextTrimming="CharacterEllipsis" Foreground="#1565C0" FontSize="11"/>
+                        <TextBlock Text="{Binding PinnedMessage.SenderDisplayName}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource PrimaryBrush}"/>
+                        <TextBlock Text="{Binding PinnedMessage.Content}" TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
-                    <Button Grid.Column="2" Content="&#xE711;" FontFamily="Segoe MDL2 Assets" Width="24" Height="24" Background="Transparent" BorderThickness="0"
-                ToolTip="Bỏ ghim" Command="{Binding TogglePinMessageCommand}" CommandParameter="{Binding PinnedMessage}"/>
+
+                    <Button Grid.Column="2" Content="✕"
+                             ToolTip="Bỏ ghim"
+                             Command="{Binding UnpinMessageCommand}"
+                             Style="{StaticResource IconButtonStyle}"/>
                 </Grid>
             </Border>
+            
             <ScrollViewer Grid.Row="2" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="10">
                 <ItemsControl ItemsSource="{Binding MessagesView}">
                     <ItemsControl.ItemTemplate>

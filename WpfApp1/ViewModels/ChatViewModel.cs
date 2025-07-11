@@ -107,10 +107,6 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private Message _pinnedMessage;
 
-        // Biến để lưu ID tin nhắn ghim của cuộc trò chuyện hiện tại
-        private string _currentPinnedMessageId;
-        private IDisposable _pinnedMessageListener;
-
         [RelayCommand]
         private void ReplyToMessage(Message message)
         {
@@ -122,81 +118,7 @@ namespace WpfApp1.ViewModels
         {
             MessageToReplyTo = null;
         }
-        [RelayCommand]
-        private async Task TogglePinMessageAsync(Message message)
-        {
-            if (message == null || SelectedContact == null) return;
-
-            try
-            {
-                var chatMetadataRef = firebaseClient.Child("chat_metadata").Child(SelectedContact.chatID);
-
-                // Nếu tin nhắn này đang được ghim -> Bỏ ghim
-                if (_currentPinnedMessageId == message.Id)
-                {
-                    await chatMetadataRef.Child("pinnedMessageId").DeleteAsync();
-                    Debug.WriteLine($"Đã bỏ ghim tin nhắn {message.Id}");
-                }
-                // Ngược lại -> Ghim tin nhắn này
-                else
-                {
-                    await chatMetadataRef.Child("pinnedMessageId").PutAsync($"\"{message.Id}\""); // Firebase cần chuỗi trong dấu ngoặc kép
-                    Debug.WriteLine($"Đã ghim tin nhắn {message.Id}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Lỗi khi ghim/bỏ ghim tin nhắn: {ex.Message}");
-            }
-        }
-        // Thay thế hoàn toàn phương thức cũ
-        private void ListenForPinnedMessage(string chatID)
-        {
-            _pinnedMessageListener?.Dispose();
-            PinnedMessage = null;
-            _currentPinnedMessageId = null;
-
-            if (string.IsNullOrEmpty(chatID)) return;
-
-            _pinnedMessageListener = firebaseClient
-                .Child("chat_metadata")
-                .Child(chatID)
-                .Child("pinnedMessageId")
-                .AsObservable<string>()
-                .Subscribe(pinnedIdEvent =>
-                {
-                    string newPinnedId = null;
-                    if (pinnedIdEvent.EventType == FirebaseEventType.InsertOrUpdate)
-                    {
-                        newPinnedId = pinnedIdEvent.Object;
-                    }
-
-                    _currentPinnedMessageId = newPinnedId;
-
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        // Cập nhật lại trạng thái "IsPinned" cho tất cả tin nhắn
-                        Message foundMessage = null;
-                        foreach (var msg in Messages)
-                        {
-                            msg.IsPinned = (msg.Id == _currentPinnedMessageId);
-                            if (msg.IsPinned)
-                            {
-                                foundMessage = msg;
-                            }
-                        }
-
-                        // Gán tin nhắn đã tìm thấy vào thuộc tính PinnedMessage để UI hiển thị
-                        PinnedMessage = foundMessage;
-                        Debug.WriteLine(foundMessage != null
-                            ? $"[PIN] Đã tìm thấy và hiển thị tin nhắn ghim: {foundMessage.Id}"
-                            : "[PIN] Không tìm thấy tin nhắn ghim trong danh sách hiện tại.");
-                    });
-
-                }, ex => { Debug.WriteLine($"Lỗi lắng nghe tin nhắn ghim: {ex.Message}"); });
-
-            allMessageSubscriptions.Add(_pinnedMessageListener);
-        }
+        
         public bool IsRecording
         {
             get => _isRecording;
@@ -305,7 +227,7 @@ namespace WpfApp1.ViewModels
                         contact.IsTyping = false;
                     }
                 }
-                ListenForPinnedMessage(value.chatID);
+               
                 // Đăng ký lắng nghe cho contact mới được chọn
                 ListenForTypingStatus(value.chatID);
 
@@ -321,9 +243,7 @@ namespace WpfApp1.ViewModels
                 Messages.Clear();
                 Files.Clear();
                 messageSubscription?.Dispose();
-                messageSubscription = null;
-                _pinnedMessageListener?.Dispose(); 
-                PinnedMessage = null;
+                messageSubscription = null;                
             }
         }
 
@@ -1081,6 +1001,7 @@ namespace WpfApp1.ViewModels
                             msg.Id = item.Key;
                             msg.IsMine = msg.SenderId == SharedData.Instance.userdata?.Email;
                             msg.Alignment = msg.IsMine ? "Right" : "Left";
+                            msg.SenderDisplayName = GetSenderDisplayName(msg.SenderId);
 
                             if (isGroupChat && !msg.IsMine)
                             {
@@ -1096,10 +1017,14 @@ namespace WpfApp1.ViewModels
                         .OrderBy(m => m.Timestamp)
                         .ToList();
 
+                    var initiallyPinned = oldMessages.FirstOrDefault(m => m.IsPinned);
+
                     Debug.WriteLine($"Đã tải {oldMessages.Count} tin nhắn cũ");
 
                     Application.Current.Dispatcher.Invoke(() =>
                     {
+                        PinnedMessage = initiallyPinned;
+
                         foreach (var message in oldMessages)
                         {
                             Messages.Add(message);
@@ -1134,6 +1059,7 @@ namespace WpfApp1.ViewModels
                                 message.Id = messageEvent.Key;
                                 message.IsMine = message.SenderId == SharedData.Instance.userdata?.Email;
                                 message.Alignment = message.IsMine ? "Right" : "Left";
+                                message.SenderDisplayName = GetSenderDisplayName(message.SenderId);
 
                                 var updatedMessageData = messageEvent.Object;
                                 updatedMessageData.Id = messageEvent.Key;
@@ -1144,6 +1070,15 @@ namespace WpfApp1.ViewModels
                                     existingMessage.LikedBy = updatedMessageData.LikedBy ?? new Dictionary<string, bool>();            
                                     existingMessage.OnPropertyChanged(nameof(existingMessage.LikeCount));
                                     existingMessage.OnPropertyChanged(nameof(existingMessage.HasLikes));
+
+                                    existingMessage.SenderDisplayName = message.SenderDisplayName;
+                                    existingMessage.IsPinned = updatedMessageData.IsPinned;
+                                    if (existingMessage.IsPinned)
+                                    {
+                                        // Nếu tin nhắn này được ghim, hiển thị nó trên thanh ghim
+                                        PinnedMessage = existingMessage;
+                                    }
+
                                 }
 
                                 if (isGroupChat && !message.IsMine)
@@ -2241,5 +2176,69 @@ namespace WpfApp1.ViewModels
                 Debug.WriteLine($"Lỗi khi thả tim: {ex.ToString()}");
             }
         }
+
+        // Ghim tin nhan
+
+        [RelayCommand]
+        private async Task PinMessageAsync(Message messageToPin)
+        {
+            if (messageToPin == null) return;
+                        
+            if (PinnedMessage != null && PinnedMessage.Id != messageToPin.Id)
+            {
+                PinnedMessage.IsPinned = false;
+                await UpdateMessageOnFirebase(PinnedMessage);
+            }
+                        
+            messageToPin.IsPinned = true;
+            await UpdateMessageOnFirebase(messageToPin);
+                      
+            PinnedMessage = messageToPin;
+        }
+
+        // Command để bỏ ghim từ thanh hiển thị
+        [RelayCommand]
+        private async Task UnpinMessageAsync()
+        {
+            if (PinnedMessage == null) return;
+
+            PinnedMessage.IsPinned = false;
+            await UpdateMessageOnFirebase(PinnedMessage);
+                       
+            PinnedMessage = null;
+        }
+
+        // Hàm trợ giúp để cập nhật một tin nhắn
+        private async Task UpdateMessageOnFirebase(Message message)
+        {
+            if (SelectedContact == null || string.IsNullOrEmpty(message.Id)) return;
+            try
+            {
+                await firebaseClient
+                    .Child("messages")
+                    .Child(SelectedContact.chatID)
+                    .Child(message.Id)
+                    .PutAsync(message);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Lỗi khi cập nhật tin nhắn: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private async Task UnpinSpecificMessageAsync(Message messageToUnpin)
+        {            
+            if (messageToUnpin == null || !messageToUnpin.IsPinned) return;
+                       
+            messageToUnpin.IsPinned = false;
+            await UpdateMessageOnFirebase(messageToUnpin); 
+                        
+            if (PinnedMessage?.Id == messageToUnpin.Id)
+            {
+                PinnedMessage = null;
+            }
+        }
+
     }
 }
