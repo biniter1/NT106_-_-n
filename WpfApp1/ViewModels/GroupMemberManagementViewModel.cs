@@ -310,19 +310,27 @@ namespace WpfApp1.ViewModels
                 // Add members to group
                 await _friendListViewModel.AddMembersToGroup(_group, selectedEmails);
 
-                // Add group contact for new members
+                // IMPROVED: Ensure new members get the group contact with proper avatar
                 var groupContact = new Contact
                 {
                     Name = _group.Name,
                     Email = _group.GroupChatId,
-                    AvatarUrl = _group.AvatarUrl,
+                    AvatarUrl = _group.AvatarUrl, // Use current group avatar
                     chatID = _group.GroupChatId,
                     IsOnline = true
                 };
 
                 foreach (var email in selectedEmails)
                 {
-                    await _friendListViewModel.AddContactAsync(email, groupContact);
+                    try
+                    {
+                        await _friendListViewModel.AddContactAsync(email, groupContact);
+                        Debug.WriteLine($"Added group contact with avatar for new member: {email}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Failed to add group contact for {email}: {ex.Message}");
+                    }
                 }
 
                 // Update local data

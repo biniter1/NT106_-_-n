@@ -206,24 +206,18 @@ namespace WpfApp1.ViewModels
             var db = FirestoreHelper.database;
             var userDocRef = db.Collection("users").Document(email);
 
-            // Kiểm tra xem người dùng có tồn tại không
-/*            var userDocSnapshot = await userDocRef.GetSnapshotAsync();
-            if (!userDocSnapshot.Exists)
-            {
-                CustomMessageBox.Show($"User {email} does not exist.", "Lỗi",
-                                    CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
-                return;
-            }
-*/
-            // Thêm contact vào subcollection 'contacts' của người dùng
-            var contactDocRef = userDocRef.Collection("contacts").Document(contact.chatID); // Dùng chat id làm document ID
+            // Add contact to subcollection 'contacts' of user
+            var contactDocRef = userDocRef.Collection("contacts").Document(contact.chatID); // Use chat id as document ID
 
             try
             {
-                await contactDocRef.SetAsync(contact); // Lưu thông tin contact
+                // Use SetAsync with MergeAll to ensure avatar URL is properly updated
+                await contactDocRef.SetAsync(contact, SetOptions.MergeAll); // This will update existing or create new
+                Debug.WriteLine($"Added/Updated contact {contact.Name} with avatar {contact.AvatarUrl} for user {email}");
             }
             catch (Exception ex)
             {
+                Debug.WriteLine($"Error adding/updating contact: {ex.Message}");
                 CustomMessageBox.Show($"Error adding contact: {ex.Message}", "Lỗi",
                                     CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
@@ -615,6 +609,19 @@ namespace WpfApp1.ViewModels
                             await memberGroupRef.UpdateAsync("groups", FieldValue.ArrayUnion(group.Id));
                             Debug.WriteLine($"Added group to existing UserGroups for {email}");
                         }
+
+                        // IMPORTANT: Create or update group contact with current avatar for new member
+                        var groupContact = new Contact
+                        {
+                            Name = group.Name,
+                            Email = group.GroupChatId,
+                            AvatarUrl = group.AvatarUrl, // Use current group avatar
+                            chatID = group.GroupChatId,
+                            IsOnline = true
+                        };
+
+                        await AddContactAsync(email, groupContact);
+                        Debug.WriteLine($"Added/Updated group contact with avatar for new member: {email}");
                     }
                 }
 
@@ -677,17 +684,17 @@ namespace WpfApp1.ViewModels
                     // Get selected friends
                     var selectedFriendEmails = createGroupWindow.GetSelectedFriendEmails();
 
-                    // Upload avatar if selected - SỬA LỖI: Kiểm tra file tồn tại trước
+                    // Upload avatar if selected - IMPROVED: Ensure proper avatar handling
                     string finalAvatarUrl = "/Assets/DefaultGroupAvatar.png"; // Default avatar
                     
                     if (!string.IsNullOrEmpty(groupData.AvatarUrl) && File.Exists(groupData.AvatarUrl))
                     {
                         try
                         {
-                            string fileName = $"group_avatar_{DateTime.Now:yyyyMMddHHmmssfff}_{Path.GetFileName(groupData.AvatarUrl)}";
+                            string fileName = $"group_avatars/{Guid.NewGuid()}_{Path.GetFileName(groupData.AvatarUrl)}";
                             string uploadedUrl = await FirebaseStorageHelper.UploadFileAsync(groupData.AvatarUrl, fileName);
                             finalAvatarUrl = uploadedUrl;
-                            Debug.WriteLine($"Avatar uploaded successfully: {uploadedUrl}");
+                            Debug.WriteLine($"Group avatar uploaded successfully: {uploadedUrl}");
                         }
                         catch (Exception ex)
                         {
@@ -707,7 +714,7 @@ namespace WpfApp1.ViewModels
                         Id = Guid.NewGuid().ToString(),
                         Name = groupData.Name,
                         Description = groupData.Description,
-                        AvatarUrl = finalAvatarUrl, // Sử dụng URL đã xử lý
+                        AvatarUrl = finalAvatarUrl, // Use uploaded or default avatar URL
                         CreatedBy = SharedData.Instance.userdata.Email,
                         CreatedAt = DateTime.UtcNow,
                         MemberEmails = initialMembers,
@@ -724,32 +731,8 @@ namespace WpfApp1.ViewModels
                         await AddMembersToGroup(newGroup, selectedFriendEmails);
                     }
 
-                    // Automatically create group contact for chat for all members
-                    var groupContact = new Contact
-                    {
-                        Name = newGroup.Name,
-                        Email = newGroup.GroupChatId,
-                        AvatarUrl = newGroup.AvatarUrl,
-                        chatID = newGroup.GroupChatId,
-                        IsOnline = true
-                    };
-
-                    // Add contact for current user
-                    await AddContactAsync(SharedData.Instance.userdata.Email, groupContact);
-
-                    // Add contact for all selected friends - SỬA LỖI: Đảm bảo tất cả thành viên đều có contact
-                    foreach (var friendEmail in selectedFriendEmails)
-                    {
-                        try
-                        {
-                            await AddContactAsync(friendEmail, groupContact);
-                            Debug.WriteLine($"Added group contact for member: {friendEmail}");
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"Failed to add group contact for {friendEmail}: {ex.Message}");
-                        }
-                    }
+                    // Automatically create group contact for chat for all members with the correct avatar
+                    await CreateGroupContactForAllMembers(newGroup, initialMembers);
 
                     var groupVM = new GroupViewModel(newGroup);
                     CombinedContacts.Add(groupVM);
@@ -768,6 +751,68 @@ namespace WpfApp1.ViewModels
                 Debug.WriteLine($"Error creating group: {ex.Message}");
                 CustomMessageBox.Show($"Lỗi khi tạo nhóm: {ex.Message}", "Lỗi",
                     CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
+            }
+        }
+
+        // NEW METHOD: Create group contact for all members with proper avatar access
+        private async Task CreateGroupContactForAllMembers(Group group, List<string> memberEmails)
+        {
+            var groupContact = new Contact
+            {
+                Name = group.Name,
+                Email = group.GroupChatId,
+                AvatarUrl = group.AvatarUrl, // Ensure avatar URL is set
+                chatID = group.GroupChatId,
+                IsOnline = true
+            };
+
+            // Add contact for all members
+            foreach (var memberEmail in memberEmails)
+            {
+                try
+                {
+                    await AddContactAsync(memberEmail, groupContact);
+                    Debug.WriteLine($"Added group contact with avatar for member: {memberEmail}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Failed to add group contact for {memberEmail}: {ex.Message}");
+                }
+            }
+        }
+
+        // NEW METHOD: Sync group avatar for all existing members
+        public async Task SyncGroupAvatarForAllMembers(Group group)
+        {
+            try
+            {
+                foreach (var memberEmail in group.MemberEmails)
+                {
+                    try
+                    {
+                        var db = FirestoreHelper.database;
+                        var contactRef = db.Collection("users")
+                                          .Document(memberEmail)
+                                          .Collection("contacts")
+                                          .Document(group.GroupChatId);
+
+                        // Update contact with new avatar URL
+                        await contactRef.UpdateAsync(new Dictionary<string, object>
+                        {
+                            { "AvatarUrl", group.AvatarUrl }
+                        });
+
+                        Debug.WriteLine($"Synced group avatar for member: {memberEmail}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Failed to sync avatar for member {memberEmail}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error syncing group avatar: {ex.Message}");
             }
         }
 
