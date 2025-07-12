@@ -66,5 +66,8 @@ namespace WpfApp1.Models
         [ObservableProperty]
         private bool _isBlockingMe;
         public bool InteractionIsBlocked => IsBlockedByMe || IsBlockingMe;
+
+        [Newtonsoft.Json.JsonIgnore] 
+        public bool IsGroupChat => !string.IsNullOrEmpty(chatID) && chatID.StartsWith("group_");
     }
 }

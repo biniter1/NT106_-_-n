@@ -108,6 +108,8 @@ namespace WpfApp1.ViewModels
         [ObservableProperty]
         private Message _pinnedMessage;
 
+        private Dictionary<string, string> _userNameCache = new Dictionary<string, string>();
+
         [RelayCommand]
         private void ReplyToMessage(Message message)
         {
@@ -946,20 +948,24 @@ namespace WpfApp1.ViewModels
         private async void LoadMessagesForContact(Contact contact)
         {
             Messages.Clear();
+            // Xóa cache tên người dùng cũ mỗi khi chuyển cuộc trò chuyện để đảm bảo dữ liệu luôn mới
+            _userNameCache.Clear();
 
             if (messageSubscription != null)
             {
                 messageSubscription.Dispose();
                 messageSubscription = null;
             }
+
             if (contact.InteractionIsBlocked)
             {
-                string message = contact.IsBlockedByMe 
-                    ? $"Bạn đã chặn {contact.Name}. Hãy bỏ chặn để tiếp tục trò chuyện." 
+                string message = contact.IsBlockedByMe
+                    ? $"Bạn đã chặn {contact.Name}. Hãy bỏ chặn để tiếp tục trò chuyện."
                     : $"Bạn không thể nhắn tin cho {contact.Name} vì người này đã chặn bạn.";
                 Messages.Add(new Message { Content = message, IsSystemMessage = true });
-                return; 
+                return;
             }
+
             if (contact.IsBlockedByMe)
             {
                 Messages.Add(new Message { Content = $"Bạn đã chặn {contact.Name}. Hãy bỏ chặn để tiếp tục trò chuyện.", IsSystemMessage = true });
@@ -983,6 +989,7 @@ namespace WpfApp1.ViewModels
                     CustomMessageBox.Show("Lỗi: Không thể kết nối đến máy chủ chat. Vui lòng thử lại.", "Lỗi kết nối", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
                     return;
                 }
+
                 bool isGroupChat = roomId.StartsWith("group_");
 
                 var messagesQuery = await firebaseClient
@@ -994,38 +1001,32 @@ namespace WpfApp1.ViewModels
 
                 if (messagesQuery != null)
                 {
-                    var oldMessages = messagesQuery
+                    // Bước 1: Tạo các tác vụ (Task) để lấy thông tin tin nhắn một cách bất đồng bộ
+                    var messageProcessingTasks = messagesQuery
                         .Where(item => item.Object != null)
-                        .Select(item =>
+                        .Select(async item => // Đánh dấu lambda là 'async'
                         {
-                            var msg = item.Object;                           
+                            var msg = item.Object;
                             msg.Id = item.Key;
                             msg.IsMine = msg.SenderId == SharedData.Instance.userdata?.Email;
-                            msg.Alignment = msg.IsMine ? "Right" : "Left";                        
-                            msg.SenderDisplayName = msg.IsMine ? "Bạn" : GetSenderDisplayName(msg.SenderId);
+                            msg.Alignment = msg.IsMine ? "Right" : "Left";
 
-                            if (isGroupChat && !msg.IsMine)
-                            {
-                                var senderName = GetSenderDisplayName(msg.SenderId);
-                                if (!string.IsNullOrEmpty(senderName))
-                                {
-                                    msg.SenderDisplayName = senderName;
-                                }
-                            }
+                            // Sửa lỗi: Thêm 'await' để lấy kết quả từ hàm async
+                            msg.SenderDisplayName = msg.IsMine ? "Bạn" : await GetSenderDisplayName(msg.SenderId);
 
                             return msg;
-                        })
-                        .OrderBy(m => m.Timestamp)
-                        .ToList();
+                        });
+
+                    // Bước 2: Chờ tất cả các tác vụ hoàn thành và lấy kết quả
+                    var oldMessages = (await Task.WhenAll(messageProcessingTasks))
+                                        .OrderBy(m => m.Timestamp)
+                                        .ToList();
 
                     var initiallyPinned = oldMessages.FirstOrDefault(m => m.IsPinned);
-
-                    Debug.WriteLine($"Đã tải {oldMessages.Count} tin nhắn cũ");
 
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         PinnedMessage = initiallyPinned;
-
                         foreach (var message in oldMessages)
                         {
                             Messages.Add(message);
@@ -1044,7 +1045,7 @@ namespace WpfApp1.ViewModels
                     .AsObservable<Message>()
                     .Subscribe(messageEvent =>
                     {
-                        Application.Current.Dispatcher.Invoke(() =>
+                        Application.Current.Dispatcher.Invoke(async () =>
                         {
                             if (messageEvent.EventType == FirebaseEventType.InsertOrUpdate && messageEvent.Object != null)
                             {
@@ -1056,19 +1057,19 @@ namespace WpfApp1.ViewModels
                                     Debug.WriteLine($"Ignoring message from blocked user: {message.SenderId}");
                                     return;
                                 }
-                                                              
+
                                 message.Id = messageEvent.Key;
                                 message.IsMine = message.SenderId == SharedData.Instance.userdata?.Email;
                                 message.Alignment = message.IsMine ? "Right" : "Left";
-                                message.SenderDisplayName = message.IsMine ? "Bạn" : GetSenderDisplayName(message.SenderId);
+                                message.SenderDisplayName = message.IsMine ? "Bạn" :await    GetSenderDisplayName(message.SenderId);
 
                                 var updatedMessageData = messageEvent.Object;
                                 updatedMessageData.Id = messageEvent.Key;
                                 var existingMessage = Messages.FirstOrDefault(m => m.Id == updatedMessageData.Id);
 
                                 if (existingMessage != null)
-                                {                                   
-                                    existingMessage.LikedBy = updatedMessageData.LikedBy ?? new Dictionary<string, bool>();            
+                                {
+                                    existingMessage.LikedBy = updatedMessageData.LikedBy ?? new Dictionary<string, bool>();
                                     existingMessage.OnPropertyChanged(nameof(existingMessage.LikeCount));
                                     existingMessage.OnPropertyChanged(nameof(existingMessage.HasLikes));
 
@@ -1082,14 +1083,14 @@ namespace WpfApp1.ViewModels
 
                                 }
 
-                                if (isGroupChat && !message.IsMine)
-                                {
-                                    var senderName = GetSenderDisplayName(message.SenderId);
-                                    if (!string.IsNullOrEmpty(senderName))
-                                    {
-                                        message.SenderDisplayName = senderName;
-                                    }
-                                }
+                                //if (isGroupChat && !message.IsMine)
+                                //{
+                                //    var senderName = GetSenderDisplayName(message.SenderId);
+                                //    if (!string.IsNullOrEmpty(senderName))
+                                //    {
+                                //        message.SenderDisplayName = senderName;
+                                //    }
+                                //}
                                 int existingIndex = Messages.IndexOf(Messages.FirstOrDefault(m => m.Id == message.Id));
                                 if (existingIndex >= 0)
                                 {
@@ -1115,9 +1116,9 @@ namespace WpfApp1.ViewModels
                                         {
                                             string fileName = message.Content;
                                             if (message.IsImage && string.IsNullOrEmpty(fileName))
-                                                fileName = $"Image_{DateTime.Now.ToString("yyyyMMddHHmmss")}.jpg";
+                                                fileName = $"Image_{DateTime.Now:yyyyMMddHHmmss}.jpg";
                                             else if (message.IsVideo && string.IsNullOrEmpty(fileName))
-                                                fileName = $"Video_{DateTime.Now.ToString("yyyyMMddHHmmss")}.mp4";
+                                                fileName = $"Video_{DateTime.Now:yyyyMMddHHmmss}.mp4";
 
                                             string extension = Path.GetExtension(fileName);
                                             if (string.IsNullOrEmpty(extension))
@@ -1133,8 +1134,8 @@ namespace WpfApp1.ViewModels
                                             var fileItem = new FileItem
                                             {
                                                 IconPathOrType = string.IsNullOrEmpty(extension) ?
-                                                                 (message.IsImage ? "jpg" : (isVideo ? "mp4" : "txt")) :
-                                                                 extension.TrimStart('.'),
+                                                                     (message.IsImage ? "jpg" : (isVideo ? "mp4" : "txt")) :
+                                                                     extension.TrimStart('.'),
                                                 FileName = fileName,
                                                 FileInfo = $"{(message.IsImage ? "Image" : (isVideo ? "Video" : "File"))} • {message.Timestamp:dd/MM/yyyy}",
                                                 FilePathOrUrl = fileUrl,
@@ -1168,7 +1169,7 @@ namespace WpfApp1.ViewModels
 
                                         if (shouldNotify)
                                         {
-                                            string titleForNotification = GetSenderDisplayName(message.SenderId) ?? message.SenderId;
+                                            string titleForNotification = await  GetSenderDisplayName(message.SenderId) ?? message.SenderId;
                                             string messageForNotification = message.Content;
 
                                             if (isGroupChat)
@@ -1231,20 +1232,56 @@ namespace WpfApp1.ViewModels
             }
         }
 
-        private string GetSenderDisplayName(string senderEmail)
+
+        private async Task<string> GetSenderDisplayName(string senderEmail)
         {
+            // Nếu email rỗng hoặc không hợp lệ
+            if (string.IsNullOrEmpty(senderEmail))
+            {
+                return "Người dùng không xác định";
+            }
+
+            // 1. Tìm trong cache trước để có hiệu năng tốt nhất
+            if (_userNameCache.TryGetValue(senderEmail, out var cachedName))
+            {
+                return cachedName;
+            }
+
+            // 2. Nếu không có trong cache, tìm trong danh sách liên hệ (Contacts)
             var contact = Contacts.FirstOrDefault(c => c.Email == senderEmail);
             if (contact != null)
             {
+                _userNameCache[senderEmail] = contact.Name; // Lưu vào cache
                 return contact.Name;
             }
 
-            if (senderEmail.Contains("@"))
+            // 3. Nếu vẫn không có, truy vấn Firestore (đây chính là "cái 2" bạn hỏi)
+            try
             {
-                return senderEmail.Split('@')[0];
+                var db = FirestoreHelper.database;
+                var userDocRef = db.Collection("users").Document(senderEmail);
+                var snapshot = await userDocRef.GetSnapshotAsync();
+
+                if (snapshot.Exists)
+                {
+                    // Giả sử trường chứa tên trong Firestore là "Name"
+                    string firestoreName = snapshot.GetValue<string>("Name");
+                    if (!string.IsNullOrEmpty(firestoreName))
+                    {
+                        _userNameCache[senderEmail] = firestoreName; // Lưu vào cache
+                        return firestoreName;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Lỗi khi lấy tên người dùng từ Firestore: {ex.Message}");
             }
 
-            return senderEmail;
+            // 4. Giải pháp cuối cùng nếu không tìm thấy ở đâu cả
+            string fallbackName = senderEmail.Contains("@") ? senderEmail.Split('@')[0] : senderEmail;
+            _userNameCache[senderEmail] = fallbackName; // Lưu cả kết quả thất bại để không tìm lại
+            return fallbackName;
         }
 
         private async void LoadFilesForContact(Contact contact)
@@ -1347,7 +1384,7 @@ namespace WpfApp1.ViewModels
                     // Lấy tên người gửi của tin nhắn gốc
                     newMessage.ReplyToSenderName = MessageToReplyTo.IsMine
                         ? "Bạn"
-                        : GetSenderDisplayName(MessageToReplyTo.SenderId);
+                        :await GetSenderDisplayName(MessageToReplyTo.SenderId);
                 }
 
                 await firebaseClient
