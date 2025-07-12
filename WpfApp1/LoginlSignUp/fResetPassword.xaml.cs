@@ -14,7 +14,9 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using WpfApp1.Models; 
-using WpfApp1.Views; 
+using WpfApp1.Views;
+using System.Net.Http;
+using Newtonsoft.Json;
 
 namespace WpfApp1.LoginlSignUp
 {
@@ -47,32 +49,54 @@ namespace WpfApp1.LoginlSignUp
 
         private async void btnSubmit_Click(object sender, RoutedEventArgs e)
         {
-            if (String.IsNullOrEmpty(txtEmail.Text))
+            string email = txtEmail.Text.Trim();
+            if (string.IsNullOrEmpty(email))
             {
-                // THAY THẾ 1
                 CustomMessageBox.Show("Vui lòng nhập địa chỉ email.", "Thông tin trống", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Warning);
                 return;
             }
 
+            // API Key của bạn
+            string apiKey = "AIzaSyCDIXwx-Zcv3Qcxt9e_y8eUNiNlnEXFDbw";
+            string url = $"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={apiKey}";
+
             try
             {
-                string code = GenerateOtpCode();
-                await FirestoreHelper.database.Collection("otp_codes").Document(txtEmail.Text).SetAsync(new
+                using (HttpClient client = new HttpClient())
                 {
-                    otp = code,
-                    createdAt = Google.Cloud.Firestore.Timestamp.GetCurrentTimestamp()
-                });
+                    // Tạo payload để yêu cầu Firebase gửi email reset password
+                    var payload = new
+                    {
+                        requestType = "PASSWORD_RESET",
+                        email = email
+                    };
 
-                SendOtpEmail(txtEmail.Text, code);
-                CustomMessageBox.Show($"Một mã OTP đã được gửi đến địa chỉ {txtEmail.Text}. Vui lòng kiểm tra hộp thư của bạn.", "Thành Công", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Success);
+                    var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+                    HttpResponseMessage response = await client.PostAsync(url, content);
+                    string result = await response.Content.ReadAsStringAsync();
 
-                this.Hide();
-                LoginlSignUp.fCode f = new fCode(code, txtEmail.Text);
-                f.Show();
+                    if (response.IsSuccessStatusCode)
+                    {
+                        // Thông báo thành công cho người dùng
+                        CustomMessageBox.Show($"Một liên kết để đặt lại mật khẩu đã được gửi đến {email}. Vui lòng kiểm tra hộp thư của bạn.", "Thành Công", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Success);
+
+                        // Đóng form này và mở lại form đăng nhập
+                        fLogin loginWindow = new fLogin();
+                        this.Close();
+                        loginWindow.Show();
+                    }
+                    else
+                    {
+                        // Phân tích lỗi từ Firebase và hiển thị
+                        dynamic errorJson = JsonConvert.DeserializeObject(result);
+                        string errorMessage = errorJson.error.message;
+                        CustomMessageBox.Show($"Lỗi: {errorMessage}", "Gửi Email Thất Bại", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
+                    }
+                }
             }
             catch (Exception ex)
             {
-                CustomMessageBox.Show("Đã xảy ra lỗi: " + ex.Message, "Lỗi", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
+                CustomMessageBox.Show("Đã xảy ra lỗi: " + ex.Message, "Lỗi Hệ Thống", CustomMessageBoxWindow.MessageButtons.OK, CustomMessageBoxWindow.MessageIcon.Error);
             }
         }
 

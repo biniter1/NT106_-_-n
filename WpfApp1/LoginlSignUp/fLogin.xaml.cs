@@ -181,58 +181,34 @@ namespace WpfApp1.LoginlSignUp
 
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
-                MessageBoxResult result = CustomMessageBox.Show("Vui lòng nhập đầy đủ thông tin đăng nhập!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
-
+                CustomMessageBox.Show("Vui lòng nhập đầy đủ thông tin đăng nhập!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
                 return;
             }
 
             try
             {
-                var db = FirestoreHelper.database;
-                if (db == null)
-                {
-                    MessageBoxResult result = CustomMessageBox.Show("Không thể kết nối đến cơ sở dữ liệu!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
-
-                    return;
-                }
-
-                var docRef = db.Collection("users").Document(email);
-                var snapshot = await docRef.GetSnapshotAsync();
-
-                if (!snapshot.Exists)
-                {
-                    MessageBoxResult result = CustomMessageBox.Show("Tài khoản không tồn tại!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
-
-                    return;
-                }
-
-                var data = snapshot.ConvertTo<User>();
-                string decryptedPassword = data.Password;
-                if (password != decryptedPassword)
-                {
-                    MessageBoxResult result = CustomMessageBox.Show("Mật khẩu không chính xác!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
-
-                    return;
-                }
-
-                // Sign in with Firebase Authentication
+                // BƯỚC 1: XÁC THỰC DUY NHẤT VỚI FIREBASE AUTHENTICATION
+                // Hàm này sẽ tự động kiểm tra xem email có tồn tại và mật khẩu có đúng không.
                 (string idToken, string refreshToken) = await SignInWithFirebase(email, password);
+
+                // Nếu idToken rỗng, nghĩa là đăng nhập thất bại.
+                // Hàm SignInWithFirebase đã hiển thị lỗi rồi nên ta chỉ cần thoát.
                 if (string.IsNullOrEmpty(idToken))
                 {
                     return;
                 }
 
-                // Check email verification status
+                // ---- ĐÃ XÓA TOÀN BỘ ĐOẠN CODE KIỂM TRA VỚI FIRESTORE Ở ĐÂY ----
+                // Lý do: Việc kiểm tra này là thừa và gây ra lỗi không đồng bộ khi đổi mật khẩu.
+                // Chỉ cần SignInWithFirebase thành công là đủ để xác nhận người dùng hợp lệ.
+
+                // BƯỚC 2: KIỂM TRA TRẠNG THÁI XÁC MINH EMAIL (GIỮ NGUYÊN)
                 using (HttpClient client = new HttpClient())
                 {
                     string apiKey = "AIzaSyCDIXwx-Zcv3Qcxt9e_y8eUNiNlnEXFDbw";
                     string url = $"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={apiKey}";
 
-                    var lookupPayload = new
-                    {
-                        idToken = idToken
-                    };
-
+                    var lookupPayload = new { idToken = idToken };
                     var content = new StringContent(JsonConvert.SerializeObject(lookupPayload), Encoding.UTF8, "application/json");
                     var response = await client.PostAsync(url, content);
                     string result = await response.Content.ReadAsStringAsync();
@@ -244,21 +220,18 @@ namespace WpfApp1.LoginlSignUp
 
                         if (!emailVerified)
                         {
-                            MessageBoxResult resultt = CustomMessageBox.Show("Email của bạn chưa được xác minh. Vui lòng kiểm tra hộp thư!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
-
+                            CustomMessageBox.Show("Email của bạn chưa được xác minh. Vui lòng kiểm tra hộp thư!", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
                             return;
                         }
                     }
                     else
                     {
-                        MessageBox.Show($"Không thể kiểm tra trạng thái email xác thực. Chi tiết lỗi: {result}", "Lỗi",
-                            MessageBoxButton.OK, MessageBoxImage.Error);
-                        MessageBoxResult resultt = CustomMessageBox.Show($"Không thể kiểm tra trạng thái email xác thực.Chi tiết lỗi: { result}",
-                        "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
-
+                        CustomMessageBox.Show($"Không thể kiểm tra trạng thái email xác thực. Chi tiết lỗi: {result}", "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
                         return;
                     }
                 }
+
+                // BƯỚC 3: LƯU TOKEN VÀ CHUYỂN TRANG (GIỮ NGUYÊN)
                 if (chkRemember.IsChecked == true)
                 {
                     StoreRefreshToken(refreshToken);
@@ -280,8 +253,7 @@ namespace WpfApp1.LoginlSignUp
             }
             catch (Exception ex)
             {
-                MessageBoxResult resultt = CustomMessageBox.Show("Lỗi: " + ex.Message, "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
-
+                CustomMessageBox.Show("Lỗi: " + ex.Message, "Thông báo", CustomMessageBoxWindow.MessageButtons.OK);
             }
         }
 
